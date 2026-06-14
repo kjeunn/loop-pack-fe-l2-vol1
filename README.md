@@ -13,7 +13,7 @@ pnpm dev
 
 ## 주차별 과제
 
-- [1주차 — 에이전트 작업 환경 세팅](docs/week-01.md)
+- [1주차 — 에이전트 작업 환경 세팅](docs/assignments/week-01.md)
 
 ## 제출
 
