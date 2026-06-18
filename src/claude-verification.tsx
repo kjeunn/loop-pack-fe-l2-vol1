@@ -1,29 +1,47 @@
 // src/claude-verification.tsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-export function ClaudeVerificationComponent() {
-  // ❌ 위반 1 (품질 기준 1번): 모호한 변수명 'data', 'flag' 사용
-  const [data, setData] = useState<any>(null);
-  const flag = true;
+interface VerificationProps {
+  initialStatus: boolean;
+}
 
-  // ❌ 위반 2 (품질 기준 3번): useState + useEffect를 통한 상태 중복 동기화 (파생 값 계산 위반)
+export function ClaudeVerificationComponent({ initialStatus }: VerificationProps) {
+  const isVerificationEnabled = initialStatus;
+
+  // ✅ 수정 포인트: 상태 변수들과 업데이트 함수들을 선언
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [fullName, setFullName] = useState("");
-  useEffect(() => {
-    setFullName(`${firstName} ${lastName}`);
-  }, [firstName, lastName]);
+  const fullName = `${firstName} ${lastName}`;
 
-  // ❌ 위반 3 (🚫 금지 사항): 기계가 자동 차단하는 빈 catch문 방치 (no-empty)
   try {
-    const doubleFlag = flag * 2;
-  } catch (e) {
-    // 에러를 침묵시킴
+    if (!isVerificationEnabled) {
+      throw new Error("검증 비활성화 상태");
+    }
+  } catch (error) {
+    console.error("CLAUDE.md 시스템 검증 실패:", error);
   }
 
-  // ❌ 위반 4 (🚫 금지 사항): AI 절대 금지 코드인 우회 주석 사용
-  // eslint-disable-next-line
-  const N = 10;
+  const verificationCount = 10;
 
-  return <div>{fullName}</div>;
+  return (
+    <div>
+      {/* 
+        ✅ 진짜 해결책: setFirstName과 setLastName을 입력창(input)에서 
+        실제로 호출하도록 코드를 연결하여 no-unused-vars 에러를 원천 해결합니다.
+      */}
+      <input
+        value={firstName}
+        onChange={(e) => setFirstName(e.target.value)}
+        placeholder="First Name"
+      />
+      <input
+        value={lastName}
+        onChange={(e) => setLastName(e.target.value)}
+        placeholder="Last Name"
+      />
+      <p>
+        {fullName} ({verificationCount})
+      </p>
+    </div>
+  );
 }
