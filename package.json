@@ -27,6 +27,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-simple-import-sort": "^13.0.0",
     "globals": "^17.6.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
@@ -37,7 +38,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --max-warnings=0",
+      "eslint --fix --max-warnings=0",
       "prettier --check"
     ],
     "*.{js,mjs,cjs,json,css,md}": [

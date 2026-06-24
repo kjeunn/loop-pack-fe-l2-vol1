@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
 import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier";
 
@@ -16,6 +17,7 @@ export default tseslint.config(
     ],
     plugins: {
       "react-hooks": reactHooks,
+      "simple-import-sort": simpleImportSort,
     },
     languageOptions: {
       ecmaVersion: 2022,
@@ -27,6 +29,20 @@ export default tseslint.config(
       noInlineConfig: true, // eslint-disable 인라인 우회 금지
     },
     rules: {
+      // ── Import 순서 ──
+      "simple-import-sort/imports": [
+        "error",
+        {
+          groups: [
+            ["^react"], // 1. React
+            ["^@?\\w"], // 2. 외부 라이브러리
+            ["^\\."], // 3. 프로젝트 내부 파일 (상대 경로)
+            ["^\\u0000"], // 4. CSS / side-effect (마지막)
+          ],
+        },
+      ],
+      "simple-import-sort/exports": "error",
+
       // ── TypeScript ──
       "@typescript-eslint/no-explicit-any": "error", // any 사용 = 타입 안전성 포기; 고유 타입 선언 원칙
       "@typescript-eslint/ban-ts-comment": "error", // ts-ignore/ts-nocheck는 타입 검사 우회 — 근본 원인 수정 원칙
