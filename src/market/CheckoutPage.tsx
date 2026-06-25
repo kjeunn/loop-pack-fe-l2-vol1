@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Card } from "./card";
 import { ADDRESSES, CART, COUPONS, MEMBER, PAST_ORDERS } from "./data";
 import { DeliveryMemo } from "./DeliveryMemo";
 import { OrderLineRow } from "./OrderLineRow";
@@ -29,25 +30,27 @@ function DeliverySection({
   const [expanded, setExpanded] = useState(false);
   const selected = addresses.find((a) => a.id === selectedAddressId)!;
   return (
-    <section>
-      <div className="row between">
-        <h2>배송지</h2>
+    <Card>
+      <Card.Header>
+        <Card.Title>배송지</Card.Title>
         <button className="link" onClick={() => setExpanded((v) => !v)}>
           {expanded ? "접기" : "변경"}
         </button>
-      </div>
-      {expanded ? (
-        <AddressForm
-          addresses={addresses}
-          selectedAddressId={selectedAddressId}
-          onSelectAddress={onSelectAddress}
-        />
-      ) : (
-        <p className="addr-summary">
-          {selected.label} · {selected.recipient} ({selected.detail})
-        </p>
-      )}
-    </section>
+      </Card.Header>
+      <Card.Body>
+        {expanded ? (
+          <AddressForm
+            addresses={addresses}
+            selectedAddressId={selectedAddressId}
+            onSelectAddress={onSelectAddress}
+          />
+        ) : (
+          <p className="addr-summary">
+            {selected.label} · {selected.recipient} ({selected.detail})
+          </p>
+        )}
+      </Card.Body>
+    </Card>
   );
 }
 
