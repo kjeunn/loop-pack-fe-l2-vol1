@@ -6,6 +6,7 @@ import { ADDRESSES, CART, COUPONS, MEMBER, PAST_ORDERS } from "./data";
 import { DeliveryMemo } from "./DeliveryMemo";
 import { OrderLineRow } from "./OrderLineRow";
 import { OrderStatusTag } from "./OrderStatusTag";
+import { PointsCard } from "./PointsCard";
 import { Price } from "./Price";
 import type { Address, Coupon, PaymentMethod } from "./types";
 
@@ -209,26 +210,13 @@ export function CheckoutPage() {
 
       <CouponCard appliedCoupon={appliedCoupon} onApply={handleApplyCoupon} />
 
-      <Card>
-        <Card.Title>적립금</Card.Title>
-        <Card.Body>
-          <label>
-            <input
-              type="checkbox"
-              checked={usePoint}
-              onChange={(e) => setUsePoint(e.target.checked)}
-            />
-            적립금 사용 (보유 {member.point.toLocaleString()}P)
-          </label>
-          {usePoint ? (
-            <input
-              type="number"
-              value={pointInput}
-              onChange={(e) => setPointInput(Number(e.target.value))}
-            />
-          ) : null}
-        </Card.Body>
-      </Card>
+      <PointsCard
+        point={member.point}
+        usePoint={usePoint}
+        pointInput={pointInput}
+        onUsePointChange={setUsePoint}
+        onPointInputChange={setPointInput}
+      />
 
       <Card>
         <Card.Title>결제수단</Card.Title>
