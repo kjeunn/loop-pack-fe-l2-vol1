@@ -6,17 +6,12 @@ import { ADDRESSES, CART, COUPONS, MEMBER, PAST_ORDERS } from "./data";
 import { DeliveryMemo } from "./DeliveryMemo";
 import { OrderLineRow } from "./OrderLineRow";
 import { OrderStatusTag } from "./OrderStatusTag";
+import { PaymentMethodCard } from "./PaymentMethodCard";
 import { PointsCard } from "./PointsCard";
 import { Price } from "./Price";
-import type { Address, Coupon, PaymentMethod } from "./types";
+import type { Address, Coupon } from "./types";
 
 import "./market.css";
-
-const PAYMENT_LABEL: Record<PaymentMethod, string> = {
-  card: "신용/체크카드",
-  transfer: "계좌이체",
-  kakao: "카카오페이",
-};
 
 // 배송지 — 접기/펼치기와 선택 요약은 스스로 책임진다.
 // 단, 실제 선택 동작(onSelectAddress)은 AddressForm → AddressField 로 통과시킨다.
@@ -116,7 +111,6 @@ export function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [usePoint, setUsePoint] = useState(false);
   const [pointInput, setPointInput] = useState(0);
-  const [payment, setPayment] = useState<PaymentMethod>("card");
   const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [placed, setPlaced] = useState(false);
@@ -218,17 +212,7 @@ export function CheckoutPage() {
         onPointInputChange={setPointInput}
       />
 
-      <Card>
-        <Card.Title>결제수단</Card.Title>
-        <Card.Body>
-          {(["card", "transfer", "kakao"] as PaymentMethod[]).map((m) => (
-            <label key={m}>
-              <input type="radio" checked={payment === m} onChange={() => setPayment(m)} />
-              {PAYMENT_LABEL[m]}
-            </label>
-          ))}
-        </Card.Body>
-      </Card>
+      <PaymentMethodCard />
 
       <Card>
         <Card.Title>결제 금액</Card.Title>
