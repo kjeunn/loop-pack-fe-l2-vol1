@@ -1,6 +1,6 @@
-import { Card } from "./card";
+import { Card } from "../../card";
+import type { CartItem } from "../../types";
 import { OrderLineRow } from "./OrderLineRow";
-import type { CartItem } from "./types";
 
 interface OrderItemsCardProps {
   items: CartItem[];

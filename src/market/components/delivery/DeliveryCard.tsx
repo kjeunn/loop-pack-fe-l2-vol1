@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { Card } from "./card";
+import { Card } from "../../card";
+import type { Address } from "../../types";
 import styles from "./DeliveryCard.module.css";
-import type { Address } from "./types";
 
 // 배송지 — 접기/펼치기와 선택 요약은 스스로 책임진다.
 // 단, 실제 선택 동작(onSelectAddress)은 AddressForm → AddressField 로 통과시킨다.

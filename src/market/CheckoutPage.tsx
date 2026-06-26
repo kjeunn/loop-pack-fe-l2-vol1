@@ -1,20 +1,20 @@
 import { useState } from "react";
 
+import { DeliveryCard } from "./components/delivery/DeliveryCard";
+import { DeliveryMemoCard } from "./components/delivery/DeliveryMemoCard";
+import { OrderItemsCard } from "./components/order/OrderItemsCard";
+import { RecentOrdersCard } from "./components/order/RecentOrdersCard";
+import { PriceSummaryCard } from "./components/price-summary/PriceSummaryCard";
+import { TermsCard } from "./components/terms/TermsCard";
 import { CouponCard } from "./CouponCard";
 import { ADDRESSES, CART, COUPONS, MEMBER } from "./data";
-import { DeliveryCard } from "./DeliveryCard";
-import { DeliveryMemoCard } from "./DeliveryMemoCard";
 import { OrderCompletePage } from "./OrderCompletePage";
-import { OrderItemsCard } from "./OrderItemsCard";
 import { PaymentMethodCard } from "./PaymentMethodCard";
 import { PointsCard } from "./PointsCard";
 import { Price } from "./Price";
-import { PriceSummaryCard } from "./PriceSummaryCard";
-import { RecentOrdersCard } from "./RecentOrdersCard";
-import { TermsCard } from "./TermsCard";
 import type { Coupon } from "./types";
 
-import "./common.css"; // 공용 스타일 분리
+import "./common.css"; // 공용 스타일 분리dkw
 
 export function CheckoutPage() {
   const member = MEMBER;

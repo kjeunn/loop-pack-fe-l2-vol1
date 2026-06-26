@@ -1,5 +1,5 @@
+import type { OrderStatus } from "../../types";
 import styles from "./OrderStatusTag.module.css";
-import type { OrderStatus } from "./types";
 
 interface OrderStatusTagProps {
   orderStatus: OrderStatus;
