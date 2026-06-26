@@ -45,16 +45,12 @@ export function CheckoutPage() {
   // 최종 금액을 state 에 담아둔다.
   const [finalPrice] = useState(itemTotal + shippingFee - couponDiscount - pointDiscount);
 
-  /**
-   * appliedCoupon은 쿠폰 카드뿐 아니라 결제 금액 계산(couponDiscount → finalPrice)도 읽는 공유 상태라 공통 부모인 CheckoutPage에서 관리
-   * 따라서, 그 값을 바꾸는 이 핸들러도 페이지에 둠. CouponCard는 onApply로 "적용" 요청만 실행하도록 분리
-   */
+  //appliedCoupon은 쿠폰 카드뿐 아니라 결제 금액 계산(couponDiscount → finalPrice)도 읽는 공유 상태라 공통 부모인 CheckoutPage에서 관리
+  //따라서, 그 값을 바꾸는 이 핸들러도 페이지에 둠. CouponCard는 onApply로 "적용" 요청만 실행하도록 분리
   const handleApplyCoupon = (code: string) => {
     const found = COUPONS.find((c) => c.code === code.trim());
-    /**
-     * 못 찾은 경우를 먼저 처리(early return). 성공 케이스를 아래에 두어 "검증 먼저, 처리 나중"
-     * 단일 적용 방식이라, 새 코드가 틀리면 기존에 적용된 쿠폰도 무효화
-     */
+    //못 찾은 경우를 먼저 처리(early return). 성공 케이스를 아래에 두어 "검증 먼저, 처리 나중"
+    //단일 적용 방식이라, 새 코드가 틀리면 기존에 적용된 쿠폰도 무효화
     if (!found) {
       alert("존재하지 않는 쿠폰이에요");
       setAppliedCoupon(null);

@@ -8,10 +8,8 @@ interface PointsCardProps {
   onPointInputChange: (value: number) => void;
 }
 
-/**
- * usePoint·pointInput 둘 다 checkoutPage에서 관리
- * 두 값 모두 금액 계산(pointDiscount)이 실시간으로 읽어야 하는 공유 상태라, 카드는 자체 상태 없이 값과 변경 콜백만 받아 입력 UI를 그림
- */
+// usePoint·pointInput 둘 다 checkoutPage에서 관리
+// 두 값 모두 금액 계산(pointDiscount)이 실시간으로 읽어야 하는 공유 상태라, 카드는 자체 상태 없이 값과 변경 콜백만 받아 입력 UI를 그림
 export function PointsCard({
   point,
   usePoint,
