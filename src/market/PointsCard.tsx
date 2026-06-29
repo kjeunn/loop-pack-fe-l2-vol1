@@ -34,6 +34,7 @@ export function PointsCard({
         {usePoint ? (
           <input
             type="number"
+            min={0}
             value={pointInput}
             onChange={(e) => onPointInputChange(Number(e.target.value))}
           />
