@@ -18,7 +18,7 @@
   margin: 8px 0 20px;
 }
 
-/* 공용 행 레이아웃 — OrderLineRow와 최근 주문 카드 등 여러 곳이 공유하므로 common에 둠 */
+/* 공용 행 레이아웃 — OrderItemRow·AmountRow·최근 주문 카드 등 여러 곳이 공유하므로 common에 둠 */
 .checkout .line {
   display: flex;
   align-items: center;

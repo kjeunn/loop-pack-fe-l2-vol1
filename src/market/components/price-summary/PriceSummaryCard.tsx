@@ -1,7 +1,7 @@
 import { Card } from "@/market/card";
-import { OrderLineRow } from "@/market/components/order/OrderLineRow";
 import { Price } from "@/market/Price";
 
+import { AmountRow } from "./AmountRow";
 import styles from "./PriceSummaryCard.module.css";
 
 interface PriceSummary {
@@ -31,22 +31,16 @@ export function PriceSummaryCard({ summary }: PriceSummaryCardProps) {
 
   return (
     <Card>
-      <Card.Title>결제 금액</Card.Title>
+      <Card.Header>
+        <Card.Title>결제 금액</Card.Title>
+      </Card.Header>
       <Card.Body>
-        <OrderLineRow type="subtotal" label="상품 금액" amount={itemTotal} />
-        <OrderLineRow type="shipping" label="배송비" amount={shippingFee} />
+        <AmountRow label="상품 금액" amount={itemTotal} />
+        <AmountRow label="배송비" amount={shippingFee} />
         {couponCode ? (
-          <OrderLineRow
-            type="coupon"
-            label="쿠폰 할인"
-            amount={couponDiscount}
-            isDiscount
-            couponCode={couponCode}
-          />
+          <AmountRow label="쿠폰 할인" amount={couponDiscount} isDiscount caption={couponCode} />
         ) : null}
-        {pointApplied ? (
-          <OrderLineRow type="point" label="적립금 사용" amount={pointDiscount} isDiscount />
-        ) : null}
+        {pointApplied ? <AmountRow label="적립금 사용" amount={pointDiscount} isDiscount /> : null}
         <div className={styles.total}>
           <span>최종 결제 금액</span>
           <Price amount={finalPrice} />

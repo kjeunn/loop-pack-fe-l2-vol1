@@ -19,7 +19,9 @@ export function PointsCard({
 }: PointsCardProps) {
   return (
     <Card>
-      <Card.Title>적립금</Card.Title>
+      <Card.Header>
+        <Card.Title>적립금</Card.Title>
+      </Card.Header>
       <Card.Body>
         <label>
           <input

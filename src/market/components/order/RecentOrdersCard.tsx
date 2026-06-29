@@ -6,7 +6,9 @@ import { OrderStatusTag } from "./OrderStatusTag";
 export function RecentOrdersCard() {
   return (
     <Card>
-      <Card.Title>최근 주문</Card.Title>
+      <Card.Header>
+        <Card.Title>최근 주문</Card.Title>
+      </Card.Header>
       <Card.Body>
         {PAST_ORDERS.map((o) => (
           <div key={o.id} className="line">
