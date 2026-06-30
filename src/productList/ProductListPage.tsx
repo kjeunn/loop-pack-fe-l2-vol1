@@ -9,6 +9,9 @@ import { getProductBadges } from "./utils/productBadges";
 
 import "./ProductListPage.css";
 
+// 검색어를 정규식에 안전하게 넣기 위한 escape (특수문자로 인한 RegExp 크래시 방지)
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export function ProductListPage() {
   // ─── 서버 상태 (직접 관리) ──────────────────────────────
   const [products, setProducts] = useState<Product[]>([]);
@@ -275,7 +278,7 @@ export function ProductListPage() {
             // ─── 검색어 하이라이팅 로직 인라인 ──────────
             const highlightMatch = (text: string) => {
               if (!searchQuery) return <>{text}</>;
-              const parts = text.split(new RegExp(`(${searchQuery})`, "gi"));
+              const parts = text.split(new RegExp(`(${escapeRegExp(searchQuery)})`, "gi"));
               return (
                 <>
                   {parts.map((part, i) =>
