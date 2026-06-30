@@ -1,55 +1,9 @@
 import { useEffect, useState } from "react";
 
+import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
+import type { CategoryValue, Product, ProductListResponse, SortBy } from "./types";
+
 import "./ProductListPage.css";
-
-// ─────────────────────────────────────────────────────────
-// 타입도 한 파일에 (실무에서 흔히 보는 모습)
-// ─────────────────────────────────────────────────────────
-
-type Product = {
-  id: number;
-  name: string;
-  category: "electronics" | "fashion" | "home" | "beauty";
-  price: number;
-  originalPrice?: number;
-  stock: number;
-  imageUrl: string;
-  createdAt: string;
-  rating: number;
-  reviewCount: number;
-};
-
-type ProductListResponse = {
-  products: Product[];
-  totalCount: number;
-};
-
-type SortBy = "latest" | "popular" | "price-asc" | "price-desc";
-
-// ─────────────────────────────────────────────────────────
-// 카테고리 / 정렬 옵션 — 컴포넌트 안에 들고 다닌다
-// ─────────────────────────────────────────────────────────
-
-const CATEGORIES: { value: "all" | Product["category"]; label: string }[] = [
-  { value: "all", label: "전체" },
-  { value: "electronics", label: "전자제품" },
-  { value: "fashion", label: "패션" },
-  { value: "home", label: "홈" },
-  { value: "beauty", label: "뷰티" },
-];
-
-const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: "latest", label: "최신순" },
-  { value: "popular", label: "인기순" },
-  { value: "price-asc", label: "가격 낮은순" },
-  { value: "price-desc", label: "가격 높은순" },
-];
-
-const PAGE_SIZE = 12;
-
-// ─────────────────────────────────────────────────────────
-// 500줄+ 컴포넌트 — UI, 비즈니스 로직, API, 포맷, 도메인 규칙이 한 파일에
-// ─────────────────────────────────────────────────────────
 
 export function ProductListPage() {
   // ─── 서버 상태 (직접 관리) ──────────────────────────────
@@ -59,7 +13,7 @@ export function ProductListPage() {
   const [error, setError] = useState<Error | null>(null);
 
   // ─── 필터 상태 ──────────────────────────────────────────
-  const [category, setCategory] = useState<"all" | Product["category"]>("all");
+  const [category, setCategory] = useState<CategoryValue>("all");
   const [minPrice, setMinPrice] = useState<number | "">("");
   const [maxPrice, setMaxPrice] = useState<number | "">("");
   const [sortBy, setSortBy] = useState<SortBy>("latest");
@@ -160,7 +114,7 @@ export function ProductListPage() {
     window.history.replaceState(null, "", `?${params.toString()}`);
   }, [category, searchQuery, page, sortBy, minPrice, maxPrice, inStockOnly]);
 
-  const handleCategoryChange = (cat: "all" | Product["category"]) => {
+  const handleCategoryChange = (cat: CategoryValue) => {
     setCategory(cat);
     setPage(1);
   };
