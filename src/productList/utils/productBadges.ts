@@ -6,11 +6,11 @@ import type { Product } from "../types";
 const ONE_DAY_MS = 1000 * 60 * 60 * 24;
 
 const NEW_WITHIN_DAYS = 7;
-const ALMOST_SOLD_OUT_STOCK = 5;
-const HOT_DISCOUNT_RATE = 30;
-const BEST_RATING = 4.5;
-const BEST_REVIEW_COUNT = 100;
-const FREE_SHIPPING_PRICE = 50000;
+const MAX_ALMOST_SOLD_OUT_STOCK = 5;
+const MIN_HOT_DISCOUNT_RATE = 30;
+const MIN_BEST_RATING = 4.5;
+const MIN_BEST_REVIEW_COUNT = 100;
+const MIN_FREE_SHIPPING_PRICE = 50000;
 
 export interface ProductBadges {
   discountRate: number;
@@ -30,11 +30,11 @@ export function getProductBadges(product: Product, now: number = Date.now()): Pr
   const daysSinceCreated = Math.floor((now - new Date(product.createdAt).getTime()) / ONE_DAY_MS);
 
   const isNew = daysSinceCreated <= NEW_WITHIN_DAYS;
-  const isHot = discountRate >= HOT_DISCOUNT_RATE;
-  const isBest = product.rating >= BEST_RATING && product.reviewCount >= BEST_REVIEW_COUNT;
+  const isHot = discountRate >= MIN_HOT_DISCOUNT_RATE;
+  const isBest = product.rating >= MIN_BEST_RATING && product.reviewCount >= MIN_BEST_REVIEW_COUNT;
   const isSoldOut = product.stock === 0;
-  const isAlmostSoldOut = product.stock > 0 && product.stock <= ALMOST_SOLD_OUT_STOCK;
-  const isFreeShipping = product.price >= FREE_SHIPPING_PRICE;
+  const isAlmostSoldOut = product.stock > 0 && product.stock <= MAX_ALMOST_SOLD_OUT_STOCK;
+  const isFreeShipping = product.price >= MIN_FREE_SHIPPING_PRICE;
 
   return {
     discountRate,
