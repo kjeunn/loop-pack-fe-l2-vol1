@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
+import { useWishlist } from "./hooks/useWishlist";
 import { fetchProducts } from "./services/productApi";
 import type { CategoryValue, Product, SortBy } from "./types";
 import { formatPrice } from "./utils/formatPrice";
@@ -31,15 +32,7 @@ export function ProductListPage() {
   const [inStockOnly, setInStockOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // ─── 위시리스트 (localStorage 동기화) ───────────────────
-  const [wishlist, setWishlist] = useState<number[]>(() => {
-    try {
-      const stored = localStorage.getItem("wishlist");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const { wishlist, toggleWishlist } = useWishlist();
 
   // ─── 최근 본 상품 (localStorage 동기화) ─────────────────
   const [recentlyViewed, setRecentlyViewed] = useState<number[]>(() => {
@@ -77,15 +70,6 @@ export function ProductListPage() {
     };
     loadProducts();
   }, [category, minPrice, maxPrice, sortBy, searchQuery, page, inStockOnly]);
-
-  // ─── 위시리스트가 바뀔 때마다 localStorage 동기화 ───────
-  useEffect(() => {
-    try {
-      localStorage.setItem("wishlist", JSON.stringify(wishlist));
-    } catch {
-      // localStorage 사용 불가 시 무시
-    }
-  }, [wishlist]);
 
   // ─── 최근 본 상품도 localStorage 동기화 ─────────────────
   useEffect(() => {
@@ -158,12 +142,6 @@ export function ProductListPage() {
     setSearchQuery("");
     setInStockOnly(false);
     setPage(1);
-  };
-
-  const handleWishlistToggle = (productId: number) => {
-    setWishlist((prev) =>
-      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId],
-    );
   };
 
   const handleProductClick = (productId: number) => {
@@ -373,7 +351,7 @@ export function ProductListPage() {
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleWishlistToggle(product.id);
+                        toggleWishlist(product.id);
                       }}
                       aria-label="위시리스트 토글"
                     >
