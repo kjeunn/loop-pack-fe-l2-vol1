@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
-import type { CategoryValue, Product, ProductListResponse, SortBy } from "./types";
+import { fetchProducts } from "./services/productApi";
+import type { CategoryValue, Product, SortBy } from "./types";
 import { formatPrice } from "./utils/formatPrice";
 import { getProductBadges } from "./utils/productBadges";
 
@@ -51,22 +52,19 @@ export function ProductListPage() {
   });
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const loadProducts = async () => {
       setIsLoading(true);
       setError(null);
-      const params = new URLSearchParams({
-        category,
-        sort: sortBy,
-        q: searchQuery,
-        page: String(page),
-        size: String(PAGE_SIZE),
-      });
-      if (minPrice !== "") params.set("minPrice", String(minPrice));
-      if (maxPrice !== "") params.set("maxPrice", String(maxPrice));
       try {
-        const res = await fetch(`/api/products?${params.toString()}`);
-        if (!res.ok) throw new Error(`API 호출 실패 (status: ${res.status})`);
-        const data: ProductListResponse = await res.json();
+        const data = await fetchProducts({
+          category,
+          sortBy,
+          searchQuery,
+          page,
+          pageSize: PAGE_SIZE,
+          minPrice,
+          maxPrice,
+        });
         // 클라이언트에서 추가 필터링 — "재고 있는 것만" 토글
         const filtered = inStockOnly ? data.products.filter((p) => p.stock > 0) : data.products;
         setProducts(filtered);
@@ -77,7 +75,7 @@ export function ProductListPage() {
         setIsLoading(false);
       }
     };
-    fetchProducts();
+    loadProducts();
   }, [category, minPrice, maxPrice, sortBy, searchQuery, page, inStockOnly]);
 
   // ─── 위시리스트가 바뀔 때마다 localStorage 동기화 ───────
