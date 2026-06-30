@@ -1,5 +1,5 @@
 // [분리 근거] 상품 도메인 규칙(할인율·NEW·HOT·BEST·품절·무료배송) 계산.
-// 렌더 본문에 인라인으로 흩어져 있던 비즈니스 규칙이라, 화면과 무관한 순수 계산으로 utils에 모으고
+// 렌더 본문에 인라인으로 흩어져 있던 비즈니스 규칙이라, 화면과 무관한 도메인 계산으로 utils에 모으고
 // 흩어진 매직넘버를 명명 상수로 드러냈다. 호출부는 raw product만 넘기고 계산 결과를 쓰기만 한다.
 import type { Product } from "../types";
 
@@ -22,12 +22,13 @@ export interface ProductBadges {
   isFreeShipping: boolean;
 }
 
-// now를 인자로 받아 순수 함수로 유지(같은 입력 → 같은 결과, 테스트 용이).
-export function getProductBadges(product: Product, now: number = Date.now()): ProductBadges {
+export function getProductBadges(product: Product): ProductBadges {
   const discountRate = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
     : 0;
-  const daysSinceCreated = Math.floor((now - new Date(product.createdAt).getTime()) / ONE_DAY_MS);
+  const createdDate = new Date(product.createdAt);
+  const now = new Date();
+  const daysSinceCreated = Math.floor((now.getTime() - createdDate.getTime()) / ONE_DAY_MS);
 
   const isNew = daysSinceCreated <= NEW_WITHIN_DAYS;
   const isHot = discountRate >= MIN_HOT_DISCOUNT_RATE;
