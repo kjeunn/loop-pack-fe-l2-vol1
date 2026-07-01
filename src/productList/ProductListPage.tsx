@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
+import { useProductQuery } from "./hooks/useProductQuery";
 import { useProducts } from "./hooks/useProducts";
 import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
 import { useUrlQuerySync } from "./hooks/useUrlQuerySync";
 import { useWishlist } from "./hooks/useWishlist";
-import type { CategoryValue, SortBy } from "./types";
+import type { SortBy } from "./types";
 import { formatPrice } from "./utils/formatPrice";
 import { getProductBadges } from "./utils/productBadges";
 
@@ -15,20 +16,25 @@ import "./ProductListPage.css";
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export function ProductListPage() {
-  // ─── 필터 상태 ──────────────────────────────────────────
-  const [category, setCategory] = useState<CategoryValue>("all");
-  const [minPrice, setMinPrice] = useState<number | "">("");
-  const [maxPrice, setMaxPrice] = useState<number | "">("");
-  const [sortBy, setSortBy] = useState<SortBy>("latest");
+  const {
+    category,
+    minPrice,
+    maxPrice,
+    sortBy,
+    searchQuery,
+    inStockOnly,
+    page,
+    onCategoryChange,
+    onMinPriceChange,
+    onMaxPriceChange,
+    onSortChange,
+    onSearchChange,
+    onInStockOnlyChange,
+    onPageChange,
+    onResetFilters,
+  } = useProductQuery();
 
-  // ─── 검색 상태 ──────────────────────────────────────────
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // ─── 페이지네이션 상태 ──────────────────────────────────
-  const [page, setPage] = useState(1);
-
-  // ─── 옵션 토글 ──────────────────────────────────────────
-  const [inStockOnly, setInStockOnly] = useState(false);
+  // 그리드/리스트 표시 토글 — 쿼리·URL과 무관한 화면 상태라 페이지가 소유.
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { wishlist, toggleWishlist } = useWishlist();
@@ -53,52 +59,6 @@ export function ProductListPage() {
   }, [page]);
 
   useUrlQuerySync({ category, searchQuery, page, sortBy, minPrice, maxPrice, inStockOnly });
-
-  const handleCategoryChange = (cat: CategoryValue) => {
-    setCategory(cat);
-    setPage(1);
-  };
-
-  const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value;
-    setMinPrice(v === "" ? "" : Number(v));
-    setPage(1);
-  };
-
-  const handleMaxPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value;
-    setMaxPrice(v === "" ? "" : Number(v));
-    setPage(1);
-  };
-
-  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortBy(e.target.value as SortBy);
-    setPage(1);
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-    setPage(1);
-  };
-
-  const handleInStockToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInStockOnly(e.target.checked);
-    setPage(1);
-  };
-
-  const handlePageChange = (next: number) => {
-    setPage(next);
-  };
-
-  const handleResetFilters = () => {
-    setCategory("all");
-    setMinPrice("");
-    setMaxPrice("");
-    setSortBy("latest");
-    setSearchQuery("");
-    setInStockOnly(false);
-    setPage(1);
-  };
 
   // ─── 페이지네이션 계산 (인라인) ─────────────────────────
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -140,7 +100,7 @@ export function ProductListPage() {
               <button
                 key={cat.value}
                 className={category === cat.value ? "active" : ""}
-                onClick={() => handleCategoryChange(cat.value)}
+                onClick={() => onCategoryChange(cat.value)}
               >
                 {cat.label}
               </button>
@@ -155,7 +115,9 @@ export function ProductListPage() {
               type="number"
               placeholder="최소"
               value={minPrice}
-              onChange={handleMinPriceChange}
+              onChange={(e) =>
+                onMinPriceChange(e.target.value === "" ? "" : Number(e.target.value))
+              }
               min={0}
             />
             <span>~</span>
@@ -163,7 +125,9 @@ export function ProductListPage() {
               type="number"
               placeholder="최대"
               value={maxPrice}
-              onChange={handleMaxPriceChange}
+              onChange={(e) =>
+                onMaxPriceChange(e.target.value === "" ? "" : Number(e.target.value))
+              }
               min={0}
             />
           </div>
@@ -180,12 +144,16 @@ export function ProductListPage() {
               fontSize: 13,
             }}
           >
-            <input type="checkbox" checked={inStockOnly} onChange={handleInStockToggle} />
+            <input
+              type="checkbox"
+              checked={inStockOnly}
+              onChange={(e) => onInStockOnlyChange(e.target.checked)}
+            />
             재고 있는 것만
           </label>
         </div>
 
-        <button className="reset-button" onClick={handleResetFilters}>
+        <button className="reset-button" onClick={onResetFilters}>
           필터 초기화
         </button>
       </section>
@@ -196,10 +164,10 @@ export function ProductListPage() {
           type="search"
           placeholder="상품 검색..."
           value={searchQuery}
-          onChange={handleSearchChange}
+          onChange={(e) => onSearchChange(e.target.value)}
           className="search-input"
         />
-        <select value={sortBy} onChange={handleSortChange}>
+        <select value={sortBy} onChange={(e) => onSortChange(e.target.value as SortBy)}>
           {SORT_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -317,34 +285,30 @@ export function ProductListPage() {
       {/* ─── 페이지네이션 ───────────────────────────────── */}
       {totalPages > 1 && (
         <nav className="pagination">
-          <button onClick={() => handlePageChange(1)} disabled={page === 1} aria-label="첫 페이지">
+          <button onClick={() => onPageChange(1)} disabled={page === 1} aria-label="첫 페이지">
             «
           </button>
           <button
-            onClick={() => handlePageChange(page - 1)}
+            onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
             aria-label="이전 페이지"
           >
             ‹
           </button>
           {pageNumbers.map((p) => (
-            <button
-              key={p}
-              className={p === page ? "active" : ""}
-              onClick={() => handlePageChange(p)}
-            >
+            <button key={p} className={p === page ? "active" : ""} onClick={() => onPageChange(p)}>
               {p}
             </button>
           ))}
           <button
-            onClick={() => handlePageChange(page + 1)}
+            onClick={() => onPageChange(page + 1)}
             disabled={page === totalPages}
             aria-label="다음 페이지"
           >
             ›
           </button>
           <button
-            onClick={() => handlePageChange(totalPages)}
+            onClick={() => onPageChange(totalPages)}
             disabled={page === totalPages}
             aria-label="마지막 페이지"
           >
