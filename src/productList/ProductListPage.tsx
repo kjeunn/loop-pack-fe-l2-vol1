@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { HighlightedText } from "./components/HighlightedText";
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
 import { useProductQuery } from "./hooks/useProductQuery";
 import { useProducts } from "./hooks/useProducts";
@@ -11,9 +12,6 @@ import { formatPrice } from "./utils/formatPrice";
 import { getProductBadges } from "./utils/productBadges";
 
 import "./ProductListPage.css";
-
-// 검색어를 정규식에 안전하게 넣기 위한 escape (특수문자로 인한 RegExp 크래시 방지)
-const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export function ProductListPage() {
   const {
@@ -189,25 +187,6 @@ export function ProductListPage() {
           <div className="empty">조건에 맞는 상품이 없습니다.</div>
         ) : (
           filteredProducts.map((product) => {
-            // ─── 검색어 하이라이팅 로직 인라인 ──────────
-            const highlightMatch = (text: string) => {
-              if (!searchQuery) return <>{text}</>;
-              const parts = text.split(new RegExp(`(${escapeRegExp(searchQuery)})`, "gi"));
-              return (
-                <>
-                  {parts.map((part, i) =>
-                    part.toLowerCase() === searchQuery.toLowerCase() ? (
-                      <mark key={i} style={{ background: "#fff176", padding: 0 }}>
-                        {part}
-                      </mark>
-                    ) : (
-                      part
-                    ),
-                  )}
-                </>
-              );
-            };
-
             const badges = getProductBadges(product);
             const formattedPrice = formatPrice(product.price);
             const formattedOriginal = product.originalPrice
@@ -236,7 +215,9 @@ export function ProductListPage() {
                 </div>
 
                 <div className="card-body">
-                  <h3 className="product-name">{highlightMatch(product.name)}</h3>
+                  <h3 className="product-name">
+                    <HighlightedText text={product.name} query={searchQuery} />
+                  </h3>
                   <div className="price-area">
                     {formattedOriginal && (
                       <span className="original-price">{formattedOriginal}</span>
