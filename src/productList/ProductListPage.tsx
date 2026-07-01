@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { ProductCard } from "./components/ProductCard";
+import { ProductGrid } from "./components/ProductGrid";
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
 import { useProductQuery } from "./hooks/useProductQuery";
 import { useProducts } from "./hooks/useProducts";
@@ -177,25 +177,14 @@ export function ProductListPage() {
       </section>
 
       {/* ─── 상품 그리드 ────────────────────────────────── */}
-      <section
-        className="product-grid"
-        style={viewMode === "list" ? { gridTemplateColumns: "1fr" } : undefined}
-      >
-        {filteredProducts.length === 0 ? (
-          <div className="empty">조건에 맞는 상품이 없습니다.</div>
-        ) : (
-          filteredProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              query={searchQuery}
-              isWished={wishlist.includes(product.id)}
-              onToggleWishlist={toggleWishlist}
-              onSelect={addRecentlyViewed}
-            />
-          ))
-        )}
-      </section>
+      <ProductGrid
+        products={filteredProducts}
+        viewMode={viewMode}
+        query={searchQuery}
+        wishlist={wishlist}
+        onToggleWishlist={toggleWishlist}
+        onSelect={addRecentlyViewed}
+      />
 
       {/* ─── 페이지네이션 ───────────────────────────────── */}
       {totalPages > 1 && (
