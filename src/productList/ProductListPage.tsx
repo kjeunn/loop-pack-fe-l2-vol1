@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
+import { useProducts } from "./hooks/useProducts";
 import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
 import { useWishlist } from "./hooks/useWishlist";
-import { fetchProducts } from "./services/productApi";
-import type { CategoryValue, Product, SortBy } from "./types";
+import type { CategoryValue, SortBy } from "./types";
 import { formatPrice } from "./utils/formatPrice";
 import { getProductBadges } from "./utils/productBadges";
 
@@ -14,12 +14,6 @@ import "./ProductListPage.css";
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export function ProductListPage() {
-  // ─── 서버 상태 (직접 관리) ──────────────────────────────
-  const [products, setProducts] = useState<Product[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
   // ─── 필터 상태 ──────────────────────────────────────────
   const [category, setCategory] = useState<CategoryValue>("all");
   const [minPrice, setMinPrice] = useState<number | "">("");
@@ -39,32 +33,18 @@ export function ProductListPage() {
   const { wishlist, toggleWishlist } = useWishlist();
   const { addRecentlyViewed } = useRecentlyViewed();
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await fetchProducts({
-          category,
-          sortBy,
-          searchQuery,
-          page,
-          pageSize: PAGE_SIZE,
-          minPrice,
-          maxPrice,
-        });
-        // 클라이언트에서 추가 필터링 — "재고 있는 것만" 토글
-        const filtered = inStockOnly ? data.products.filter((p) => p.stock > 0) : data.products;
-        setProducts(filtered);
-        setTotalCount(data.totalCount);
-      } catch (err) {
-        setError(err as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadProducts();
-  }, [category, minPrice, maxPrice, sortBy, searchQuery, page, inStockOnly]);
+  const { products, totalCount, isLoading, error } = useProducts({
+    category,
+    sortBy,
+    searchQuery,
+    page,
+    pageSize: PAGE_SIZE,
+    minPrice,
+    maxPrice,
+  });
+
+  // "재고 있는 것만" 토글은 클라이언트 파생 필터 — 서버 재요청 없이 렌더 시 거른다.
+  const filteredProducts = inStockOnly ? products.filter((p) => p.stock > 0) : products;
 
   // ─── 페이지가 바뀔 때 스크롤 맨 위로 ────────────────────
   useEffect(() => {
@@ -247,10 +227,10 @@ export function ProductListPage() {
         className="product-grid"
         style={viewMode === "list" ? { gridTemplateColumns: "1fr" } : undefined}
       >
-        {products.length === 0 ? (
+        {filteredProducts.length === 0 ? (
           <div className="empty">조건에 맞는 상품이 없습니다.</div>
         ) : (
-          products.map((product) => {
+          filteredProducts.map((product) => {
             // ─── 검색어 하이라이팅 로직 인라인 ──────────
             const highlightMatch = (text: string) => {
               if (!searchQuery) return <>{text}</>;
