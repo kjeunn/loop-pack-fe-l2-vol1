@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
+import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
 import { useWishlist } from "./hooks/useWishlist";
 import { fetchProducts } from "./services/productApi";
 import type { CategoryValue, Product, SortBy } from "./types";
@@ -36,16 +37,7 @@ export function ProductListPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { wishlist, toggleWishlist } = useWishlist();
-
-  // ─── 최근 본 상품 (localStorage 동기화) ─────────────────
-  const [recentlyViewed, setRecentlyViewed] = useState<number[]>(() => {
-    try {
-      const stored = localStorage.getItem("recentlyViewed");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const { addRecentlyViewed } = useRecentlyViewed();
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -73,15 +65,6 @@ export function ProductListPage() {
     };
     loadProducts();
   }, [category, minPrice, maxPrice, sortBy, searchQuery, page, inStockOnly]);
-
-  // ─── 최근 본 상품도 localStorage 동기화 ─────────────────
-  useEffect(() => {
-    try {
-      localStorage.setItem("recentlyViewed", JSON.stringify(recentlyViewed));
-    } catch {
-      // localStorage 사용 불가 시 무시
-    }
-  }, [recentlyViewed]);
 
   // ─── 페이지가 바뀔 때 스크롤 맨 위로 ────────────────────
   useEffect(() => {
@@ -145,13 +128,6 @@ export function ProductListPage() {
     setSearchQuery("");
     setInStockOnly(false);
     setPage(1);
-  };
-
-  const handleProductClick = (productId: number) => {
-    setRecentlyViewed((prev) => {
-      const without = prev.filter((id) => id !== productId);
-      return [productId, ...without].slice(0, 10);
-    });
   };
 
   // ─── 페이지네이션 계산 (인라인) ─────────────────────────
@@ -305,7 +281,7 @@ export function ProductListPage() {
               <article
                 key={product.id}
                 className="product-card"
-                onClick={() => handleProductClick(product.id)}
+                onClick={() => addRecentlyViewed(product.id)}
               >
                 <div className="image-wrap">
                   <img src={product.imageUrl} alt={product.name} loading="lazy" />
