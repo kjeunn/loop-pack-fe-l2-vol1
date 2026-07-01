@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
 import { useProducts } from "./hooks/useProducts";
 import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
+import { useUrlQuerySync } from "./hooks/useUrlQuerySync";
 import { useWishlist } from "./hooks/useWishlist";
 import type { CategoryValue, SortBy } from "./types";
 import { formatPrice } from "./utils/formatPrice";
@@ -51,18 +52,7 @@ export function ProductListPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [page]);
 
-  // ─── 필터·검색·페이지 상태가 바뀔 때마다 URL 쿼리 동기화 ──
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (category !== "all") params.set("category", category);
-    if (searchQuery) params.set("q", searchQuery);
-    if (page > 1) params.set("page", String(page));
-    if (sortBy !== "latest") params.set("sort", sortBy);
-    if (minPrice !== "") params.set("minPrice", String(minPrice));
-    if (maxPrice !== "") params.set("maxPrice", String(maxPrice));
-    if (inStockOnly) params.set("inStock", "true");
-    window.history.replaceState(null, "", `?${params.toString()}`);
-  }, [category, searchQuery, page, sortBy, minPrice, maxPrice, inStockOnly]);
+  useUrlQuerySync({ category, searchQuery, page, sortBy, minPrice, maxPrice, inStockOnly });
 
   const handleCategoryChange = (cat: CategoryValue) => {
     setCategory(cat);
