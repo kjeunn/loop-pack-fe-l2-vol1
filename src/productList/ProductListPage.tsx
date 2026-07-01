@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { HighlightedText } from "./components/HighlightedText";
+import { ProductCard } from "./components/ProductCard";
 import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
 import { useProductQuery } from "./hooks/useProductQuery";
 import { useProducts } from "./hooks/useProducts";
@@ -8,8 +8,6 @@ import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
 import { useUrlQuerySync } from "./hooks/useUrlQuerySync";
 import { useWishlist } from "./hooks/useWishlist";
 import type { SortBy } from "./types";
-import { formatPrice } from "./utils/formatPrice";
-import { getProductBadges } from "./utils/productBadges";
 
 import "./ProductListPage.css";
 
@@ -186,80 +184,16 @@ export function ProductListPage() {
         {filteredProducts.length === 0 ? (
           <div className="empty">조건에 맞는 상품이 없습니다.</div>
         ) : (
-          filteredProducts.map((product) => {
-            const badges = getProductBadges(product);
-            const formattedPrice = formatPrice(product.price);
-            const formattedOriginal = product.originalPrice
-              ? formatPrice(product.originalPrice)
-              : null;
-            const isWished = wishlist.includes(product.id);
-
-            return (
-              <article
-                key={product.id}
-                className="product-card"
-                onClick={() => addRecentlyViewed(product.id)}
-              >
-                <div className="image-wrap">
-                  <img src={product.imageUrl} alt={product.name} loading="lazy" />
-                  {badges.discountRate > 0 && (
-                    <span className="badge badge-discount">{badges.discountRate}% 할인</span>
-                  )}
-                  {badges.isNew && <span className="badge badge-new">NEW</span>}
-                  {badges.isHot && <span className="badge badge-hot">특가</span>}
-                  {badges.isBest && <span className="badge badge-best">BEST</span>}
-                  {badges.isSoldOut && <span className="badge badge-soldout">품절</span>}
-                  {!badges.isSoldOut && badges.isAlmostSoldOut && (
-                    <span className="badge badge-warning">품절 임박</span>
-                  )}
-                </div>
-
-                <div className="card-body">
-                  <h3 className="product-name">
-                    <HighlightedText text={product.name} query={searchQuery} />
-                  </h3>
-                  <div className="price-area">
-                    {formattedOriginal && (
-                      <span className="original-price">{formattedOriginal}</span>
-                    )}
-                    <span className="price">{formattedPrice}</span>
-                    {badges.isFreeShipping && (
-                      <span
-                        style={{
-                          marginLeft: 6,
-                          fontSize: 11,
-                          color: "#2e7d32",
-                          fontWeight: 600,
-                        }}
-                      >
-                        무료배송
-                      </span>
-                    )}
-                  </div>
-                  <div className="rating-area">
-                    <span className="rating">★ {product.rating.toFixed(1)}</span>
-                    <span className="review-count">({product.reviewCount.toLocaleString()})</span>
-                    <button
-                      style={{
-                        marginLeft: "auto",
-                        border: "none",
-                        background: "transparent",
-                        cursor: "pointer",
-                        fontSize: 16,
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleWishlist(product.id);
-                      }}
-                      aria-label="위시리스트 토글"
-                    >
-                      {isWished ? "♥" : "♡"}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })
+          filteredProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              query={searchQuery}
+              isWished={wishlist.includes(product.id)}
+              onToggleWishlist={toggleWishlist}
+              onSelect={addRecentlyViewed}
+            />
+          ))
         )}
       </section>
 
