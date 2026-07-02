@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { FilterPanel } from "./components/FilterPanel";
+import { Pagination } from "./components/Pagination";
 import { ProductGrid } from "./components/ProductGrid";
 import { SearchBar } from "./components/SearchBar";
 import { SortSelect } from "./components/SortSelect";
@@ -59,12 +60,9 @@ export function ProductListPage() {
 
   useUrlQuerySync({ category, searchQuery, page, sortBy, minPrice, maxPrice, inStockOnly });
 
-  // ─── 페이지네이션 계산 (인라인) ─────────────────────────
+  // totalPages는 여기서 파생해 Pagination엔 "페이지 수"만 넘긴다.
+  // nav 위젯은 페이지 수만 알면 되고, totalCount·PAGE_SIZE(리스트/페이지 크기 개념)에 결합될 필요가 없다.
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const pageNumbers: number[] = [];
-  const startPage = Math.max(1, page - 2);
-  const endPage = Math.min(totalPages, page + 2);
-  for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
 
   // ─── 로딩/에러는 early return ───────────────────────────
   if (isLoading && products.length === 0) {
@@ -121,39 +119,7 @@ export function ProductListPage() {
       />
 
       {/* ─── 페이지네이션 ───────────────────────────────── */}
-      {totalPages > 1 && (
-        <nav className="pagination">
-          <button onClick={() => onPageChange(1)} disabled={page === 1} aria-label="첫 페이지">
-            «
-          </button>
-          <button
-            onClick={() => onPageChange(page - 1)}
-            disabled={page === 1}
-            aria-label="이전 페이지"
-          >
-            ‹
-          </button>
-          {pageNumbers.map((p) => (
-            <button key={p} className={p === page ? "active" : ""} onClick={() => onPageChange(p)}>
-              {p}
-            </button>
-          ))}
-          <button
-            onClick={() => onPageChange(page + 1)}
-            disabled={page === totalPages}
-            aria-label="다음 페이지"
-          >
-            ›
-          </button>
-          <button
-            onClick={() => onPageChange(totalPages)}
-            disabled={page === totalPages}
-            aria-label="마지막 페이지"
-          >
-            »
-          </button>
-        </nav>
-      )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
 
       {/* ─── 백그라운드 로딩 인디케이터 ─────────────────── */}
       {isLoading && products.length > 0 && (
