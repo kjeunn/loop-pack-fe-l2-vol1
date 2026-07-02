@@ -20,6 +20,8 @@ export function useProducts({
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  // 첫 로딩(한 번도 못 불러온 상태)과 갱신 로딩을 구분하기 위한 플래그.
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -42,10 +44,15 @@ export function useProducts({
         setError(err as Error);
       } finally {
         setIsLoading(false);
+        setHasLoaded(true);
       }
     };
     loadProducts();
   }, [category, minPrice, maxPrice, sortBy, searchQuery, page, pageSize, inStockOnly]);
 
-  return { products, totalCount, isLoading, error };
+  // 아직 첫 결과를 못 받은 상태(로드 전 + 첫 로딩 중).
+  // 마운트 첫 렌더부터 true라 첫 로딩 화면이 곧바로 떠서, 결과 도착 전 빈 화면이 잠깐 비치지 않는다.
+  const isInitialLoading = !hasLoaded;
+
+  return { products, totalCount, isLoading, isInitialLoading, error };
 }

@@ -7,6 +7,7 @@ import { SearchBar } from "./components/SearchBar";
 import { SortSelect } from "./components/SortSelect";
 import { ViewModeToggle } from "./components/ViewModeToggle";
 import { PAGE_SIZE } from "./constants";
+import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { useProductQuery } from "./hooks/useProductQuery";
 import { useProducts } from "./hooks/useProducts";
 import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
@@ -15,6 +16,9 @@ import { useWishlist } from "./hooks/useWishlist";
 import { getTotalPages } from "./utils/getTotalPages";
 
 import "./ProductListPage.css";
+
+// 타이핑이 멈추고 이 시간(ms)이 지나면 검색어를 fetch에 반영한다(입력 중 과요청 방지).
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function ProductListPage() {
   const {
@@ -41,10 +45,13 @@ export function ProductListPage() {
   const { wishlist, toggleWishlist } = useWishlist();
   const { addRecentlyViewed } = useRecentlyViewed();
 
-  const { products, totalCount, isLoading, error } = useProducts({
+  // 검색어는 즉시 상태로 두되(입력창 반응성 유지), fetch를 유발하는 값만 디바운스해 타이핑 중 과요청을 막는다.
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+
+  const { products, totalCount, isLoading, isInitialLoading, error } = useProducts({
     category,
     sortBy,
-    searchQuery,
+    searchQuery: debouncedSearchQuery,
     page,
     pageSize: PAGE_SIZE,
     minPrice,
@@ -64,7 +71,9 @@ export function ProductListPage() {
   const totalPages = getTotalPages(totalCount, PAGE_SIZE);
 
   // ─── 로딩/에러는 early return ───────────────────────────
-  if (isLoading && products.length === 0) {
+  // 전체 화면 로딩은 첫 결과를 받기 전(isInitialLoading)에만 띄운다.
+  // 로드 이후에는 결과가 비어도 UI(헤더·검색·필터)를 유지해 화면이 통째로 사라지지 않게 한다.
+  if (isInitialLoading) {
     return <div className="loading">로딩 중...</div>;
   }
 
@@ -121,7 +130,8 @@ export function ProductListPage() {
       <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
 
       {/* ─── 백그라운드 로딩 인디케이터 ─────────────────── */}
-      {isLoading && products.length > 0 && (
+      {/* 갱신 로딩(첫 로딩 제외)에서는 결과가 비어도 "갱신 중"을 표시한다 */}
+      {isLoading && !isInitialLoading && (
         <div className="background-loading">데이터 갱신 중...</div>
       )}
     </div>
