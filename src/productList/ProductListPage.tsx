@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 
+import { FilterPanel } from "./components/FilterPanel";
 import { ProductGrid } from "./components/ProductGrid";
-import { CATEGORIES, PAGE_SIZE, SORT_OPTIONS } from "./constants";
+import { PAGE_SIZE, SORT_OPTIONS } from "./constants";
 import { useProductQuery } from "./hooks/useProductQuery";
 import { useProducts } from "./hooks/useProducts";
 import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
@@ -88,71 +89,17 @@ export function ProductListPage() {
       </header>
 
       {/* ─── 필터 패널 ──────────────────────────────────── */}
-      <section className="filter-panel">
-        <div className="filter-group">
-          <label>카테고리</label>
-          <div className="category-list">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.value}
-                className={category === cat.value ? "active" : ""}
-                onClick={() => onCategoryChange(cat.value)}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="filter-group">
-          <label>가격 범위</label>
-          <div className="price-range">
-            <input
-              type="number"
-              placeholder="최소"
-              value={minPrice}
-              onChange={(e) =>
-                onMinPriceChange(e.target.value === "" ? "" : Number(e.target.value))
-              }
-              min={0}
-            />
-            <span>~</span>
-            <input
-              type="number"
-              placeholder="최대"
-              value={maxPrice}
-              onChange={(e) =>
-                onMaxPriceChange(e.target.value === "" ? "" : Number(e.target.value))
-              }
-              min={0}
-            />
-          </div>
-        </div>
-
-        <div className="filter-group">
-          <label>옵션</label>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontWeight: 400,
-              fontSize: 13,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={inStockOnly}
-              onChange={(e) => onInStockOnlyChange(e.target.checked)}
-            />
-            재고 있는 것만
-          </label>
-        </div>
-
-        <button className="reset-button" onClick={onResetFilters}>
-          필터 초기화
-        </button>
-      </section>
+      <FilterPanel
+        category={category}
+        minPrice={minPrice}
+        maxPrice={maxPrice}
+        inStockOnly={inStockOnly}
+        onCategoryChange={onCategoryChange}
+        onMinPriceChange={onMinPriceChange}
+        onMaxPriceChange={onMaxPriceChange}
+        onInStockOnlyChange={onInStockOnlyChange}
+        onResetFilters={onResetFilters}
+      />
 
       {/* ─── 검색 + 정렬 + 보기 모드 ───────────────────── */}
       <section className="search-sort">
