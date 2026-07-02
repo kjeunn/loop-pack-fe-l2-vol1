@@ -14,6 +14,7 @@ export function useProducts({
   pageSize,
   minPrice,
   maxPrice,
+  inStockOnly,
 }: ProductQuery) {
   const [products, setProducts] = useState<Product[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -33,6 +34,7 @@ export function useProducts({
           pageSize,
           minPrice,
           maxPrice,
+          inStockOnly,
         });
         setProducts(data.products);
         setTotalCount(data.totalCount);
@@ -43,7 +45,7 @@ export function useProducts({
       }
     };
     loadProducts();
-  }, [category, minPrice, maxPrice, sortBy, searchQuery, page, pageSize]);
+  }, [category, minPrice, maxPrice, sortBy, searchQuery, page, pageSize, inStockOnly]);
 
   return { products, totalCount, isLoading, error };
 }

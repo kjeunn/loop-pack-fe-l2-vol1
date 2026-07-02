@@ -11,6 +11,7 @@ export interface ProductQuery {
   pageSize: number;
   minPrice: number | "";
   maxPrice: number | "";
+  inStockOnly: boolean;
 }
 
 export async function fetchProducts(query: ProductQuery): Promise<ProductListResponse> {
@@ -23,6 +24,7 @@ export async function fetchProducts(query: ProductQuery): Promise<ProductListRes
   });
   if (query.minPrice !== "") params.set("minPrice", String(query.minPrice));
   if (query.maxPrice !== "") params.set("maxPrice", String(query.maxPrice));
+  if (query.inStockOnly) params.set("inStock", "true");
 
   const res = await fetch(`/api/products?${params.toString()}`);
   if (!res.ok) throw new Error(`API 호출 실패 (status: ${res.status})`);

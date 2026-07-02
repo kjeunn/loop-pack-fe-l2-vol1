@@ -49,10 +49,8 @@ export function ProductListPage() {
     pageSize: PAGE_SIZE,
     minPrice,
     maxPrice,
+    inStockOnly,
   });
-
-  // "재고 있는 것만" 토글은 클라이언트 파생 필터 — 서버 재요청 없이 렌더 시 거른다.
-  const filteredProducts = inStockOnly ? products.filter((p) => p.stock > 0) : products;
 
   // ─── 페이지가 바뀔 때 스크롤 맨 위로 ────────────────────
   useEffect(() => {
@@ -111,7 +109,7 @@ export function ProductListPage() {
 
       {/* ─── 상품 그리드 ────────────────────────────────── */}
       <ProductGrid
-        products={filteredProducts}
+        products={products}
         viewMode={viewMode}
         query={searchQuery}
         wishlist={wishlist}
