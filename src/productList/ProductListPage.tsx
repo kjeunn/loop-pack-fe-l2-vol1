@@ -12,6 +12,7 @@ import { useProducts } from "./hooks/useProducts";
 import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
 import { useUrlQuerySync } from "./hooks/useUrlQuerySync";
 import { useWishlist } from "./hooks/useWishlist";
+import { getTotalPages } from "./utils/getTotalPages";
 
 import "./ProductListPage.css";
 
@@ -62,7 +63,7 @@ export function ProductListPage() {
 
   // totalPages는 여기서 파생해 Pagination엔 "페이지 수"만 넘긴다.
   // nav 위젯은 페이지 수만 알면 되고, totalCount·PAGE_SIZE(리스트/페이지 크기 개념)에 결합될 필요가 없다.
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages = getTotalPages(totalCount, PAGE_SIZE);
 
   // ─── 로딩/에러는 early return ───────────────────────────
   if (isLoading && products.length === 0) {
