@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 
 import { FilterPanel } from "./components/FilterPanel";
 import { ProductGrid } from "./components/ProductGrid";
-import { PAGE_SIZE, SORT_OPTIONS } from "./constants";
+import { SearchBar } from "./components/SearchBar";
+import { SortSelect } from "./components/SortSelect";
+import { ViewModeToggle } from "./components/ViewModeToggle";
+import { PAGE_SIZE } from "./constants";
 import { useProductQuery } from "./hooks/useProductQuery";
 import { useProducts } from "./hooks/useProducts";
 import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
 import { useUrlQuerySync } from "./hooks/useUrlQuerySync";
 import { useWishlist } from "./hooks/useWishlist";
-import type { SortBy } from "./types";
 
 import "./ProductListPage.css";
 
@@ -103,24 +105,9 @@ export function ProductListPage() {
 
       {/* ─── 검색 + 정렬 + 보기 모드 ───────────────────── */}
       <section className="search-sort">
-        <input
-          type="search"
-          placeholder="상품 검색..."
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="search-input"
-        />
-        <select value={sortBy} onChange={(e) => onSortChange(e.target.value as SortBy)}>
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <select value={viewMode} onChange={(e) => setViewMode(e.target.value as "grid" | "list")}>
-          <option value="grid">그리드</option>
-          <option value="list">리스트</option>
-        </select>
+        <SearchBar searchQuery={searchQuery} onSearchChange={onSearchChange} />
+        <SortSelect sortBy={sortBy} onSortChange={onSortChange} />
+        <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </section>
 
       {/* ─── 상품 그리드 ────────────────────────────────── */}
