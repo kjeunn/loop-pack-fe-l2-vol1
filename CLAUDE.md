@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> AI가 코드를 생성·수정할 때 따르는 행동 규칙. 규칙의 "왜"와 프로젝트 구조 설명은 `CONTRIBUTING.md` 참고.
+> AI가 코드를 생성·수정할 때 따르는 행동 규칙. 규칙의 "왜"와 프로젝트 구조 설명은 `CONVENTION.md` 참고.
 
 ## 💡 제1원칙
 
@@ -56,18 +56,10 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 
 ## ✍️ 네이밍
 
+> "왜"는 `CONVENTION.md`(네이밍이 이런 이유) 참고.
+
 - **콜백 prop은 `on~`, 핸들러는 `handle~`.** 부모의 `handle~`을 자식의 `on~`에 연결.
-
-```tsx
-<CouponCard onApply={handleApplyCoupon} />
-```
-
-- **props 타입은 `컴포넌트명+Props`로 분리.** 인라인 타입 금지. 외부에서 안 쓰면 `export` 안 함.
-
-```ts
-  interface CouponCardProps { ... }
-```
-
+- **props 타입은 `컴포넌트명+Props`로 분리.** 인라인 타입 금지, 외부에서 안 쓰면 `export` 안 함.
 - **의미 기반 네이밍.** 구현(`input`/`section`)이 아니라 의미(`amount`/`card`)로.
 
 ## 💬 주석
