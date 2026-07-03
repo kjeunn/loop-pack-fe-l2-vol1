@@ -22,6 +22,8 @@ export function useProducts({
   const [error, setError] = useState<Error | null>(null);
   // 첫 로딩(한 번도 못 불러온 상태)과 갱신 로딩을 구분하기 위한 플래그.
   const [hasLoaded, setHasLoaded] = useState(false);
+  // retry가 증가시키는 트리거. 쿼리가 그대로여도 effect를 다시 돌려 재요청하게 한다.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -48,11 +50,14 @@ export function useProducts({
       }
     };
     loadProducts();
-  }, [category, minPrice, maxPrice, sortBy, searchQuery, page, pageSize, inStockOnly]);
+  }, [category, minPrice, maxPrice, sortBy, searchQuery, page, pageSize, inStockOnly, reloadKey]);
 
   // 아직 첫 결과를 못 받은 상태(로드 전 + 첫 로딩 중).
   // 마운트 첫 렌더부터 true라 첫 로딩 화면이 곧바로 떠서, 결과 도착 전 빈 화면이 잠깐 비치지 않는다.
   const isInitialLoading = !hasLoaded;
 
-  return { products, totalCount, isLoading, isInitialLoading, error };
+  // retry: reloadKey를 바꿔 effect를 다시 돌린다(새로고침 없이 같은 쿼리로 재요청 — 일시적 API 오류 복구용).
+  const retry = () => setReloadKey((key) => key + 1);
+
+  return { products, totalCount, isLoading, isInitialLoading, error, retry };
 }

@@ -48,7 +48,7 @@ export function ProductListPage() {
   // 검색어는 즉시 상태로 두되(입력창 반응성 유지), fetch를 유발하는 값만 디바운스해 타이핑 중 과요청을 막는다.
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 
-  const { products, totalCount, isLoading, isInitialLoading, error } = useProducts({
+  const { products, totalCount, isLoading, isInitialLoading, error, retry } = useProducts({
     category,
     sortBy,
     searchQuery: debouncedSearchQuery,
@@ -81,7 +81,7 @@ export function ProductListPage() {
     return (
       <div className="error">
         <p>오류가 발생했습니다: {error.message}</p>
-        <button onClick={() => window.location.reload()}>다시 시도</button>
+        <button onClick={() => retry()}>다시 시도</button>
       </div>
     );
   }
