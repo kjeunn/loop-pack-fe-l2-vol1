@@ -26,6 +26,10 @@ export function useProducts({
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    // 필터를 빠르게 바꾸면 여러 요청이 겹친다. cleanup에서 ignore를 세워,
+    // 뒤늦게 도착한 옛 응답이 최신 응답을 덮어쓰지 않게 막는다(race condition 방어).
+    // (실제 네트워크 취소는 AbortController가 하지만, mock fetch가 signal을 무시해 여기선 ignore로 방어)
+    let ignore = false;
     const loadProducts = async () => {
       setIsLoading(true);
       setError(null);
@@ -40,16 +44,23 @@ export function useProducts({
           maxPrice,
           inStockOnly,
         });
+        if (ignore) return;
         setProducts(data.products);
         setTotalCount(data.totalCount);
       } catch (err) {
+        if (ignore) return;
         setError(err as Error);
       } finally {
-        setIsLoading(false);
-        setHasLoaded(true);
+        if (!ignore) {
+          setIsLoading(false);
+          setHasLoaded(true);
+        }
       }
     };
     loadProducts();
+    return () => {
+      ignore = true;
+    };
   }, [category, minPrice, maxPrice, sortBy, searchQuery, page, pageSize, inStockOnly, reloadKey]);
 
   // 아직 첫 결과를 못 받은 상태(로드 전 + 첫 로딩 중).
