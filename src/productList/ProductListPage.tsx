@@ -67,6 +67,16 @@ export function ProductListPage() {
   // nav 위젯은 페이지 수만 알면 되고, totalCount·PAGE_SIZE(리스트/페이지 크기 개념)에 결합될 필요가 없다.
   const totalPages = getTotalPages(totalCount, PAGE_SIZE);
 
+  // ?page=99처럼 마지막 페이지를 넘는 URL로 들어오면 결과가 비어 빈 화면이 된다.
+  // 마지막 페이지가 아니라 첫 페이지로 되돌린다: 필터 변경 시 첫 페이지로 가는 규칙과 같은 "정상 진입점"이고,
+  // 명백히 범위를 벗어난 값이라 요청한 페이지 근처를 지켜줄 의미가 약하다(첫 페이지는 항상 존재).
+  // 로딩 전 totalPages는 신뢰할 수 없어 첫 응답을 받은 뒤(!isInitialLoading)에만 판정한다.
+  useEffect(() => {
+    if (!isInitialLoading && page > totalPages) {
+      onPageChange(1);
+    }
+  }, [isInitialLoading, page, totalPages, onPageChange]);
+
   // ─── 로딩/에러는 early return ───────────────────────────
   // 전체 화면 로딩은 첫 결과를 받기 전(isInitialLoading)에만 띄운다.
   // 로드 이후에는 결과가 비어도 UI(헤더·검색·필터)를 유지해 화면이 통째로 사라지지 않게 한다.
