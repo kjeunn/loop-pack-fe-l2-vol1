@@ -10,7 +10,7 @@ productList/
 ├─ components/  FilterPanel · SearchBar · SortSelect · ViewModeToggle
 │               ProductGrid · ProductCard · HighlightedText · Pagination
 ├─ hooks/       useProductQuery · useProducts · useWishlist
-│               useRecentlyViewed · useUrlQuerySync · useDebouncedValue
+│               useRecentlyViewed · useDebouncedValue
 ├─ services/    productApi
 └─ utils/       formatPrice · getTotalPages · productBadges
 ```
@@ -23,10 +23,10 @@ productList/
 | `CATEGORIES`·`SORT_OPTIONS`·`PAGE_SIZE`                    | 설정/콘텐츠        | `constants.ts`                            | 옵션 콘텐츠·레이어 횡단 값                       |
 | `fetch` + `URLSearchParams` 조립                           | API                | `services/productApi`                     | 통신 구현 캡슐화(DIP)                            |
 | `products`·`totalCount`·`isLoading`·`error` + fetch effect | 서버 상태          | `useProducts`                             | "언제·어떻게 불러오나"                           |
-| `category`·가격·`sort`·`search`·`page`·`inStock` + 핸들러  | 클라 상태          | `useProductQuery`                         | 공유 불변식(필터→1페이지), URL 복원              |
+| `category`·가격·`sort`·`search`·`page`·`inStock` + 핸들러  | 클라 상태          | `useProductQuery`                         | 공유 불변식(필터→1페이지), URL 단일 소스         |
 | `wishlist` + localStorage                                  | 클라 상태          | `useWishlist`                             | 저장 동기화                                      |
 | `recentlyViewed` + localStorage                            | 클라 상태          | `useRecentlyViewed`                       | 저장 동기화                                      |
-| URL 쿼리 동기화 effect                                     | 외부 시스템 동기화 | `useUrlQuerySync`                         | 브라우저 히스토리                                |
+| URL 쿼리 동기화                                            | 외부 시스템 동기화 | 라우터 `useSearchParams`                  | `useProductQuery`가 URL을 단일 소스로 읽고 씀    |
 | 검색어 디바운스                                            | 로직               | `useDebouncedValue`                       | 범용 재사용                                      |
 | 할인율·NEW·HOT·품절·무료배송 규칙                          | 비즈니스 로직      | `utils/productBadges`                     | 순수(JSX 무관)                                   |
 | 가격 포맷                                                  | 표시 변환          | `utils/formatPrice`                       | 순수                                             |
@@ -63,12 +63,18 @@ productList/
 - **page>1에서 검색 시작 시 fetch 2번** — 검색이 즉시 `page`를 1로 리셋해 한 번, 디바운스 확정으로 한 번 요청한다. 리셋은 존재하지 않는 페이지가 빈 결과로 보이는 것을 막는 정확성 조치라 유지하고, 소량 중복은 감수한다. 없애려면 리셋을 디바운스 확정 시점에 묶어야 해 복잡도가 커진다.
 - **`viewMode` 미유지(새로고침 시 그리드로)** — 원본의 URL 동기화에도 viewMode는 없었고 그대로 두었다. viewMode는 "무엇을 보여줄지"가 아니라 "어떻게 보여줄지"라 URL에 넣지 않는다고 판단했다. 유지하려면 localStorage가 적합하다고 생각한다.
 
+### 멘토 피드백 반영 (후속)
+
+1. **빠른 필터 변경 시 옛 응답이 최신을 덮어씀(race condition)**
+   재현: 필터를 연속으로 빠르게 전환. 원인: 여러 fetch가 겹칠 때 늦게 도착한 옛 응답이 최신 응답을 덮어쓴다. 수정: effect cleanup에서 `ignore` 플래그를 세워 **뒤늦은 응답의 setState를 무시**한다.
+2. **뒤로가기·앞으로가기로 필터가 복원되지 않음**
+   재현: 필터 변경 후 브라우저 뒤로가기. 원인: URL에 **쓰기만** 하고(useUrlQuerySync) 상태는 별도 `useState`가 소유해, 히스토리 이동(popstate)이 상태에 반영 안 됨. 수정: `useUrlQuerySync`·hydrate를 걷어내고 **라우터 `useSearchParams`로 URL을 단일 소스화** — 읽기·쓰기를 URL 하나로 모아 뒤로/앞으로가기가 그대로 필터에 반영된다.
+
 ## 3. 분리 근거 (한 문장 요약)
 
 - **`useProducts`** — 쿼리로 서버 상품 상태(목록·개수·로딩·에러)를 불러오고 `retry`를 제공한다.
-- **`useProductQuery`** — 필터·검색·정렬·페이지 상태를 소유한다(필터 변경 시 첫 페이지로 리셋, 초기값은 URL에서 복원).
+- **`useProductQuery`** — 필터·검색·정렬·페이지 상태를 소유한다. URL이 단일 소스라 라우터 `useSearchParams`로 직접 읽고 쓴다(뒤로가기·앞으로가기·새로고침·공유 유지). 필터 변경 시 첫 페이지로 리셋한다.
 - **`useWishlist` / `useRecentlyViewed`** — 각 목록을 localStorage와 동기화하며 토글/추가를 제공한다.
-- **`useUrlQuerySync`** — 필터 상태를 URL 쿼리에 반영한다.
 - **`useDebouncedValue`** — 값 변경을 지정 지연만큼 미뤄 반영한다.
 - **분리하지 않음**: `viewMode`(페이지만 읽음), 스크롤 effect(1줄·`page` 종속) → 페이지가 소유.
 

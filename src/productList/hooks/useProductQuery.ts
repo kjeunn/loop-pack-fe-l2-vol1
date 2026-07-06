@@ -1,7 +1,10 @@
 // [분리 근거] 상품 목록 쿼리 상태(필터·검색·정렬·페이지)를 한 곳에서 소유한다.
-// 이 값들은 "아무거나 바뀌면 첫 페이지로"라는 불변식을 공유하고, 같은 소비자(서버 fetch·URL 동기화)가
+// 이 값들은 "아무거나 바뀌면 첫 페이지로"라는 불변식을 공유하고, 같은 소비자(서버 fetch)가
 // 함께 읽으므로 하나의 hook으로 묶는다. viewMode(표시 토글)는 쿼리와 무관해 여기 두지 않는다.
-import { useState } from "react";
+//
+// URL이 단일 소스다. useState로 별도 상태를 두지 않고 useSearchParams에서 직접 읽어,
+// 뒤로가기·앞으로가기(popstate)로 URL이 바뀌면 화면도 따라 바뀐다. 새로고침·공유·북마크도 자동 유지된다.
+import { useSearchParams } from "react-router-dom";
 
 import { CATEGORIES, SORT_OPTIONS } from "../constants";
 import type { CategoryValue, SortBy } from "../types";
@@ -15,68 +18,75 @@ function parsePrice(raw: string | null): number | "" {
   return Number.isNaN(value) ? "" : value;
 }
 
-// URL 쿼리에서 초기 필터 상태를 복원한다(새로고침·공유·북마크로 열어도 조건 유지).
-// 없거나 유효하지 않은 값은 기본값으로 떨어진다.
-function readInitialQuery() {
-  const params = new URLSearchParams(window.location.search);
+// 기본값이면 param을 지워 URL을 깨끗하게 유지한다(?category=all 같은 노이즈 방지).
+function setOrDelete(params: URLSearchParams, key: string, value: string, isDefault: boolean) {
+  if (isDefault) params.delete(key);
+  else params.set(key, value);
+}
 
-  const categoryParam = params.get("category") as CategoryValue | null;
-  const sortParam = params.get("sort") as SortBy | null;
-  const pageParam = Number(params.get("page"));
-
-  return {
-    category: categoryParam && CATEGORY_VALUES.includes(categoryParam) ? categoryParam : "all",
-    minPrice: parsePrice(params.get("minPrice")),
-    maxPrice: parsePrice(params.get("maxPrice")),
-    sortBy: sortParam && SORT_VALUES.includes(sortParam) ? sortParam : "latest",
-    searchQuery: params.get("q") ?? "",
-    inStockOnly: params.get("inStock") === "true",
-    page: Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1,
-  };
+interface UpdateOptions {
+  // 타입 입력(검색·가격)은 매 글자마다 히스토리를 쌓지 않도록 현재 항목을 교체한다.
+  replace?: boolean;
+  // 페이지 자체를 옮길 때만 false. 그 외 필터 변경은 항상 첫 페이지로 되돌린다.
+  resetPage?: boolean;
 }
 
 export function useProductQuery() {
-  // 초기값은 URL에서 한 번 복원(readInitialQuery). 이후 변경은 아래 상태가 소유한다.
-  const [initialQuery] = useState(readInitialQuery);
-  const [category, setCategory] = useState<CategoryValue>(initialQuery.category);
-  const [minPrice, setMinPrice] = useState<number | "">(initialQuery.minPrice);
-  const [maxPrice, setMaxPrice] = useState<number | "">(initialQuery.maxPrice);
-  const [sortBy, setSortBy] = useState<SortBy>(initialQuery.sortBy);
-  const [searchQuery, setSearchQuery] = useState(initialQuery.searchQuery);
-  const [inStockOnly, setInStockOnly] = useState(initialQuery.inStockOnly);
-  const [page, setPage] = useState(initialQuery.page);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // page 상태를 필터·검색과 같은 hook에 두는 이유:
-  // "필터가 바뀌면 첫 페이지로"라는 불변식을 공유하고, 같은 소비자(서버 fetch·URL 동기화)가 함께 읽는다.
-  // 별도 usePagination으로 쪼개면 필터 변경 시 그 hook의 setPage를 호출해야 해 hook 간 결합이 생긴다.
-  // (페이지 번호 UI는 별도 컴포넌트로 빼되, 사용처가 하나뿐이라 전역 공통 컴포넌트로 승격하지는 않는다.)
+  const categoryParam = searchParams.get("category") as CategoryValue | null;
+  const sortParam = searchParams.get("sort") as SortBy | null;
+  const pageParam = Number(searchParams.get("page"));
 
-  // 필터·검색·정렬이 바뀌면 현재 페이지에 결과가 없을 수 있으므로 항상 첫 페이지로 되돌린다.
-  // setter를 "값 설정 + 첫 페이지로"로 감싸 반복되는 리셋 규칙을 한 곳에 모은다.
-  const withPageReset =
-    <T>(setValue: (value: T) => void) =>
-    (value: T) => {
-      setValue(value);
-      setPage(1);
-    };
+  // 유효하지 않은 값은 기본값으로 떨어뜨려 읽는다(URL을 그대로 신뢰하지 않는다).
+  const category: CategoryValue =
+    categoryParam && CATEGORY_VALUES.includes(categoryParam) ? categoryParam : "all";
+  const sortBy: SortBy = sortParam && SORT_VALUES.includes(sortParam) ? sortParam : "latest";
+  const minPrice = parsePrice(searchParams.get("minPrice"));
+  const maxPrice = parsePrice(searchParams.get("maxPrice"));
+  const searchQuery = searchParams.get("q") ?? "";
+  const inStockOnly = searchParams.get("inStock") === "true";
+  const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
 
-  const onCategoryChange = withPageReset(setCategory);
-  const onMinPriceChange = withPageReset(setMinPrice);
-  const onMaxPriceChange = withPageReset(setMaxPrice);
-  const onSortChange = withPageReset(setSortBy);
-  const onSearchChange = withPageReset(setSearchQuery);
-  const onInStockOnlyChange = withPageReset(setInStockOnly);
-  const onPageChange = (next: number) => setPage(next);
-
-  const onResetFilters = () => {
-    setCategory("all");
-    setMinPrice("");
-    setMaxPrice("");
-    setSortBy("latest");
-    setSearchQuery("");
-    setInStockOnly(false);
-    setPage(1);
+  // 필터·검색·정렬이 바뀌면 현재 페이지에 결과가 없을 수 있으므로 항상 첫 페이지로 되돌린다(resetPage).
+  // setSearchParams에 함수형 업데이트를 넘겨 직전 URL 위에서 갱신한다.
+  const updateParams = (mutate: (params: URLSearchParams) => void, options: UpdateOptions = {}) => {
+    const { resetPage = true, replace = false } = options;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        mutate(next);
+        if (resetPage) next.delete("page");
+        return next;
+      },
+      { replace },
+    );
   };
+
+  const onCategoryChange = (next: CategoryValue) =>
+    updateParams((params) => setOrDelete(params, "category", next, next === "all"));
+  const onSortChange = (next: SortBy) =>
+    updateParams((params) => setOrDelete(params, "sort", next, next === "latest"));
+  const onInStockOnlyChange = (next: boolean) =>
+    updateParams((params) => setOrDelete(params, "inStock", "true", !next));
+
+  const onMinPriceChange = (next: number | "") =>
+    updateParams((params) => setOrDelete(params, "minPrice", String(next), next === ""), {
+      replace: true,
+    });
+  const onMaxPriceChange = (next: number | "") =>
+    updateParams((params) => setOrDelete(params, "maxPrice", String(next), next === ""), {
+      replace: true,
+    });
+  const onSearchChange = (next: string) =>
+    updateParams((params) => setOrDelete(params, "q", next, next === ""), { replace: true });
+
+  const onPageChange = (next: number) =>
+    updateParams((params) => setOrDelete(params, "page", String(next), next <= 1), {
+      resetPage: false,
+    });
+
+  const onResetFilters = () => setSearchParams({});
 
   return {
     category,

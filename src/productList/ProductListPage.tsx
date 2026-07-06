@@ -11,7 +11,6 @@ import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { useProductQuery } from "./hooks/useProductQuery";
 import { useProducts } from "./hooks/useProducts";
 import { useRecentlyViewed } from "./hooks/useRecentlyViewed";
-import { useUrlQuerySync } from "./hooks/useUrlQuerySync";
 import { useWishlist } from "./hooks/useWishlist";
 import { getTotalPages } from "./utils/getTotalPages";
 
@@ -63,8 +62,6 @@ export function ProductListPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [page]);
-
-  useUrlQuerySync({ category, searchQuery, page, sortBy, minPrice, maxPrice, inStockOnly });
 
   // totalPages는 여기서 파생해 Pagination엔 "페이지 수"만 넘긴다.
   // nav 위젯은 페이지 수만 알면 되고, totalCount·PAGE_SIZE(리스트/페이지 크기 개념)에 결합될 필요가 없다.
