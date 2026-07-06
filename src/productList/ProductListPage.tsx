@@ -47,7 +47,7 @@ export function ProductListPage() {
   // 검색어는 즉시 상태로 두되(입력창 반응성 유지), fetch를 유발하는 값만 디바운스해 타이핑 중 과요청을 막는다.
   const debouncedSearchQuery = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 
-  const { products, totalCount, isLoading, isInitialLoading, error, retry } = useProducts({
+  const { products, totalCount, status, isInitialLoading, error, retry } = useProducts({
     category,
     sortBy,
     searchQuery: debouncedSearchQuery,
@@ -84,10 +84,10 @@ export function ProductListPage() {
     return <div className="loading">로딩 중...</div>;
   }
 
-  if (error) {
+  if (status === "error") {
     return (
       <div className="error">
-        <p>오류가 발생했습니다: {error.message}</p>
+        <p>오류가 발생했습니다: {error?.message}</p>
         <button onClick={() => retry()}>다시 시도</button>
       </div>
     );
@@ -138,7 +138,7 @@ export function ProductListPage() {
 
       {/* ─── 백그라운드 로딩 인디케이터 ─────────────────── */}
       {/* 갱신 로딩(첫 로딩 제외)에서는 결과가 비어도 "갱신 중"을 표시한다 */}
-      {isLoading && !isInitialLoading && (
+      {status === "loading" && !isInitialLoading && (
         <div className="background-loading">데이터 갱신 중...</div>
       )}
     </div>

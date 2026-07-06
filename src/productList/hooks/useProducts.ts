@@ -6,6 +6,9 @@ import { useEffect, useState } from "react";
 import { fetchProducts, type ProductQuery } from "../services/productApi";
 import type { Product } from "../types";
 
+// 로딩·성공·에러는 동시에 참일 수 없는 배타 상태라 boolean 여러 개 대신 하나의 enum으로 든다.
+export type ProductsStatus = "loading" | "success" | "error";
+
 export function useProducts({
   category,
   sortBy,
@@ -18,7 +21,7 @@ export function useProducts({
 }: ProductQuery) {
   const [products, setProducts] = useState<Product[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<ProductsStatus>("loading");
   const [error, setError] = useState<Error | null>(null);
   // 첫 로딩(한 번도 못 불러온 상태)과 갱신 로딩을 구분하기 위한 플래그.
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -31,7 +34,7 @@ export function useProducts({
     // (실제 네트워크 취소는 AbortController가 하지만, mock fetch가 signal을 무시해 여기선 ignore로 방어)
     let ignore = false;
     const loadProducts = async () => {
-      setIsLoading(true);
+      setStatus("loading");
       setError(null);
       try {
         const data = await fetchProducts({
@@ -47,14 +50,14 @@ export function useProducts({
         if (ignore) return;
         setProducts(data.products);
         setTotalCount(data.totalCount);
+        setStatus("success");
       } catch (err) {
         if (ignore) return;
         setError(err as Error);
+        setStatus("error");
       } finally {
-        if (!ignore) {
-          setIsLoading(false);
-          setHasLoaded(true);
-        }
+        // 로딩 종료는 status 전이(success/error)로 표현되므로 여기선 첫 로딩 여부만 기록한다.
+        if (!ignore) setHasLoaded(true);
       }
     };
     loadProducts();
@@ -70,5 +73,5 @@ export function useProducts({
   // retry: reloadKey를 바꿔 effect를 다시 돌린다(새로고침 없이 같은 쿼리로 재요청 — 일시적 API 오류 복구용).
   const retry = () => setReloadKey((key) => key + 1);
 
-  return { products, totalCount, isLoading, isInitialLoading, error, retry };
+  return { products, totalCount, status, isInitialLoading, error, retry };
 }
