@@ -1,10 +1,7 @@
-# CONTRIBUTING.md
+# CONVENTION.md
 
 > 프로젝트 구조·컨벤션과 그 "왜"를 사람이 파악하기 위한 문서.
 > AI 코드 생성 규칙(요약)은 `CLAUDE.md` 참고.
-
-- **규칙/컨벤션**: 잘 바뀌지 않는 약속.
-- **구조 개요**: 현재 시점 스냅샷. 코드가 바뀌면 함께 갱신한다.
 
 ---
 
@@ -32,35 +29,5 @@
 
 ## 🧩 컴포넌트 패턴
 
-- **Card compound.** 카드 UI는 `Card` + `Card.Header`/`Card.Title`/`Card.Body`로 구성한다. 머리말 구성(제목만 / 제목+버튼 / 제목 없음)이 카드마다 달라 호출자가 자유 조합해야 하기 때문. `Card.Title`은 내부에서 `useId`로 `aria-labelledby`를 자동 연결해 `<section>`을 접근성 랜드마크로 노출한다.
+- **Card compound.** 카드 UI는 `Card` + `Card.Header`/`Card.Title`/`Card.Body`로 구성한다. 머리말 구성(제목만 / 제목+버튼 / 제목 없음)이 카드마다 달라 호출자가 자유 조합해야 하기 때문. `Card.Title`은 heading으로 문서 구조를 제공한다. 카드마다 랜드마크를 켜면 화면 하나에 랜드마크가 늘어 오히려 탐색 노이즈라, `<section>`을 이름 있는 랜드마크로 노출하지는 않는다.
 - **상태 소유권.** "이 값을 누가 읽는가"로 위치를 정한다. 입력 중 임시값은 자식이, 여러 곳이 읽는 결과값은 공통 부모가 소유. (상세 규칙은 `CLAUDE.md`)
-
----
-
-## 🗺️ 현재 구조 개요
-
-> ⚠️ **현재 시점 스냅샷.** 구조가 바뀌면 이 섹션도 함께 갱신한다.
-
-```
-market/
-  CheckoutPage.tsx          # 상태·금액 계산·카드 조합
-  OrderCompletePage.tsx     # 주문 완료 화면
-  common.css                # 공용 base 스타일(전역)
-  data.ts                   # 데이터 상수만 (유틸 함수 X)
-  types.ts                  # 공용 타입
-
-  components/
-    card/                   # compound 베이스
-    order/                  # OrderItemsCard, RecentOrdersCard, OrderLineRow, OrderStatusTag(+module)
-    delivery/               # DeliveryCard(+module, AddressForm/Field 포함), DeliveryMemoCard, DeliveryMemo
-    terms/                  # TermsCard(+module)
-    price-summary/          # PriceSummaryCard(+module)
-    CouponCard.tsx          # 단일 컴포넌트 (평평하게)
-    PointsCard.tsx
-    PaymentMethodCard.tsx
-    Price.tsx               # 공용 금액 표시
-```
-
-- **`CheckoutPage`**: 공유 상태와 금액 계산을 소유, 카드들을 조합. 각 섹션의 UI·내부 상태는 카드가 담당.
-- **`Price`**: 금액 표시 전용. 등급 할인 등 계산은 호출부(페이지)가 책임.
-- **`data.ts`**: 데이터 상수만(유틸 함수는 두지 않음).

@@ -40,7 +40,8 @@ export function CheckoutPage() {
   const couponDiscount = appliedCoupon ? appliedCoupon.discount : 0;
 
   // ── 적립금 정책 ──────────────────────────────
-  const pointDiscount = usePoint ? Math.min(pointInput, member.point, itemTotal) : 0;
+  // Math.min만으론 음수 입력이 음수 할인(=결제액 증가)이 되므로 0으로 하한을 둠.
+  const pointDiscount = usePoint ? Math.max(0, Math.min(pointInput, member.point, itemTotal)) : 0;
 
   // 변경 전: 최종 금액을 state 에 담아둔다.
   // 변경 후: 파생 값이라 state가 아니라 렌더 시 계산. itemTotal/할인 등이 바뀌면 자동으로 다시 계산됨.

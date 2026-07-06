@@ -17,7 +17,9 @@ export function CouponCard({ appliedCoupon, onApply }: CouponCardProps) {
 
   return (
     <Card>
-      <Card.Title>쿠폰</Card.Title>
+      <Card.Header>
+        <Card.Title>쿠폰</Card.Title>
+      </Card.Header>
       <Card.Body>
         <div className="row">
           <input

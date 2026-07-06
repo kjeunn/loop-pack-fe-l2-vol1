@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> AI가 코드를 생성·수정할 때 따르는 행동 규칙. 규칙의 "왜"와 프로젝트 구조 설명은 `CONTRIBUTING.md` 참고.
+> AI가 코드를 생성·수정할 때 따르는 행동 규칙. 규칙의 "왜"와 프로젝트 구조 설명은 `CONVENTION.md` 참고.
 
 ## 💡 제1원칙
 
@@ -56,18 +56,10 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 
 ## ✍️ 네이밍
 
+> "왜"는 `CONVENTION.md`(네이밍이 이런 이유) 참고.
+
 - **콜백 prop은 `on~`, 핸들러는 `handle~`.** 부모의 `handle~`을 자식의 `on~`에 연결.
-
-```tsx
-<CouponCard onApply={handleApplyCoupon} />
-```
-
-- **props 타입은 `컴포넌트명+Props`로 분리.** 인라인 타입 금지. 외부에서 안 쓰면 `export` 안 함.
-
-```ts
-  interface CouponCardProps { ... }
-```
-
+- **props 타입은 `컴포넌트명+Props`로 분리.** 인라인 타입 금지, 외부에서 안 쓰면 `export` 안 함.
 - **의미 기반 네이밍.** 구현(`input`/`section`)이 아니라 의미(`amount`/`card`)로.
 
 ## 💬 주석
@@ -82,7 +74,7 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 - **한 커밋에 한 가지.** 리팩토링·기능·버그수정 안 섞음. type(`fix`/`refactor`/`feat`) 갈리면 커밋도 분리.
 - **이동과 수정 분리.** 순수 이동 먼저 커밋(git이 이동으로 추적) 후 수정.
 - **작업은 함께, 커밋은 분리.** `git add -p`로 성격별로. 단 얽혀서 한 조각씩 떼면 깨지는 작업(CSS 분리 등)은 한 단위로.
-- **이유는 본문에.** 제목은 "무엇을 했나"만. 모호한 수식("직관적으로") 금지.
+- **이유는 본문에, 단 주석과 중복 금지.** 제목은 "무엇을 했나"만(`type: 동사 + 대상`), 모호한 수식("직관적으로") 금지. 본문에는 코드·주석에 없는 맥락만 적는다. 이미 코드 주석에 남긴 분리 근거 등을 되풀이하지 말 것. 추가 설명이 꼭 필요한 게 아니면 제목만으로 끝낸다.
 
 ## 🚫 하네스
 

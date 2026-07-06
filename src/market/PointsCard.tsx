@@ -19,7 +19,9 @@ export function PointsCard({
 }: PointsCardProps) {
   return (
     <Card>
-      <Card.Title>적립금</Card.Title>
+      <Card.Header>
+        <Card.Title>적립금</Card.Title>
+      </Card.Header>
       <Card.Body>
         <label>
           <input
@@ -32,6 +34,7 @@ export function PointsCard({
         {usePoint ? (
           <input
             type="number"
+            min={0}
             value={pointInput}
             onChange={(e) => onPointInputChange(Number(e.target.value))}
           />

@@ -22,7 +22,9 @@ export function PaymentMethodCard() {
 
   return (
     <Card>
-      <Card.Title>결제수단</Card.Title>
+      <Card.Header>
+        <Card.Title>결제수단</Card.Title>
+      </Card.Header>
       <Card.Body>
         {PAYMENT_METHODS.map((m) => (
           <label key={m}>

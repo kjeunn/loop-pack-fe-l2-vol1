@@ -1,0 +1,92 @@
+// [분리 근거] 필터 입력 UI(카테고리·가격 범위·재고 옵션·초기화) 묶음.
+// 상태는 useProductQuery가 소유하고, 이 컴포넌트는 값과 on~ 콜백만 받아 입력 UI를 그린다(표현 전용).
+import { CATEGORIES } from "../constants";
+import type { CategoryValue } from "../types";
+
+interface FilterPanelProps {
+  category: CategoryValue;
+  minPrice: number | "";
+  maxPrice: number | "";
+  inStockOnly: boolean;
+  onCategoryChange: (category: CategoryValue) => void;
+  onMinPriceChange: (value: number | "") => void;
+  onMaxPriceChange: (value: number | "") => void;
+  onInStockOnlyChange: (checked: boolean) => void;
+  onResetFilters: () => void;
+}
+
+export function FilterPanel({
+  category,
+  minPrice,
+  maxPrice,
+  inStockOnly,
+  onCategoryChange,
+  onMinPriceChange,
+  onMaxPriceChange,
+  onInStockOnlyChange,
+  onResetFilters,
+}: FilterPanelProps) {
+  return (
+    <section className="filter-panel">
+      <div className="filter-group">
+        <label>카테고리</label>
+        <div className="category-list">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.value}
+              className={category === cat.value ? "active" : ""}
+              onClick={() => onCategoryChange(cat.value)}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="filter-group">
+        <label>가격 범위</label>
+        <div className="price-range">
+          <input
+            type="number"
+            placeholder="최소"
+            value={minPrice}
+            onChange={(e) => onMinPriceChange(e.target.value === "" ? "" : Number(e.target.value))}
+            min={0}
+          />
+          <span>~</span>
+          <input
+            type="number"
+            placeholder="최대"
+            value={maxPrice}
+            onChange={(e) => onMaxPriceChange(e.target.value === "" ? "" : Number(e.target.value))}
+            min={0}
+          />
+        </div>
+      </div>
+
+      <div className="filter-group">
+        <label>옵션</label>
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontWeight: 400,
+            fontSize: 13,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={inStockOnly}
+            onChange={(e) => onInStockOnlyChange(e.target.checked)}
+          />
+          재고 있는 것만
+        </label>
+      </div>
+
+      <button className="reset-button" onClick={onResetFilters}>
+        필터 초기화
+      </button>
+    </section>
+  );
+}
