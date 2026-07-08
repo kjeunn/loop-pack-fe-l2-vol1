@@ -8,7 +8,7 @@
 // - id는 useId로 인스턴스마다 자동 생성 → 한 화면에 여러 개 떠도 안 겹치고 SSR-안전.
 
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type { UseSelectProps, UseSelectReturn } from "./types";
 
@@ -44,6 +44,24 @@ export function useSelect<Item>({
     buffer: "",
     timer: null,
   });
+
+  // 바깥 클릭으로 닫기. document 이벤트 구독이라 effect가 정당하다(외부 시스템 동기화, 파생 계산 아님).
+  // ref 대신 훅이 만든 id로 버튼·메뉴 영역을 판별한다 → 사용처가 ref를 붙일 필요가 없다.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const menuEl = document.getElementById(menuId);
+      const toggleEl = document.getElementById(toggleId);
+      // 버튼·메뉴 안쪽이면 무시, 바깥이면 닫는다.
+      if (menuEl?.contains(target) || toggleEl?.contains(target)) return;
+      // closeMenu 본문과 동일. closeMenu는 매 렌더 새 함수라 dep에 넣으면 리스너가 매번 재구독돼, 인라인으로 둔다.
+      setIsOpen(false);
+      setHighlightedIndex(-1);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    return () => document.removeEventListener("mousedown", onPointerDown);
+  }, [isOpen, menuId, toggleId]);
 
   const isDisabled = (index: number) =>
     index >= 0 && index < items.length ? (isItemDisabled?.(items[index], index) ?? false) : true;
