@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 
+import { DialogDemo } from "@/components/dialog-demo/DialogDemo";
 import { SelectDemo } from "@/components/select-demo/SelectDemo";
 import { SelectDemoSkeleton } from "@/components/select-demo/SelectDemoSkeleton";
 import { getProductOptions } from "@/server/products";
@@ -12,13 +13,19 @@ async function SelectSection() {
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-[560px] px-6 py-16">
-      <h1 className="mb-6 text-2xl font-extrabold">Select 데모</h1>
+    <main className="mx-auto max-w-[560px] space-y-16 px-6 py-16">
+      <section>
+        <h1 className="mb-6 text-2xl font-extrabold">Select</h1>
+        {/* 데이터 로딩은 서버가 하고, 느리면 Suspense가 스켈레톤을 먼저 스트리밍한다. */}
+        <Suspense fallback={<SelectDemoSkeleton />}>
+          <SelectSection />
+        </Suspense>
+      </section>
 
-      {/* 데이터 로딩은 서버가 하고, 느리면 Suspense가 스켈레톤을 먼저 스트리밍한다. */}
-      <Suspense fallback={<SelectDemoSkeleton />}>
-        <SelectSection />
-      </Suspense>
+      <section>
+        <h1 className="mb-6 text-2xl font-extrabold">Dialog</h1>
+        <DialogDemo />
+      </section>
     </main>
   );
 }
