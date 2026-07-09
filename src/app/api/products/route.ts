@@ -23,8 +23,13 @@ const sizeOptions = [
   { id: "SHOE-240", size: 24, stock: 3, deliveryText: "내일(토) 도착보장" },
   { id: "SHOE-250", size: 25, stock: 0 },
   { id: "SHOE-260", size: 26, stock: 12, deliveryText: "내일(토) 도착보장" },
-  { id: "SHOE-270", size: 27, stock: 5, deliveryText: "내일(토) 도착보장" },
-  { id: "SHOE-280", size: 28, stock: 0 },
+  { id: "SHOE-270", size: 27, stock: 0, deliveryText: "내일(토) 도착보장" },
+  { id: "SHOE-280", size: 28, stock: 5, deliveryText: "내일(토) 도착보장" },
+  { id: "SHOE-290", size: 29, stock: 5, deliveryText: "내일(토) 도착보장" },
+  { id: "SHOE-300", size: 30, stock: 5, deliveryText: "내일(토) 도착보장" },
+  { id: "SHOE-310", size: 31, stock: 5, deliveryText: "내일(토) 도착보장" },
+  { id: "SHOE-320", size: 32, stock: 3, deliveryText: "내일(토) 도착보장" },
+  { id: "SHOE-330", size: 33, stock: 5, deliveryText: "내일(토) 도착보장" },
 ];
 
 // select2 — 썸네일 옵션 (실제 이미지 대신 placeholder svg)

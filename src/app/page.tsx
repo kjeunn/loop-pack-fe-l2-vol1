@@ -1,26 +1,60 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { type SizeOption, SizeSelect } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton/Skeleton";
+
+interface OptionsResponse {
+  sizeOptions: SizeOption[];
+}
+
 export default function Home() {
+  const [sizeOptions, setSizeOptions] = useState<SizeOption[]>([]);
+  const [size, setSize] = useState<SizeOption | null>(null);
+  // 초기값 loading이라 effect에서 동기 setState를 안 해도 된다(set-state-in-effect 회피).
+  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+
+  useEffect(() => {
+    // 옵션은 한 번만 fetch해 state에 보관한다(참조 안정 → 선택 참조 비교가 유지됨).
+    let ignore = false;
+    fetch("/api/products")
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: OptionsResponse) => {
+        if (ignore) return;
+        setSizeOptions(data.sizeOptions);
+        setStatus("success");
+      })
+      .catch(() => {
+        if (!ignore) setStatus("error");
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   return (
-    <main style={{ maxWidth: 640, margin: "0 auto", padding: "64px 24px" }}>
-      <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>Commerce</h1>
-      <p style={{ color: "#5a6675", lineHeight: 1.7, marginBottom: 24 }}>
-        4주차부터 여기에 커머스를 쌓아갑니다. 이번 주는 디자인 시스템의 뼈대
-        <b> Select</b>와 <b>Dialog</b>를 직접 만드는 것부터 시작해요.
-      </p>
-      <ul style={{ lineHeight: 2, color: "#18212e", paddingLeft: 18 }}>
-        <li>
-          컴포넌트 자리: <code>src/components/ui/select</code> ·{" "}
-          <code>src/components/ui/dialog</code>
-        </li>
-        <li>
-          mock 백엔드: <code>GET /api/products</code> (<code>src/app/api/products/route.ts</code>)
-        </li>
-        <li>
-          과제 명세: <code>docs/assignments/week-04.md</code>
-        </li>
-      </ul>
-      <p style={{ color: "#8794a3", marginTop: 24, fontSize: 14 }}>
-        구조는 최소 골격만 있어요. 폴더 구성은 각자 근거를 대고 바꾸면 돼요.
-      </p>
+    <main className="mx-auto max-w-[560px] px-6 py-16">
+      <h1 className="mb-6 text-2xl font-extrabold">Select 데모 — 사이즈</h1>
+
+      {status === "loading" && <Skeleton className="h-14 w-full rounded-xl" />}
+      {status === "error" && <p className="text-red-500">옵션을 불러오지 못했습니다.</p>}
+
+      {status === "success" && (
+        <>
+          <SizeSelect label="사이즈" options={sizeOptions} value={size} onChange={setSize} />
+
+          <p className="mt-4 text-gray-600">
+            선택: {size ? `${size.size} (재고 ${size.stock})` : "없음"}
+          </p>
+          <p className="mt-2 text-sm text-gray-400">
+            키보드: 버튼 포커스 → ↑↓ 이동(품절 건너뜀) · Enter 선택 · Esc/바깥클릭 닫기
+          </p>
+        </>
+      )}
     </main>
   );
 }
