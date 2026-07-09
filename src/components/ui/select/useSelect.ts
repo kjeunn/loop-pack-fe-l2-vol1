@@ -63,6 +63,15 @@ export function useSelect<Item>({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [isOpen, menuId, toggleId]);
 
+  // 키보드로 하이라이트가 보이는 영역 밖으로 가면, 그 옵션을 스크롤로 따라가 보이게 한다.
+  // (목록에 max-height가 생겨 스크롤이 있을 때 필요. block:"nearest"라 이미 보이면 안 움직인다.)
+  useEffect(() => {
+    if (!isOpen || highlightedIndex < 0) return;
+    document
+      .getElementById(`${baseId}-item-${highlightedIndex}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, highlightedIndex, baseId]);
+
   const isDisabled = (index: number) =>
     index >= 0 && index < items.length ? (isItemDisabled?.(items[index], index) ?? false) : true;
 
