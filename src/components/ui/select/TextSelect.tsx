@@ -75,14 +75,14 @@ export function TextSelect({ label, options, value, onChange }: TextSelectProps)
                   <strong className="text-lg font-extrabold text-gray-900">
                     {option.price.toLocaleString()}원
                   </strong>
-                  <span className="ml-1.5 text-[13px] text-orange-500">
+                  <span className="ml-1.5 text-[13px] text-gray-400">
                     (1개당 {option.unitPrice.toLocaleString()}원)
                   </span>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {option.freeShipping && (
-                  <span className="rounded-full border border-orange-500 px-2.5 py-1 text-xs font-semibold text-orange-500">
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                     무료배송
                   </span>
                 )}
