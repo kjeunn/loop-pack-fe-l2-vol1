@@ -11,5 +11,6 @@
 // 공개 API(barrel): 헤드리스 훅·타입·변형 컴포넌트를 여기서 모아 내보낸다.
 // 변형(TextSelect·ThumbnailSelect)은 만들면서 아래에 추가한다.
 export { type SizeOption, SizeSelect } from "./SizeSelect";
+export { type ThumbnailOption, ThumbnailSelect } from "./ThumbnailSelect";
 export type { GetItemPropsArgs, UseSelectProps, UseSelectReturn } from "./types";
 export { useSelect } from "./useSelect";

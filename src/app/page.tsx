@@ -2,16 +2,24 @@
 
 import { useEffect, useState } from "react";
 
-import { type SizeOption, SizeSelect } from "@/components/ui/select";
+import {
+  type SizeOption,
+  SizeSelect,
+  type ThumbnailOption,
+  ThumbnailSelect,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton/Skeleton";
 
 interface OptionsResponse {
   sizeOptions: SizeOption[];
+  thumbnailOptions: ThumbnailOption[];
 }
 
 export default function Home() {
   const [sizeOptions, setSizeOptions] = useState<SizeOption[]>([]);
+  const [thumbnailOptions, setThumbnailOptions] = useState<ThumbnailOption[]>([]);
   const [size, setSize] = useState<SizeOption | null>(null);
+  const [thumbnail, setThumbnail] = useState<ThumbnailOption | null>(null);
   // 초기값 loading이라 effect에서 동기 setState를 안 해도 된다(set-state-in-effect 회피).
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
@@ -26,6 +34,7 @@ export default function Home() {
       .then((data: OptionsResponse) => {
         if (ignore) return;
         setSizeOptions(data.sizeOptions);
+        setThumbnailOptions(data.thumbnailOptions);
         setStatus("success");
       })
       .catch(() => {
@@ -38,22 +47,40 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-[560px] px-6 py-16">
-      <h1 className="mb-6 text-2xl font-extrabold">Select 데모 — 사이즈</h1>
+      <h1 className="mb-6 text-2xl font-extrabold">Select 데모</h1>
 
-      {status === "loading" && <Skeleton className="h-14 w-full rounded-xl" />}
+      {status === "loading" && (
+        <div className="space-y-6">
+          <Skeleton className="h-14 w-full rounded-xl" />
+          <Skeleton className="h-14 w-full rounded-xl" />
+        </div>
+      )}
       {status === "error" && <p className="text-red-500">옵션을 불러오지 못했습니다.</p>}
 
       {status === "success" && (
-        <>
-          <SizeSelect label="사이즈" options={sizeOptions} value={size} onChange={setSize} />
+        <div className="space-y-8">
+          <section>
+            <h2 className="mb-2 text-sm font-semibold text-gray-500">사이즈</h2>
+            <SizeSelect label="사이즈" options={sizeOptions} value={size} onChange={setSize} />
+            <p className="mt-2 text-sm text-gray-500">
+              선택: {size ? `${size.size} (재고 ${size.stock})` : "없음"}
+            </p>
+          </section>
 
-          <p className="mt-4 text-gray-600">
-            선택: {size ? `${size.size} (재고 ${size.stock})` : "없음"}
-          </p>
-          <p className="mt-2 text-sm text-gray-400">
-            키보드: 버튼 포커스 → ↑↓ 이동(품절 건너뜀) · Enter 선택 · Esc/바깥클릭 닫기
-          </p>
-        </>
+          <section>
+            <h2 className="mb-2 text-sm font-semibold text-gray-500">썸네일</h2>
+            <ThumbnailSelect
+              label="옵션을 선택해 주세요"
+              options={thumbnailOptions}
+              value={thumbnail}
+              onChange={setThumbnail}
+            />
+            <p className="mt-2 text-sm text-gray-500">
+              선택:{" "}
+              {thumbnail ? `${thumbnail.title} — ${thumbnail.price.toLocaleString()}원` : "없음"}
+            </p>
+          </section>
+        </div>
       )}
     </main>
   );
