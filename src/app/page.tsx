@@ -1,92 +1,35 @@
-"use client";
+import { Suspense } from "react";
 
-import { useEffect, useState } from "react";
-
-import {
-  type SizeOption,
-  SizeSelect,
-  type TextOption,
-  TextSelect,
-  type ThumbnailOption,
-  ThumbnailSelect,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton/Skeleton";
 
-interface OptionsResponse {
-  textOptions: TextOption[];
-  sizeOptions: SizeOption[];
-  thumbnailOptions: ThumbnailOption[];
+import { getProductOptions } from "./api/products/data";
+import { SelectDemo } from "./SelectDemo";
+
+// 데이터를 await하는 서버 컴포넌트. 느린 소스면 이 await 동안 아래 Suspense fallback이 스트리밍된다.
+async function SelectSection() {
+  const options = await getProductOptions();
+  return <SelectDemo options={options} />;
+}
+
+function LoadingSkeletons() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-14 w-full rounded-xl" />
+      <Skeleton className="h-14 w-full rounded-xl" />
+      <Skeleton className="h-14 w-full rounded-xl" />
+    </div>
+  );
 }
 
 export default function Home() {
-  const [textOptions, setTextOptions] = useState<TextOption[]>([]);
-  const [sizeOptions, setSizeOptions] = useState<SizeOption[]>([]);
-  const [thumbnailOptions, setThumbnailOptions] = useState<ThumbnailOption[]>([]);
-  const [text, setText] = useState<TextOption | null>(null);
-  const [size, setSize] = useState<SizeOption | null>(null);
-  const [thumbnail, setThumbnail] = useState<ThumbnailOption | null>(null);
-  // 초기값 loading이라 effect에서 동기 setState를 안 해도 된다(set-state-in-effect 회피).
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-
-  useEffect(() => {
-    // 옵션은 한 번만 fetch해 state에 보관한다(참조 안정 → 선택 참조 비교가 유지됨).
-    let ignore = false;
-    fetch("/api/products")
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: OptionsResponse) => {
-        if (ignore) return;
-        setTextOptions(data.textOptions);
-        setSizeOptions(data.sizeOptions);
-        setThumbnailOptions(data.thumbnailOptions);
-        setStatus("success");
-      })
-      .catch(() => {
-        if (!ignore) setStatus("error");
-      });
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
   return (
     <main className="mx-auto max-w-[560px] px-6 py-16">
       <h1 className="mb-6 text-2xl font-extrabold">Select 데모</h1>
 
-      {status === "loading" && (
-        <div className="space-y-6">
-          <Skeleton className="h-14 w-full rounded-xl" />
-          <Skeleton className="h-14 w-full rounded-xl" />
-          <Skeleton className="h-14 w-full rounded-xl" />
-        </div>
-      )}
-      {status === "error" && <p className="text-red-500">옵션을 불러오지 못했습니다.</p>}
-
-      {status === "success" && (
-        <div className="space-y-8">
-          <section>
-            <h2 className="mb-2 text-sm font-semibold text-gray-500">텍스트/가격</h2>
-            <TextSelect label="옵션 선택" options={textOptions} value={text} onChange={setText} />
-          </section>
-
-          <section>
-            <h2 className="mb-2 text-sm font-semibold text-gray-500">사이즈</h2>
-            <SizeSelect label="사이즈" options={sizeOptions} value={size} onChange={setSize} />
-          </section>
-
-          <section>
-            <h2 className="mb-2 text-sm font-semibold text-gray-500">썸네일</h2>
-            <ThumbnailSelect
-              label="옵션을 선택해 주세요"
-              options={thumbnailOptions}
-              value={thumbnail}
-              onChange={setThumbnail}
-            />
-          </section>
-        </div>
-      )}
+      {/* 데이터 로딩은 서버가 하고, 느리면 Suspense가 스켈레톤을 먼저 스트리밍한다. */}
+      <Suspense fallback={<LoadingSkeletons />}>
+        <SelectSection />
+      </Suspense>
     </main>
   );
 }
