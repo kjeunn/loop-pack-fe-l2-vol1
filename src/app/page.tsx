@@ -5,19 +5,24 @@ import { useEffect, useState } from "react";
 import {
   type SizeOption,
   SizeSelect,
+  type TextOption,
+  TextSelect,
   type ThumbnailOption,
   ThumbnailSelect,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton/Skeleton";
 
 interface OptionsResponse {
+  textOptions: TextOption[];
   sizeOptions: SizeOption[];
   thumbnailOptions: ThumbnailOption[];
 }
 
 export default function Home() {
+  const [textOptions, setTextOptions] = useState<TextOption[]>([]);
   const [sizeOptions, setSizeOptions] = useState<SizeOption[]>([]);
   const [thumbnailOptions, setThumbnailOptions] = useState<ThumbnailOption[]>([]);
+  const [text, setText] = useState<TextOption | null>(null);
   const [size, setSize] = useState<SizeOption | null>(null);
   const [thumbnail, setThumbnail] = useState<ThumbnailOption | null>(null);
   // 초기값 loading이라 effect에서 동기 setState를 안 해도 된다(set-state-in-effect 회피).
@@ -33,6 +38,7 @@ export default function Home() {
       })
       .then((data: OptionsResponse) => {
         if (ignore) return;
+        setTextOptions(data.textOptions);
         setSizeOptions(data.sizeOptions);
         setThumbnailOptions(data.thumbnailOptions);
         setStatus("success");
@@ -53,6 +59,7 @@ export default function Home() {
         <div className="space-y-6">
           <Skeleton className="h-14 w-full rounded-xl" />
           <Skeleton className="h-14 w-full rounded-xl" />
+          <Skeleton className="h-14 w-full rounded-xl" />
         </div>
       )}
       {status === "error" && <p className="text-red-500">옵션을 불러오지 못했습니다.</p>}
@@ -60,11 +67,13 @@ export default function Home() {
       {status === "success" && (
         <div className="space-y-8">
           <section>
+            <h2 className="mb-2 text-sm font-semibold text-gray-500">텍스트/가격</h2>
+            <TextSelect label="옵션 선택" options={textOptions} value={text} onChange={setText} />
+          </section>
+
+          <section>
             <h2 className="mb-2 text-sm font-semibold text-gray-500">사이즈</h2>
             <SizeSelect label="사이즈" options={sizeOptions} value={size} onChange={setSize} />
-            <p className="mt-2 text-sm text-gray-500">
-              선택: {size ? `${size.size} (재고 ${size.stock})` : "없음"}
-            </p>
           </section>
 
           <section>
@@ -75,10 +84,6 @@ export default function Home() {
               value={thumbnail}
               onChange={setThumbnail}
             />
-            <p className="mt-2 text-sm text-gray-500">
-              선택:{" "}
-              {thumbnail ? `${thumbnail.title} — ${thumbnail.price.toLocaleString()}원` : "없음"}
-            </p>
           </section>
         </div>
       )}
