@@ -2,18 +2,13 @@
 
 import { useState } from "react";
 
-import {
-  type SizeOption,
-  SizeSelect,
-  type TextOption,
-  TextSelect,
-  type ThumbnailOption,
-  ThumbnailSelect,
-} from "@/components/ui/select";
+import { type SizeOption, SizeSelect } from "@/components/ui/select/SizeSelect";
+import { type TextOption, TextSelect } from "@/components/ui/select/TextSelect";
+import { type ThumbnailOption, ThumbnailSelect } from "@/components/ui/select/ThumbnailSelect";
+import type { ProductOptions } from "@/server/products";
 
-import type { ProductOptions } from "./api/products/data";
-
-// 데이터는 서버가 준다(props). 여기선 상호작용(선택 상태)만 담당한다.
+// page(서버)가 준 데이터로 3종 select를 조립하고 선택 상태를 관리한다.
+// 페이지 전용 조합(프리미티브 아님)이라 components/select-demo에 둔다.
 interface SelectDemoProps {
   options: ProductOptions;
 }

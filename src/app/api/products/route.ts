@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getProductOptions } from "./data";
+import { getProductOptions } from "@/server/products";
 
 // 옵션 데이터를 HTTP로 노출하는 목업 백엔드. 데이터 자체는 data.ts가 소유한다.
 // (서버 컴포넌트는 이 라우트를 fetch하지 않고 data.ts를 직접 읽는다 — self-fetch 회피.)

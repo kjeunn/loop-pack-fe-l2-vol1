@@ -1,7 +1,9 @@
-import type { SizeOption, TextOption, ThumbnailOption } from "@/components/ui/select";
+import type { SizeOption } from "@/components/ui/select/SizeSelect";
+import type { TextOption } from "@/components/ui/select/TextSelect";
+import type { ThumbnailOption } from "@/components/ui/select/ThumbnailSelect";
 
-// 목업 옵션 데이터의 단일 소스. 실제로는 DB/외부 API.
-// route.ts는 이걸 HTTP로 노출하고, 서버 컴포넌트(page)는 getProductOptions로 직접 읽는다(자기 API self-fetch 회피).
+// 서버 데이터 접근 계층. 지금은 목업을 반환하지만, 실제 DB/API가 붙으면 getProductOptions 본문만 바꾼다.
+// route.ts(HTTP 노출)와 page(서버 컴포넌트)가 함께 호출한다 — 서버는 self-fetch 없이 이걸 직접 부른다.
 // 재고는 수량(stock)으로 두고 "품절"은 프론트가 stock<=0으로 파생한다. id는 상품코드(SKU) 형태 고유 키.
 
 const textOptions: TextOption[] = [
@@ -57,7 +59,7 @@ export interface ProductOptions {
   thumbnailOptions: ThumbnailOption[];
 }
 
-// 서버에서 옵션을 읽는다. 느린 소스라면 이 await 동안 page의 Suspense fallback이 스켈레톤을 스트리밍한다.
+// 느린 소스라면 이 await 동안 page의 Suspense fallback이 스켈레톤을 스트리밍한다.
 export async function getProductOptions(): Promise<ProductOptions> {
   return { textOptions, sizeOptions, thumbnailOptions };
 }
