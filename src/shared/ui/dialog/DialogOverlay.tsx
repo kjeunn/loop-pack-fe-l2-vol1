@@ -2,7 +2,7 @@
 
 import { createPortal } from "react-dom";
 
-import { cn } from "@/lib/cn";
+import { cn } from "@/shared/lib/cn";
 
 import { useDialogContext } from "./DialogContext";
 import type { DialogOverlayProps } from "./types";

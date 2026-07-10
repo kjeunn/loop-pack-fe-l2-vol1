@@ -1,5 +1,5 @@
 // 의미 요소(제목·설명). 훅이 없어 상태와 무관한 순수 표현이라 여기 묶는다.
-import { cn } from "@/lib/cn";
+import { cn } from "@/shared/lib/cn";
 
 import type { DialogDescriptionProps, DialogTitleProps } from "./types";
 

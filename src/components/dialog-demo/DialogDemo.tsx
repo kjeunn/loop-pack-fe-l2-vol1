@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Dialog } from "@/components/ui/dialog/Dialog";
+import { Dialog } from "@/shared/ui/dialog/Dialog";
 
 // Dialog compound 데모. uncontrolled/controlled 두 방식 + 조각 조합·override·버튼 동작을 보여준다.
 export function DialogDemo() {
