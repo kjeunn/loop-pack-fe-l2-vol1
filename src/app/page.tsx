@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 
-import { DialogDemo } from "@/components/dialog-demo/DialogDemo";
-import { SelectDemo } from "@/components/select-demo/SelectDemo";
-import { SelectDemoSkeleton } from "@/components/select-demo/SelectDemoSkeleton";
-import { getProductOptions } from "@/server/products";
+import { getProductOptions } from "@/features/product-options/api/products";
+import { DialogDemo } from "@/views/demo/dialog/DialogDemo";
+import { SelectDemo } from "@/views/demo/select/SelectDemo";
+import { SelectDemoSkeleton } from "@/views/demo/select/SelectDemoSkeleton";
 
 // 데이터를 await하는 서버 컴포넌트. 느린 소스면 이 await 동안 아래 Suspense fallback이 스트리밍된다.
 async function SelectSection() {

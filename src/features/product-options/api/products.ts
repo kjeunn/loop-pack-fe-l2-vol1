@@ -1,6 +1,8 @@
-import type { SizeOption } from "@/components/ui/select/SizeSelect";
-import type { TextOption } from "@/components/ui/select/TextSelect";
-import type { ThumbnailOption } from "@/components/ui/select/ThumbnailSelect";
+import type {
+  SizeOption,
+  TextOption,
+  ThumbnailOption,
+} from "@/features/product-options/model/types";
 
 // 서버 데이터 접근 계층. 지금은 목업을 반환하지만, 실제 DB/API가 붙으면 getProductOptions 본문만 바꾼다.
 // route.ts(HTTP 노출)와 page(서버 컴포넌트)가 함께 호출한다 — 서버는 self-fetch 없이 이걸 직접 부른다.

@@ -10,7 +10,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 
-import type { UseSelectProps, UseSelectReturn } from "./types";
+import type { UseSelectProps, UseSelectReturn } from "@/shared/lib/select/types";
 
 const TYPEAHEAD_RESET_MS = 400;
 

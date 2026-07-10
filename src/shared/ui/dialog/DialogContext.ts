@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-import type { DialogContextValue } from "./types";
+import type { DialogContextValue } from "@/shared/ui/dialog/types";
 
 export const DialogContext = createContext<DialogContextValue | null>(null);
 

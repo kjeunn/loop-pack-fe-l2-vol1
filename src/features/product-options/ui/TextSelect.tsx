@@ -1,18 +1,10 @@
 "use client";
 
+import type { TextOption } from "@/features/product-options/model/types";
 import { useSelect } from "@/shared/lib/select/useSelect";
 
 // select3 — 텍스트/가격 옵션. 같은 useSelect에 <li> 안쪽 생김새만 다르게 심는다.
 // 품절은 stock 수량에서 파생한다(isItemDisabled). 옵션 상태는 훅이 실어 보낸 data-*로 스타일링.
-export interface TextOption {
-  id: string;
-  title: string;
-  price: number;
-  unitPrice: number;
-  freeShipping?: boolean;
-  stock: number;
-}
-
 interface TextSelectProps {
   label: string;
   options: TextOption[];

@@ -3,9 +3,8 @@
 import { createPortal } from "react-dom";
 
 import { cn } from "@/shared/lib/cn";
-
-import { useDialogContext } from "./DialogContext";
-import type { DialogOverlayProps } from "./types";
+import { useDialogContext } from "@/shared/ui/dialog/DialogContext";
+import type { DialogOverlayProps } from "@/shared/ui/dialog/types";
 
 // 백드롭. 바깥(오버레이) 클릭이면 닫는다. Content는 별도 Portal이라 여기로 이벤트가 안 올라온다.
 export function DialogOverlay({ onClick, className, ...props }: DialogOverlayProps) {

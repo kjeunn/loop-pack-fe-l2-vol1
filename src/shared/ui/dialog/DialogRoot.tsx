@@ -2,8 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { DialogContext } from "./DialogContext";
-import type { DialogContextValue, DialogProps } from "./types";
+import { DialogContext } from "@/shared/ui/dialog/DialogContext";
+import type { DialogContextValue, DialogProps } from "@/shared/ui/dialog/types";
 
 // Root — 이중 API. open prop이 오면 controlled(부모 소유), 없으면 내부 state(uncontrolled).
 // 닫힘 신호까지 onOpenChange 하나로 통일한다.

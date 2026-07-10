@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 
-import { type SizeOption, SizeSelect } from "@/components/ui/select/SizeSelect";
-import { type TextOption, TextSelect } from "@/components/ui/select/TextSelect";
-import { type ThumbnailOption, ThumbnailSelect } from "@/components/ui/select/ThumbnailSelect";
-import type { ProductOptions } from "@/server/products";
+import type { ProductOptions } from "@/features/product-options/api/products";
+import type {
+  SizeOption,
+  TextOption,
+  ThumbnailOption,
+} from "@/features/product-options/model/types";
+import { SizeSelect } from "@/features/product-options/ui/SizeSelect";
+import { TextSelect } from "@/features/product-options/ui/TextSelect";
+import { ThumbnailSelect } from "@/features/product-options/ui/ThumbnailSelect";
 
 // page(서버)가 준 데이터로 3종 select를 조립하고 선택 상태를 관리한다.
 // 페이지 전용 조합(프리미티브 아님)이라 components/select-demo에 둔다.

@@ -8,11 +8,11 @@
 //   - (이번 주 범위 밖) 포커스 트랩·ARIA는 다루지 않는다
 //
 // Object.assign으로 조각을 Root에 붙여 Dialog.Trigger 등으로 쓴다.
-import { DialogClose, DialogTrigger } from "./DialogButtons";
-import { DialogOverlay } from "./DialogOverlay";
-import { DialogPanel } from "./DialogPanel";
-import { DialogRoot } from "./DialogRoot";
-import { DialogDescription, DialogTitle } from "./DialogText";
+import { DialogClose, DialogTrigger } from "@/shared/ui/dialog/DialogButtons";
+import { DialogOverlay } from "@/shared/ui/dialog/DialogOverlay";
+import { DialogPanel } from "@/shared/ui/dialog/DialogPanel";
+import { DialogRoot } from "@/shared/ui/dialog/DialogRoot";
+import { DialogDescription, DialogTitle } from "@/shared/ui/dialog/DialogText";
 
 export const Dialog = Object.assign(DialogRoot, {
   Trigger: DialogTrigger,

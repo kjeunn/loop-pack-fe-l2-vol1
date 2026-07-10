@@ -4,9 +4,8 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/shared/lib/cn";
-
-import { useDialogContext } from "./DialogContext";
-import type { DialogPanelProps } from "./types";
+import { useDialogContext } from "@/shared/ui/dialog/DialogContext";
+import type { DialogPanelProps } from "@/shared/ui/dialog/types";
 
 // 모달 박스(패널). Portal로 그리고, 열렸을 때만 렌더하며 Esc 닫기·배경 스크롤 잠금을 담당한다.
 export function DialogPanel({ className, ...props }: DialogPanelProps) {
