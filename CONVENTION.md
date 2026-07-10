@@ -18,6 +18,7 @@
 
 - **Tailwind 우선.** 레이아웃·간격·색·상태 변형(`data-[highlighted]`, `aria-expanded`)은 유틸리티로 표현한다.
 - **CSS Module은 Tailwind가 못 쓰는 것만.** `@keyframes`(shimmer 등)처럼 유틸리티로 안 되는 것만 `*.module.css`에 두고 컴포넌트에 콜로케이트한다. 클래스·키프레임명이 자동 스코프돼 충돌이 없다.
+- **모듈 클래스명은 camelCase.** 여러 단어 클래스는 하이픈(`addr-summary`)이면 점 표기로 못 읽으므로(`styles.addr-summary` → 뺄셈으로 해석) `addrSummary`로 둔다.
 
 ## ✍️ 네이밍이 이런 이유
 
