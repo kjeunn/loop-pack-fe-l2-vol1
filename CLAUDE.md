@@ -20,6 +20,8 @@
 const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 ```
 
+7. **import는 절대경로(`@/`).** 상대경로(`./`·`../`) 금지 — FSD 슬라이스 이동·리팩터에 강함. 콜로케이트 에셋(`*.module.css`)만 예외.
+
 ## 🧩 컴포넌트 설계 전략 (ESLint 강제 불가)
 
 ### 경계
