@@ -49,6 +49,11 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 10. **children vs slot.** 단순 포함은 `children`, 고정 영역은 named slot. 구성이 케이스마다 다르면 compound.
 11. **Drilling vs Context.** 3단계 이상 + 여러 컴포넌트가 같은 값 읽으면 Context.
 
+### 패턴
+
+12. **controlled/uncontrolled는 한 컴포넌트에서.** 제어 prop의 유무(`open !== undefined`)로 판별. 통보는 `onXxxChange` 하나로, 닫기 전용 `onClose` 따로 안 둠.
+13. **Headless는 prop-getter로.** 로직(키보드·포커스·aria)은 훅이, `getXxxProps()`로 뷰에 내림. 상태는 `data-*`/`aria-*`로만 노출, 뷰는 생김새만.
+
 ## 🗂️ 상태 소유권
 
 - **"이 값을 누가 읽는가"로 위치 결정.** 한 곳만 읽으면 그 컴포넌트, 여럿이 읽으면 공통 부모.
@@ -63,6 +68,12 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 - **콜백 prop은 `on~`, 핸들러는 `handle~`.** 부모의 `handle~`을 자식의 `on~`에 연결.
 - **props 타입은 `컴포넌트명+Props`로 분리.** 인라인 타입 금지, 외부에서 안 쓰면 `export` 안 함.
 - **의미 기반 네이밍.** 구현(`input`/`section`)이 아니라 의미(`amount`/`card`)로.
+
+## 📄 문서 유지 (CLAUDE.md·CONVENTION.md·SKILL)
+
+- **역할 분리.** CLAUDE=규칙(한 줄), CONVENTION=왜, SKILL=점검 절차. 같은 내용을 3벌 쓰지 말고 관점만 다르게.
+- **필수만.** 규칙 하나에 한 줄, 예시는 하나. 변형·곁가지는 뺀다.
+- **낡은 예시 금지.** 삭제된 코드(Card 등)를 예시로 남기지 않는다. 살아있는 코드만 인용.
 
 ## 💬 주석
 
@@ -80,7 +91,7 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 
 ## 🚫 하네스
 
-ESLint 강제 룰은 `eslint.config.js`에서 관리. 우회(`eslint-disable`, `ts-ignore`, `--no-verify`) 금지.
+ESLint 강제 룰은 `eslint.config.mjs`에서 관리. 우회(`eslint-disable`, `ts-ignore`, `--no-verify`) 금지.
 
 ## 🚀 Git & PR 규칙
 
