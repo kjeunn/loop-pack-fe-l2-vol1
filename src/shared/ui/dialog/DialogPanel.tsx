@@ -4,36 +4,36 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/shared/lib/cn";
+import { useMounted } from "@/shared/lib/useMounted";
 import { useDialogContext } from "@/shared/ui/dialog/DialogContext";
+import { lockScroll as lockBodyScroll, pushEscClose } from "@/shared/ui/dialog/layer";
 import type { DialogPanelProps } from "@/shared/ui/dialog/types";
 
-// 모달 박스(패널). Portal로 그리고, 열렸을 때만 렌더하며 Esc 닫기·배경 스크롤 잠금을 담당한다.
+// 모달 박스(패널). Portal로 그린다.
+// 배경 스크롤·Esc는 인스턴스가 아니라 layer(전역)가 refcount·stack으로 관리한다.
+// 중첩 Dialog에서 마지막이 닫힐 때만 스크롤이 풀리고, Esc는 맨 위 Dialog 하나만 닫힌다.
 export function DialogPanel({ className, ...props }: DialogPanelProps) {
   const { open, setOpen, lockScroll } = useDialogContext();
+  // 서버엔 document가 없다. 마운트 후에만 Portal을 그려 open=true 첫 렌더에서도 안전하게 한다.
+  const mounted = useMounted();
 
-  // 배경 스크롤 잠금 — open이고 lockScroll일 때만(lockScroll=false면 비모달이라 배경 유지).
-  // Esc effect와 분리한 이유: Esc는 setOpen 의존이라 재실행되는데, 여기 묶이면 재실행 시
-  // prevOverflow가 "hidden"으로 오염돼 스크롤이 안 풀린다. 그래서 open·lockScroll만 의존하게 둔다.
+  // 배경 스크롤 잠금 — open이고 lockScroll일 때만. 중첩은 layer가 refcount로 처리한다.
+  // Esc effect와 나눈 이유: Esc는 setOpen 의존이라 재실행되는데,
+  // 여기 묶이면 재실행 시 잠금이 다시 걸려 refcount가 어긋난다.
+  // 그래서 open·lockScroll만 의존하게 둔다.
   useEffect(() => {
     if (!open || !lockScroll) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
+    return lockBodyScroll(document);
   }, [open, lockScroll]);
 
-  // Esc로 닫기 — document 키다운 구독(외부 시스템 동기화).
+  // Esc 닫기 — layer stack에 close를 올린다.
+  // 맨 위 하나만 닫히게 하는 판단은 layer가 한다.
   useEffect(() => {
     if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return pushEscClose(document, () => setOpen(false));
   }, [open, setOpen]);
 
-  if (!open || typeof document === "undefined") return null;
+  if (!mounted || !open) return null;
 
   return createPortal(
     <div
