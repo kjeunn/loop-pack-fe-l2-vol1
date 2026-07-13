@@ -90,6 +90,48 @@ export function DialogDemo() {
           </Dialog.Panel>
         </Dialog>
       </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-gray-500">
+          Nested (중첩 — 안쪽을 닫아도 배경 잠금 유지 · Esc는 위부터)
+        </h2>
+        <Dialog>
+          <Dialog.Trigger className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
+            바깥 Dialog 열기
+          </Dialog.Trigger>
+          <Dialog.Overlay />
+          <Dialog.Panel>
+            <Dialog.Title>바깥 Dialog</Dialog.Title>
+            <Dialog.Description>
+              여기서 안쪽 Dialog를 연다. 안쪽을 닫아도 배경 스크롤은 잠긴 채여야 하고, Esc는
+              안쪽부터 하나씩 닫힌다.
+            </Dialog.Description>
+            <div className="mt-5 flex justify-end gap-2">
+              {/* 중첩: 바깥 Panel 안에 또 하나의 Dialog. 각자 자기 Context를 가진다 */}
+              <Dialog>
+                <Dialog.Trigger className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white">
+                  안쪽 Dialog 열기
+                </Dialog.Trigger>
+                <Dialog.Overlay />
+                <Dialog.Panel>
+                  <Dialog.Title>안쪽 Dialog</Dialog.Title>
+                  <Dialog.Description>
+                    Esc를 누르면 이것만 닫히고 바깥은 남는다. 닫아도 배경 스크롤은 잠긴 채.
+                  </Dialog.Description>
+                  <div className="mt-5 flex justify-end">
+                    <Dialog.Close className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium">
+                      안쪽 닫기
+                    </Dialog.Close>
+                  </div>
+                </Dialog.Panel>
+              </Dialog>
+              <Dialog.Close className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium">
+                바깥 닫기
+              </Dialog.Close>
+            </div>
+          </Dialog.Panel>
+        </Dialog>
+      </section>
     </div>
   );
 }
