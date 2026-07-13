@@ -23,6 +23,7 @@ export function ThumbnailSelect({ label, options, value, onChange }: ThumbnailSe
     },
     getItemText: (option) => option?.title ?? "",
     isItemDisabled: (option) => option.stock <= 0,
+    getItemKey: (option) => option.id,
   });
 
   return (

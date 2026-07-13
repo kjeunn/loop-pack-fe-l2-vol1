@@ -15,6 +15,9 @@ export interface UseSelectProps<Item> {
   getItemText?: (item: Item | null) => string;
   // 품절 등 비활성 판정. 기본은 항상 활성.
   isItemDisabled?: (item: Item, index: number) => boolean;
+  // 선택 동일성에 쓸 안정 키(예: 상품코드). 없으면 참조(===) 비교로 폴백한다.
+  // 목록을 새로 만들거나 다시 받아 참조가 바뀌어도 선택이 유지되게 하려면 넘긴다.
+  getItemKey?: (item: Item) => string | number;
 }
 
 export interface GetItemPropsArgs<Item> {

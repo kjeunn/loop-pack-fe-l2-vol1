@@ -21,6 +21,7 @@ export function TextSelect({ label, options, value, onChange }: TextSelectProps)
     },
     getItemText: (option) => option?.title ?? "",
     isItemDisabled: (option) => option.stock <= 0,
+    getItemKey: (option) => option.id,
   });
 
   return (

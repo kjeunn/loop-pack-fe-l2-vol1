@@ -21,6 +21,7 @@ export function SizeSelect({ label, options, value, onChange }: SizeSelectProps)
     },
     getItemText: (option) => (option ? String(option.size) : ""),
     isItemDisabled: (option) => option.stock <= 0,
+    getItemKey: (option) => option.id,
   });
 
   return (

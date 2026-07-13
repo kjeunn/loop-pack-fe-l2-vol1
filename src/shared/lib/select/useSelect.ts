@@ -21,6 +21,7 @@ export function useSelect<Item>({
   onSelectedItemChange,
   getItemText = (item) => (item === null ? "" : String(item)),
   isItemDisabled,
+  getItemKey,
 }: UseSelectProps<Item>): UseSelectReturn<Item> {
   const baseId = useId();
   const labelId = `${baseId}-label`;
@@ -29,9 +30,17 @@ export function useSelect<Item>({
   const itemId = (index: number) => `${baseId}-item-${index}`;
 
   // selectedItem은 controlled/uncontrolled 둘 다 지원(prop 유무로 판별).
+  // isControlled가 참일 때 selectedItemProp은 undefined가 걸러져 Item|null로 좁혀지고,
+  // 거짓일 때 쓰는 selectedItemState도 Item|null이라, as 캐스팅 없이 selectedItem은 Item|null이 된다.
   const isControlled = selectedItemProp !== undefined;
   const [selectedItemState, setSelectedItemState] = useState<Item | null>(defaultSelectedItem);
-  const selectedItem = isControlled ? (selectedItemProp as Item | null) : selectedItemState;
+  const selectedItem = isControlled ? selectedItemProp : selectedItemState;
+
+  // 선택 동일성 — getItemKey가 있으면 키로, 없으면 참조로 비교한다.
+  // 키 비교면 목록을 새로 만들어 참조가 바뀌어도(재생성·재요청) 선택 표시가 안 깨진다.
+  const isSameItem = (a: Item, b: Item) => (getItemKey ? getItemKey(a) === getItemKey(b) : a === b);
+  const selectedIndex = () =>
+    selectedItem === null ? -1 : items.findIndex((item) => isSameItem(item, selectedItem));
 
   // isOpen·highlightedIndex는 select만 읽는 뷰 상태라 항상 내부 소유.
   const [isOpen, setIsOpen] = useState(false);
@@ -100,8 +109,8 @@ export function useSelect<Item>({
 
   const openMenu = () => {
     setIsOpen(true);
-    // 열 때 선택 항목을 하이라이트(참조 비교). 없거나 품절이면 첫 활성 항목으로.
-    const selected = selectedItem === null ? -1 : items.indexOf(selectedItem);
+    // 열 때 선택 항목을 하이라이트한다. 없거나 품절이면 첫 활성 항목으로.
+    const selected = selectedIndex();
     setHighlightedIndex(selected >= 0 && !isDisabled(selected) ? selected : firstEnabledIndex());
   };
 
@@ -223,9 +232,9 @@ export function useSelect<Item>({
 
     getItemProps: ({ item, index }) => {
       const disabled = isDisabled(index);
-      // selected는 참조 비교라, items를 매 렌더 새로 만들면 참조가 어긋나 선택 표시가 깨진다.
-      // → items를 안정 참조로 두거나, 필요하면 key 기반 비교로 바꾼다.
-      const selected = selectedItem === item;
+      // 선택 판정은 isSameItem으로. getItemKey를 넘기면 참조가 아니라 키로 비교돼,
+      // 목록을 새로 만들어 참조가 바뀌어도 선택 표시가 유지된다.
+      const selected = selectedItem !== null && isSameItem(item, selectedItem);
       const highlighted = highlightedIndex === index;
       return {
         id: itemId(index),
