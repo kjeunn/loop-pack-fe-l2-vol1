@@ -127,6 +127,9 @@ export function useSelect<Item>({
   };
 
   // 타입어헤드: 입력 문자를 모아 접두사 일치 항목으로 점프. 열려 있으면 하이라이트, 닫혀 있으면 바로 선택.
+  // 한계: 영문·숫자만 동작한다. 한글은 IME 조합 중 keydown의 event.key가 한 글자가 아니라 "Process"라
+  // event.key.length === 1 조건(아래 default)을 통과하지 못한다.
+  // 한글 검색까지 필요하면 별도 입력창(combobox)·compositionend 처리로 가야 한다 — 이번 범위 밖.
   const onTypeahead = (key: string) => {
     const state = typeahead.current;
     if (state.timer) clearTimeout(state.timer);
