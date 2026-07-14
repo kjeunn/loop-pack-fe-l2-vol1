@@ -8,6 +8,7 @@ import type {
   TextOption,
   ThumbnailOption,
 } from "@/features/product-options/model/types";
+import { FloatingSelect } from "@/features/product-options/ui/FloatingSelect";
 import { SizeSelect } from "@/features/product-options/ui/SizeSelect";
 import { TextSelect } from "@/features/product-options/ui/TextSelect";
 import { ThumbnailSelect } from "@/features/product-options/ui/ThumbnailSelect";
@@ -21,10 +22,28 @@ interface SelectDemoProps {
 export function SelectDemo({ options }: SelectDemoProps) {
   const [text, setText] = useState<TextOption | null>(null);
   const [size, setSize] = useState<SizeOption | null>(null);
+  const [floatingSize, setFloatingSize] = useState<SizeOption | null>(null);
   const [thumbnail, setThumbnail] = useState<ThumbnailOption | null>(null);
 
   return (
     <div className="space-y-8">
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-gray-500">사이즈 (인라인 펼침)</h2>
+        <SizeSelect label="사이즈" options={options.sizeOptions} value={size} onChange={setSize} />
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-gray-500">
+          사이즈 (플로팅 팝오버 · @floating-ui)
+        </h2>
+        <FloatingSelect
+          label="사이즈"
+          options={options.sizeOptions}
+          value={floatingSize}
+          onChange={setFloatingSize}
+        />
+      </section>
+
       <section>
         <h2 className="mb-2 text-sm font-semibold text-gray-500">텍스트/가격</h2>
         <TextSelect
@@ -33,11 +52,6 @@ export function SelectDemo({ options }: SelectDemoProps) {
           value={text}
           onChange={setText}
         />
-      </section>
-
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-500">사이즈</h2>
-        <SizeSelect label="사이즈" options={options.sizeOptions} value={size} onChange={setSize} />
       </section>
 
       <section>
