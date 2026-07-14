@@ -11,7 +11,7 @@ export function DialogDemo() {
 
   return (
     <div className="space-y-10">
-      <section>
+      <div>
         <h2 className="mb-2 text-sm font-semibold text-gray-500">Uncontrolled (내부 state)</h2>
         <Dialog>
           <Dialog.Trigger className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white">
@@ -51,9 +51,9 @@ export function DialogDemo() {
             </div>
           </Dialog.Panel>
         </Dialog>
-      </section>
+      </div>
 
-      <section>
+      <div>
         <h2 className="mb-2 text-sm font-semibold text-gray-500">
           Controlled (외부 state · open: {String(open)})
         </h2>
@@ -89,9 +89,9 @@ export function DialogDemo() {
             </div>
           </Dialog.Panel>
         </Dialog>
-      </section>
+      </div>
 
-      <section>
+      <div>
         <h2 className="mb-2 text-sm font-semibold text-gray-500">
           Nested (중첩 — 안쪽을 닫아도 배경 잠금 유지 · Esc는 위부터)
         </h2>
@@ -131,7 +131,7 @@ export function DialogDemo() {
             </div>
           </Dialog.Panel>
         </Dialog>
-      </section>
+      </div>
     </div>
   );
 }

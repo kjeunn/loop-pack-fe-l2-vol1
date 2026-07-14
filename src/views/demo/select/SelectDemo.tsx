@@ -27,12 +27,12 @@ export function SelectDemo({ options }: SelectDemoProps) {
 
   return (
     <div className="space-y-8">
-      <section>
+      <div>
         <h2 className="mb-2 text-sm font-semibold text-gray-500">사이즈 (인라인 펼침)</h2>
         <SizeSelect label="사이즈" options={options.sizeOptions} value={size} onChange={setSize} />
-      </section>
+      </div>
 
-      <section>
+      <div>
         <h2 className="mb-2 text-sm font-semibold text-gray-500">
           사이즈 (플로팅 팝오버 · @floating-ui)
         </h2>
@@ -42,9 +42,9 @@ export function SelectDemo({ options }: SelectDemoProps) {
           value={floatingSize}
           onChange={setFloatingSize}
         />
-      </section>
+      </div>
 
-      <section>
+      <div>
         <h2 className="mb-2 text-sm font-semibold text-gray-500">텍스트/가격</h2>
         <TextSelect
           label="옵션 선택"
@@ -52,9 +52,9 @@ export function SelectDemo({ options }: SelectDemoProps) {
           value={text}
           onChange={setText}
         />
-      </section>
+      </div>
 
-      <section>
+      <div>
         <h2 className="mb-2 text-sm font-semibold text-gray-500">썸네일</h2>
         <ThumbnailSelect
           label="옵션을 선택해 주세요"
@@ -62,7 +62,7 @@ export function SelectDemo({ options }: SelectDemoProps) {
           value={thumbnail}
           onChange={setThumbnail}
         />
-      </section>
+      </div>
     </div>
   );
 }
