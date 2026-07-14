@@ -2,21 +2,29 @@
   "name": "commerce",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check": "pnpm test && pnpm lint && pnpm typecheck && pnpm build",
     "test:e2e": "playwright test",
     "prepare": "husky"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.20",
+    "@tanstack/react-query": "^5.101.2",
     "next": "16.2.10",
+    "nuqs": "^2.9.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.6.0"
@@ -27,11 +35,11 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^24.12.3",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.3",
-    "eslint": "^9.39.4",
+    "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -42,7 +50,8 @@
     "prettier": "^3.8.4",
     "tailwindcss": "^4.3.2",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "zustand": "^5.0.14"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
