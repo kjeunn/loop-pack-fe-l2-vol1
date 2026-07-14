@@ -28,6 +28,7 @@
 
 ## 🧩 컴포넌트 패턴
 
+- **마크업 의미.** `<section>`은 이름 있는 문서 구획에만 쓴다. 단순한 시각적 그룹은 `<div>`로 두고, `<section>`을 중첩·남용하지 않는다 — 문서 아웃라인과 테스트 조회가 흐려진다.
 - **상태 소유권.** "이 값을 누가 읽는가"로 위치를 정한다. 입력 중 임시값은 자식이, 여러 곳이 읽는 결과값은 공통 부모가 소유. (상세 규칙은 `CLAUDE.md`)
 - **Compound + 이중 API(Dialog).** `Dialog.Trigger/Overlay/Panel/...`을 Context로 조립한다. 머리말·버튼 구성이 호출처마다 달라 조각 배치를 호출자에게 위임하기 때문. 열림 상태는 `open` prop 유무로 controlled/uncontrolled를 한 컴포넌트에서 판별하고, 통보는 `onOpenChange` 하나로 모은다 — 창구가 둘(`onClose`+`onOpenChange`)이면 동기화가 어긋난다. 스크롤 잠금과 Esc 이펙트는 분리한다: `setOpen` 정체성이 바뀌어 잠금 이펙트가 재실행되면 원복값이 오염된다.
 - **Headless prop-getter(Select).** 키보드·포커스·타입어헤드·aria를 `useSelect` 훅에 몰고 `getToggleButtonProps`/`getMenuProps`/`getItemProps`로 내린다. 뷰는 훅이 실어 보낸 `data-*`만 읽어 스타일링 → 같은 로직 위에 생김새가 다른 여러 뷰(Size/Text/Thumbnail)를 얹는다.
