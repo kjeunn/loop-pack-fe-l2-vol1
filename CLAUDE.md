@@ -7,6 +7,15 @@
 - **설명할 수 없는 코드는 커밋 금지.** AI 코드의 버그도 최종 책임은 1차 작성자(인간).
 - **책임 분리.** 도구(Lint/Format)는 컨벤션·타입만 보장. 비즈니스 로직 판별은 인간이.
 
+## ✅ 범위와 완료 기준
+
+- **명시된 제외만 범위 밖.** 문서에 "하지 마라"고 적힌 것(예: 포커스·ARIA)만 뺀다. 나머지는 기본 포함 — "알아서 범위 밖이겠지"라는 추정으로 빼지 않는다.
+- **happy path만으로 done 금지.** 보이는 데모·체크리스트를 넘어, 해당하면 검증한다(해당 없으면 그 이유가 분명해야).
+  - **경계·오류 입력** — 빈 목록·초기 상태·실패 경로에서도 안전한가.
+  - **전역 자원**(body·document·window·스토리지·싱글턴)을 건드리면 — 인스턴스가 둘 이상일 때 누가 언제 해제하나.
+  - **상태를 밖에 노출하면** — 부모가 소유(controlled)하는 경우까지 동작하나.
+  - **SSR에서 document·window·Portal을 쓰면** — 서버 첫 렌더에서 안전한가(마운트 후로 미룸).
+
 ## 🛠️ 핵심 코드 품질 기준 (ESLint 강제 불가)
 
 1. **의도적 네이밍.** `data`/`temp`/`flag` 등 모호한 이름 금지. (`flag` → `isAdult`)
@@ -19,6 +28,8 @@
 ```ts
 const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 ```
+
+7. **import는 절대경로(`@/`).** 상대경로(`./`·`../`) 금지 — FSD 슬라이스 이동·리팩터에 강함. 콜로케이트 에셋(`*.module.css`)만 예외.
 
 ## 🧩 컴포넌트 설계 전략 (ESLint 강제 불가)
 
@@ -47,6 +58,11 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 10. **children vs slot.** 단순 포함은 `children`, 고정 영역은 named slot. 구성이 케이스마다 다르면 compound.
 11. **Drilling vs Context.** 3단계 이상 + 여러 컴포넌트가 같은 값 읽으면 Context.
 
+### 패턴
+
+12. **controlled/uncontrolled는 한 컴포넌트에서.** 제어 prop의 유무(`open !== undefined`)로 판별. 통보는 `onXxxChange` 하나로, 닫기 전용 `onClose` 따로 안 둠.
+13. **Headless는 prop-getter로.** 로직(키보드·포커스·aria)은 훅이, `getXxxProps()`로 뷰에 내림. 상태는 `data-*`/`aria-*`로만 노출, 뷰는 생김새만.
+
 ## 🗂️ 상태 소유권
 
 - **"이 값을 누가 읽는가"로 위치 결정.** 한 곳만 읽으면 그 컴포넌트, 여럿이 읽으면 공통 부모.
@@ -62,9 +78,17 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 - **props 타입은 `컴포넌트명+Props`로 분리.** 인라인 타입 금지, 외부에서 안 쓰면 `export` 안 함.
 - **의미 기반 네이밍.** 구현(`input`/`section`)이 아니라 의미(`amount`/`card`)로.
 
+## 📄 문서 유지 (CLAUDE.md·CONVENTION.md·SKILL)
+
+- **역할 분리.** CLAUDE=규칙(한 줄), CONVENTION=왜, SKILL=점검 절차. 같은 내용을 3벌 쓰지 말고 관점만 다르게.
+- **필수만.** 규칙 하나에 한 줄, 예시는 하나. 변형·곁가지는 뺀다.
+- **낡은 예시 금지.** 삭제된 코드(Card 등)를 예시로 남기지 않는다. 살아있는 코드만 인용.
+
 ## 💬 주석
 
 - **"왜"만.** 코드가 말하는 무엇/어떻게는 생략. 설계 의도·판단 근거만.
+- **뭉뚱그리지 말고 정확히.** 근거는 무엇이·무엇을·어떻게인지 구체적으로. "좁혀진다"처럼 주체·대상이 흐린 서술 대신 "참일 때 X가 Y로 좁혀진다"로.
+- **줄바꿈은 의미 단위로.** 폭을 채우려 문장·절 중간에서 끊지 말고, 자연스러운 경계(절·문장 끝)에서 바꾼다. 한 줄이 하나의 생각으로 읽히게.
 - **`//` vs `/** _/`.** 설계 의도는 라인 주석(`//`), API 사용법만 JSDoc(`/\*\* _/`).
 - **주석이 아닌 것:** "안 한 일의 이유", 변경 이력, 시간·출처 표시 → git/커밋 메시지의 몫.
 - **컨벤션 따른 것엔 주석 불필요.** (`type→interface`, `XxxProps` 등)
@@ -78,7 +102,7 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 
 ## 🚫 하네스
 
-ESLint 강제 룰은 `eslint.config.js`에서 관리. 우회(`eslint-disable`, `ts-ignore`, `--no-verify`) 금지.
+ESLint 강제 룰은 `eslint.config.mjs`에서 관리. 우회(`eslint-disable`, `ts-ignore`, `--no-verify`) 금지.
 
 ## 🚀 Git & PR 규칙
 

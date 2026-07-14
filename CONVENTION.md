@@ -5,21 +5,20 @@
 
 ---
 
-## 📁 폴더 구조 규칙
+## 📁 폴더 구조 규칙 (FSD)
 
-- **폴더는 kebab-case, 파일은 PascalCase**(컴포넌트명). 예) `price-summary/PriceSummaryCard.tsx`.
-  폴더를 소문자로 통일하면 OS 간 대소문자 충돌(Linux CI에서만 터지는 버그)을 막는다. 파일은 컴포넌트명과 1:1로 맞춰 한 쌍임을 드러낸다. CSS 모듈도 `PriceSummaryCard.module.css`로 맞춘다.
-- **폴더는 "묶을 게 있을 때만".** 파일 2개 이상(컴포넌트+CSS, 또는 관련 컴포넌트 묶음)일 때만 폴더로. 하나뿐이면 `components/` 바로 아래 평평하게 두고, 파일이 늘면 그때 폴더화한다.
-- **기능별로 묶는다.** 관련 컴포넌트는 기능 폴더로(`order/`, `delivery/`). 단일 카드+전용 스타일도 기능 폴더로(`terms/`, `price-summary/`).
-- **단독 컴포넌트와 충돌하면 폴더명을 줄이지 않는다.** 공용 `Price.tsx`가 있으므로 결제 금액 카드 폴더는 `price`가 아니라 `price-summary`.
+레이어로 나눠 **변경 파급을 가둔다** — 위 레이어만 아래를 알고, 아래는 위를 모른다.
+
+- **레이어.** `app`(라우팅) → `views`(화면 조합) → `features`(도메인 단위) → `shared`(재사용 프리미티브·유틸). import는 **아래로만** 흐른다. 역참조·순환은 곧 경계가 깨졌다는 신호.
+- **레이어 안은 segment로.** `ui`(컴포넌트) / `model`(타입·상태) / `api`(데이터 접근) / `lib`(로직·유틸). 도메인 타입은 `model`에, JSX 없는 헤드리스 훅은 `lib`에. `shared`는 slice 없이 segment를 바로 둔다.
+- **폴더는 kebab-case, 파일은 PascalCase**(컴포넌트명). 폴더를 소문자로 통일하면 OS 간 대소문자 충돌(Linux CI에서만 터지는 버그)을 막는다. CSS 모듈도 `Xxx.module.css`로 1:1.
+- **import는 절대경로(`@/`).** 슬라이스를 옮겨도 참조가 안 깨진다. 콜로케이트 에셋(`*.module.css`)만 상대경로 예외.
 
 ## 🎨 CSS 전략
 
-전역 CSS와 CSS Modules를 **스타일의 주인이 누구인가**로 나눈다.
-
-- **공용 base → 전역(`common.css`).** 특정 컴포넌트 소속이 아니라 앱 전반이 공유하는 것(페이지 레이아웃, `input`/`button`/`label`, 공용 행 레이아웃, 디자인 토큰). 여러 곳이 공유하므로 스코프 격리하면 안 된다 — 모듈로 만들면 중복되거나 갈 곳이 없다.
-- **컴포넌트 고유 → CSS Modules(`*.module.css`).** 주인이 명확한 스타일(`.total`은 결제 금액 카드, `.tag`는 상태 태그). 클래스명이 자동 스코프되어 충돌이 없다.
-- **모듈 클래스명은 camelCase.** 하이픈은 JS에서 `styles.addr-summary`로 못 읽으므로 `addrSummary`.
+- **Tailwind 우선.** 레이아웃·간격·색·상태 변형(`data-[highlighted]`, `aria-expanded`)은 유틸리티로 표현한다.
+- **CSS Module은 Tailwind가 못 쓰는 것만.** `@keyframes`(shimmer 등)처럼 유틸리티로 안 되는 것만 `*.module.css`에 두고 컴포넌트에 콜로케이트한다. 클래스·키프레임명이 자동 스코프돼 충돌이 없다.
+- **모듈 클래스명은 camelCase.** 여러 단어 클래스는 하이픈(`addr-summary`)이면 점 표기로 못 읽으므로(`styles.addr-summary` → 뺄셈으로 해석) `addrSummary`로 둔다.
 
 ## ✍️ 네이밍이 이런 이유
 
@@ -29,5 +28,7 @@
 
 ## 🧩 컴포넌트 패턴
 
-- **Card compound.** 카드 UI는 `Card` + `Card.Header`/`Card.Title`/`Card.Body`로 구성한다. 머리말 구성(제목만 / 제목+버튼 / 제목 없음)이 카드마다 달라 호출자가 자유 조합해야 하기 때문. `Card.Title`은 heading으로 문서 구조를 제공한다. 카드마다 랜드마크를 켜면 화면 하나에 랜드마크가 늘어 오히려 탐색 노이즈라, `<section>`을 이름 있는 랜드마크로 노출하지는 않는다.
+- **마크업 의미.** `<section>`은 이름 있는 문서 구획에만 쓴다. 단순한 시각적 그룹은 `<div>`로 두고, `<section>`을 중첩·남용하지 않는다 — 문서 아웃라인과 테스트 조회가 흐려진다.
 - **상태 소유권.** "이 값을 누가 읽는가"로 위치를 정한다. 입력 중 임시값은 자식이, 여러 곳이 읽는 결과값은 공통 부모가 소유. (상세 규칙은 `CLAUDE.md`)
+- **Compound + 이중 API(Dialog).** `Dialog.Trigger/Overlay/Panel/...`을 Context로 조립한다. 머리말·버튼 구성이 호출처마다 달라 조각 배치를 호출자에게 위임하기 때문. 열림 상태는 `open` prop 유무로 controlled/uncontrolled를 한 컴포넌트에서 판별하고, 통보는 `onOpenChange` 하나로 모은다 — 창구가 둘(`onClose`+`onOpenChange`)이면 동기화가 어긋난다. 스크롤 잠금과 Esc 이펙트는 분리한다: `setOpen` 정체성이 바뀌어 잠금 이펙트가 재실행되면 원복값이 오염된다.
+- **Headless prop-getter(Select).** 키보드·포커스·타입어헤드·aria를 `useSelect` 훅에 몰고 `getToggleButtonProps`/`getMenuProps`/`getItemProps`로 내린다. 뷰는 훅이 실어 보낸 `data-*`만 읽어 스타일링 → 같은 로직 위에 생김새가 다른 여러 뷰(Size/Text/Thumbnail)를 얹는다.

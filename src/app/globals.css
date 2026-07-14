@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* 데모는 라이트 고정. (Tailwind preflight가 기본 리셋을 담당하므로 수동 리셋은 두지 않는다) */
+:root {
+  color-scheme: light;
+}
+
+body {
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  color: #171717;
+  background: #ffffff;
+}
