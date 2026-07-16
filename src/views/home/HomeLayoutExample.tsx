@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import "./week-05-layout.css";
+import "@/shared/ui/week-05-layout.css";
 
 /**
  * 5주차 과제를 빠르게 시작할 수 있도록 제공하는 최소 레이아웃 예시입니다.
