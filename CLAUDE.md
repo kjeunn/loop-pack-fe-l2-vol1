@@ -104,6 +104,8 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 
 ESLint 강제 룰은 `eslint.config.mjs`에서 관리. 우회(`eslint-disable`, `ts-ignore`, `--no-verify`) 금지.
 
+**제공된 테스트·픽스처는 계약.** 통과시키려 테스트를 고치지 말고 구현·데이터를 고친다. 테스트 수정이 불가피하면 먼저 확인받는다.
+
 ## 🚀 Git & PR 규칙
 
 - **브랜치:** `feature/weekN-기능명` 또는 `fix/weekN-버그명`. `main` 기준.
