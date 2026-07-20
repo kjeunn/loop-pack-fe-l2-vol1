@@ -10,7 +10,7 @@ import "@/shared/ui/week-05-layout.css";
  * 데이터 조회, Query 구성, 전역 상태와 이벤트 연결은 포함되어 있지 않습니다.
  * 실제 상태를 연결할 때 각 버튼의 aria-pressed를 해당 상품의 포함 여부로 바꿉니다.
  */
-export function ProductListLayoutExample() {
+export function ProductListView() {
   return (
     <main className="week05-page">
       <header className="week05-header">

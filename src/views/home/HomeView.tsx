@@ -10,7 +10,7 @@ import type { Product } from "@/types/commerce";
 
 import "@/shared/ui/week-05-layout.css";
 
-export function HomeLayoutExample() {
+export function HomeView() {
   const { data, isLoading, isError, error } = useQuery(homeQueryOptions());
 
   return (
