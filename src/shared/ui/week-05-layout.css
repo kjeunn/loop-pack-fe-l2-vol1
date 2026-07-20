@@ -22,6 +22,10 @@
 }
 
 .week05-hero {
+  position: relative;
+  /* 배너 이미지가 fill로 깔리므로 자식 z-index를 이 안에 가둔다. */
+  isolation: isolate;
+  overflow: hidden;
   min-height: 220px;
   display: flex;
   flex-direction: column;
@@ -29,6 +33,25 @@
   gap: 8px;
   padding: 32px;
   background: #ececec;
+}
+
+.week05-hero-image {
+  object-fit: cover;
+  /* cover는 기본이 가운데 크롭이라 인물·상품 상단이 잘린다. 위쪽을 기준으로 맞춘다. */
+  object-position: top;
+}
+
+/* 사진 위에서도 기존 어두운 본문 색을 유지하려고 흰 스크림을 덧댄다. */
+.week05-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.35));
+}
+
+.week05-hero > p,
+.week05-hero > h1 {
+  position: relative;
 }
 
 .week05-section {
