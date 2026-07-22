@@ -1,10 +1,8 @@
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
+import { DEFAULT_PAGE_SIZE } from "@/features/products/model/pagination";
 import { fetchJson } from "@/shared/api/fetcher";
 import type { ProductListQuery, ProductListResponse } from "@/types/commerce";
-
-// pageSize는 사용자가 바꾸지 않는 고정값이라 URL이 아닌 상수로 둔다.
-export const PRODUCT_PAGE_SIZE = 12;
 
 // 목록은 조건(q·category·sort·page)마다 다른 캐시 엔트리가 된다.
 // 방금 보던 조건으로 되돌아오는 경우만 재요청을 아끼면 되므로 staleTime은 짧게 둔다.
@@ -21,7 +19,7 @@ function normalize(query: ProductListQuery): Required<ProductListQuery> {
     // 기본 정렬(latest)도 API에 명시한다. sort 생략은 4주차 호환 동작이라 화면에선 쓰지 않는다.
     sort: query.sort ?? "latest",
     page: query.page ?? 1,
-    pageSize: query.pageSize ?? PRODUCT_PAGE_SIZE,
+    pageSize: query.pageSize ?? DEFAULT_PAGE_SIZE,
   };
 }
 
@@ -42,5 +40,7 @@ export function productListQueryOptions(query: ProductListQuery) {
     queryKey: ["products", normalized] as const,
     queryFn: () => fetchJson<ProductListResponse>(`/api/products?${toSearchParams(normalized)}`),
     staleTime: PRODUCTS_STALE_TIME,
+    // 페이지·필터를 바꿀 때 스켈레톤으로 깜빡이지 않고 이전 목록을 유지한다.
+    placeholderData: keepPreviousData,
   });
 }

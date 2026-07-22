@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 interface ProvidersProps {
   children: ReactNode;
@@ -38,7 +39,7 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <NuqsAdapter>{children}</NuqsAdapter>
       {/* 조건별 query key가 실제로 갈라지는지, staleTime이 재요청을 막는지 확인하는 용도.
           프로덕션 번들에서는 자동으로 빠진다. */}
       <ReactQueryDevtools initialIsOpen={false} />

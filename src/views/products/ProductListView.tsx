@@ -1,16 +1,74 @@
-import Image from "next/image";
+"use client";
+
+import { type ChangeEvent, useEffect } from "react";
+
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useQueryStates } from "nuqs";
+
+import { productListQueryOptions } from "@/features/products/api/queries";
+import { type PageSize } from "@/features/products/model/pagination";
+import { productSearchParsers } from "@/features/products/model/searchParams";
+import {
+  CATEGORY_OPTIONS,
+  PAGE_SIZE_OPTIONS,
+  SORT_OPTIONS,
+} from "@/features/products/ui/filterOptions";
+import type { CategoryId, ProductSort } from "@/types/commerce";
+
+import { ProductListResults } from "./ProductListResults";
+import { ProductSearchInput } from "./ProductSearchInput";
 
 import "@/shared/ui/week-05-layout.css";
 
-/**
- * 5주차 과제를 빠르게 시작할 수 있도록 제공하는 최소 레이아웃 예시입니다.
- * 이 구조는 상태관리 아키텍처의 정답이 아닙니다.
- * 그대로 사용하거나, 기존 컴포넌트를 재사용하거나, 자유롭게 교체해도 됩니다.
- * 데이터 조회, Query 구성, 전역 상태와 이벤트 연결은 포함되어 있지 않습니다.
- * 실제 상태를 연결할 때 각 버튼의 aria-pressed를 해당 상품의 포함 여부로 바꿉니다.
- */
 export function ProductListView() {
+  const [query, setQuery] = useQueryStates(productSearchParsers, { history: "push" });
+  // 결과 목록은 ProductListResults가 직접 조회한다. 여기서는 페이지 이동에 필요한
+  // 전체 개수만 쓰며, 같은 query key라 요청은 한 번만 나간다.
+  const { data, isPlaceholderData } = useQuery(productListQueryOptions(query));
+
+  const totalCount = data?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
+
+  // 파서가 걸러낸 값(pageSize=999 등)은 조회에는 안 쓰이지만 주소창에는 그대로 남아,
+  // URL이 실제 조회 조건과 다른 말을 한다. 정규화된 값으로 덮어써 둘을 맞춘다.
+  // 잘못된 URL은 뒤로 가기로 돌아갈 지점이 아니므로 replace로 바꾼다.
+  // 값이 이미 정규형이면 nuqs가 상태를 갱신하지 않아 이 effect는 다시 돌지 않는다.
+  useEffect(() => {
+    setQuery(query, { history: "replace" });
+  }, [query, setQuery]);
+
+  // 마지막 페이지를 넘는 page는 형식상 유효해 파서가 거를 수 없다(전체 개수는 서버만 안다).
+  // 응답이 온 뒤 첫 페이지로 되돌린다. 다른 무효값과 같은 규칙(무효면 기본값)을 쓴다.
+  useEffect(() => {
+    if (!data || query.page <= totalPages) return;
+    setQuery({ page: 1 }, { history: "replace" });
+  }, [data, query.page, totalPages, setQuery]);
+
+  // 검색·카테고리·정렬을 바꾸면 이전 페이지가 유효하지 않으므로 page를 1로 되돌린다.
+  // 한 객체로 넘겨 URL 쓰기가 한 번에 일어나게 한다(조회도 한 번).
+  function handleSearch(q: string) {
+    setQuery({ q, page: 1 });
+  }
+
+  function handleCategoryChange(event: ChangeEvent<HTMLSelectElement>) {
+    setQuery({ category: event.target.value as CategoryId | "all", page: 1 });
+  }
+
+  function handleSortChange(event: ChangeEvent<HTMLSelectElement>) {
+    setQuery({ sort: event.target.value as ProductSort, page: 1 });
+  }
+
+  // 개수를 바꾸면 기존 페이지 번호가 범위를 벗어날 수 있어 함께 1로 되돌린다.
+  // 선택지를 PAGE_SIZE_VALUES로 그리므로 값은 항상 PageSize 중 하나다.
+  function handlePageSizeChange(event: ChangeEvent<HTMLSelectElement>) {
+    setQuery({ pageSize: Number(event.target.value) as PageSize, page: 1 });
+  }
+
+  function goToPage(page: number) {
+    setQuery({ page });
+  }
+
   return (
     <main className="week05-page">
       <header className="week05-header">
@@ -21,78 +79,60 @@ export function ProductListView() {
           <span>장바구니 0</span>
         </nav>
       </header>
+
       <section className="week05-section">
         <h1>상품 목록</h1>
-        <form className="week05-filters">
-          <label>
-            검색
-            <input name="q" placeholder="상품명 또는 브랜드" />
-          </label>
+        <div className="week05-filters">
+          <ProductSearchInput value={query.q} onSearch={handleSearch} />
           <label>
             카테고리
-            <select name="category" defaultValue="all">
-              <option value="all">전체</option>
-              <option value="casual">캐주얼</option>
-              <option value="fashion">패션</option>
-              <option value="goods">뷰티·잡화</option>
-              <option value="home">홈</option>
-              <option value="digital">디지털</option>
+            <select value={query.category} onChange={handleCategoryChange}>
+              {CATEGORY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </label>
           <label>
             정렬
-            <select name="sort" defaultValue="latest">
-              <option value="latest">최신순</option>
+            <select value={query.sort} onChange={handleSortChange}>
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </label>
-        </form>
-      </section>
-      <section className="week05-section" aria-label="상품 검색 결과">
-        <p>총 0개</p>
-        <div className="week05-grid">
-          {Array.from({ length: 8 }, (_, index) => (
-            <article className="week05-product" key={index}>
-              <Image
-                className="week05-image"
-                src={index % 2 === 0 ? "/images/products/p11.jpg" : "/images/products/p16.jpg"}
-                alt={
-                  index % 2 === 0
-                    ? "하이드레이팅 나이트 립 마스크 25g + 소프트 글로우 결 토너 210ml"
-                    : "스탠리 클래식 런치박스"
-                }
-                width={400}
-                height={400}
-              />
-              <p>브랜드</p>
-              <h2>
-                {index % 2 === 0
-                  ? "하이드레이팅 나이트 립 마스크 25g + 소프트 글로우 결 토너 210ml"
-                  : "스탠리 클래식 런치박스"}
-              </h2>
-              <strong>0원</strong>
-              <div>
-                <button
-                  type="button"
-                  aria-label={`${index + 1}번 상품 위시리스트`}
-                  aria-pressed={false}
-                >
-                  찜
-                </button>
-                <button
-                  type="button"
-                  aria-label={`${index + 1}번 상품 장바구니`}
-                  aria-pressed={false}
-                >
-                  담기
-                </button>
-              </div>
-            </article>
-          ))}
+          <label>
+            표시 개수
+            <select value={query.pageSize} onChange={handlePageSizeChange}>
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+      </section>
+
+      <section className="week05-section" aria-label="상품 검색 결과" aria-busy={isPlaceholderData}>
+        <ProductListResults />
         <nav className="week05-pagination" aria-label="페이지 이동">
-          <button type="button">이전</button>
-          <span>1 / 1</span>
-          <button type="button">다음</button>
+          <button type="button" onClick={() => goToPage(query.page - 1)} disabled={query.page <= 1}>
+            이전
+          </button>
+          <span>
+            {query.page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => goToPage(query.page + 1)}
+            disabled={query.page >= totalPages}
+          >
+            다음
+          </button>
         </nav>
       </section>
     </main>
