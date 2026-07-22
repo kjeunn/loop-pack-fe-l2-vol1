@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { homeQueryOptions } from "@/features/home/api/queries";
+import { ProductCard } from "@/features/products/ui/ProductCard";
+import { ProductGridSkeleton } from "@/features/products/ui/ProductSkeleton";
 import { Skeleton } from "@/shared/ui/loading/Skeleton";
 import type { Product } from "@/types/commerce";
 
@@ -88,36 +90,6 @@ function ProductSection({ title, products }: ProductSectionProps) {
   );
 }
 
-interface ProductCardProps {
-  product: Product;
-}
-
-function ProductCard({ product }: ProductCardProps) {
-  return (
-    <article className="week05-product">
-      <Image
-        className="week05-image"
-        src={product.image}
-        alt={product.name}
-        width={400}
-        height={400}
-      />
-      <p>{product.brand}</p>
-      <h3>{product.name}</h3>
-      <strong>{product.price.toLocaleString("ko-KR")}원</strong>
-      <div>
-        {/* 찜·담기는 전역 클라이언트 상태(Zustand)를 붙일 자리라 지금은 정적으로 둔다. */}
-        <button type="button" aria-label={`${product.name} 위시리스트`} aria-pressed={false}>
-          찜
-        </button>
-        <button type="button" aria-label={`${product.name} 장바구니`} aria-pressed={false}>
-          담기
-        </button>
-      </div>
-    </article>
-  );
-}
-
 // API가 홈 상품을 섹션당 6개 준다. 로딩과 성공의 그리드 높이를 맞추려고 같은 개수를 그린다.
 const HOME_SECTION_PRODUCT_COUNT = 6;
 
@@ -137,28 +109,9 @@ function HomeSkeleton() {
       {["popular", "new"].map((section) => (
         <section className="week05-section" key={section}>
           <Skeleton className="mb-4 h-6 w-24" />
-          <div className="week05-grid">
-            {Array.from({ length: HOME_SECTION_PRODUCT_COUNT }, (_, index) => (
-              <ProductCardSkeleton key={index} />
-            ))}
-          </div>
+          <ProductGridSkeleton count={HOME_SECTION_PRODUCT_COUNT} />
         </section>
       ))}
     </div>
-  );
-}
-
-function ProductCardSkeleton() {
-  return (
-    <article className="week05-product">
-      <Skeleton className="week05-image" />
-      <Skeleton className="h-4 w-16" />
-      <Skeleton className="h-5 w-full" />
-      <Skeleton className="h-5 w-20" />
-      <div>
-        <Skeleton className="h-9 w-12" />
-        <Skeleton className="h-9 w-14" />
-      </div>
-    </article>
   );
 }
