@@ -7,8 +7,11 @@ argument-hint: [파일경로 또는 컴포넌트명]
 
 # Pattern Review — Headless · Compound · 이중 API · FSD 배치
 
+> **용도: 우리 코드베이스 검사.** FSD 배치·절대경로 등 이 레포의 컨벤션을 전제로 한다.
+> 외부 라이브러리 분석이나 설계 학습에는 `analyze-component`를 쓴다.
+
 컴포넌트가 **어떤 패턴을 택했는지**, 그 패턴의 계약을 지켰는지, FSD 레이어에 맞게 놓였는지를 리뷰한다.
-(관심사 분리·Custom Hook 책임은 `component-review`가 본다 — 여기선 패턴과 배치만.)
+(관심사 분리·Custom Hook 책임 범위는 `analyze-component`의 "책임 범위" 관점이 본다 — 여기선 패턴 계약과 배치만.)
 
 ---
 
@@ -16,7 +19,7 @@ argument-hint: [파일경로 또는 컴포넌트명]
 
 1. **대상 읽기** — 인자로 받은 파일(없으면 대상을 묻는다)과 연관 파일(Context·types·훅·조립부)을 함께 읽는다. compound는 조각 파일이 흩어져 있으니 조립 지점(`Object.assign`/`Xxx.Trigger`)까지 본다.
 2. **패턴 판별** — 아래 *패턴 판별 기준*으로 Headless / Compound / 단순 컴포넌트 중 무엇인지 정한다. 패턴을 잘못 고른 것 자체가 첫 리뷰 포인트.
-3. **계약 점검** — 판별된 패턴의 체크리스트를 적용한다.
+3. **계약 점검** — 판별된 패턴의 체크리스트를 적용한다. **체크리스트는 조건부다** — 해당 패턴·성격일 때만 그 섹션을 적용한다.
 4. **FSD 배치 점검** — 파일이 맞는 레이어·segment에 있는지, import가 아래로만 흐르는지 본다.
 5. **리포트 출력** — _리포트 형식_ 그대로. 파일은 수정하지 않고 후보만 제안한다.
 
@@ -54,14 +57,19 @@ argument-hint: [파일경로 또는 컴포넌트명]
 - [ ] 제어 여부를 **prop 유무**(`open !== undefined`)로 판별하는가? (별도 `isControlled` prop을 받지 않음)
 - [ ] uncontrolled일 때만 내부 state를 갱신하고, controlled일 땐 부모 값을 그대로 읽는가?
 - [ ] 상태 통보 창구가 `onXxxChange` **하나**인가? (`onClose`·`onOpen`을 따로 두어 창구가 갈리지 않음)
+- [ ] 생애 중 controlled ↔ uncontrolled로 바뀌는 것을 감지해 경고하는가? (React가 input에서 경고하는 것과 같은 규칙)
 - [ ] 콜백 prop 이름이 `on~`인가?
 
-### 4. 오버레이(Portal/scroll/effect)
+### 4. 오버레이 — Dialog·Drawer·Dropdown·Toast 등 떠 있는 UI 공통 (해당 시에만 적용)
+
+> **스크롤 잠금·배경 차단은 modal성 오버레이에만 해당한다.** Dropdown·Tooltip이 스크롤을 잠그면 그 자체가 버그다.
 
 - [ ] Portal로 DOM 최상단에 렌더돼 부모 `overflow`/`z-index`에 안 갇히는가?
 - [ ] Esc·오버레이 클릭으로 닫히고, 그 처리도 `onOpenChange` 하나로 모이는가?
 - [ ] **스크롤 잠금과 Esc 리스너가 서로 다른 effect로 분리**됐는가? (합치면 `setOpen` 정체성 변화로 잠금이 재실행돼 원복값이 오염됨)
+- [ ] 중첩 오버레이에서 Esc가 **최상단 것만** 닫는가? 스크롤 잠금 해제가 refcount로 관리되어 안쪽이 닫혀도 바깥 잠금이 유지되는가?
 - [ ] 동작을 끄는 지점을 이름으로 열어뒀는가? (`lockScroll` ✅ / `modal` 같은 모호한 이름 ❌)
+- [ ] (실서비스 공용 기준) 포커스 트랩·복원·초기 포커스, `role="dialog"`·`aria-modal`을 검토했는가? — 이 레포 4주차 과제에선 스코프 밖이었지만, 실서비스 리뷰에선 반드시 본다.
 
 ### 5. 확장 지점
 
@@ -89,8 +97,7 @@ argument-hint: [파일경로 또는 컴포넌트명]
 - 🔴 높음 — 패턴 오선택(변형 1개인데 compound), 이중 API 창구 분열(`onClose`+`onOpenChange`), Context value 미안정화, FSD 역참조
 - 🟡 중간 — 뷰가 상태를 직접 계산(headless 누수), effect 미분리, `on~` 네이밍 위반, 배치 오류(훅이 `ui`에)
 - 🟢 사소 — 확장 지점 미개방, 이름 다듬기
-
-각 항목: `[심각도] 파일:라인 — 무엇이 / 왜 문제 / 어떻게`
+  각 항목: `[심각도] 파일:라인 — 무엇이 / 왜 문제 / 어떻게`
 
 **3) 개선 후보 표**
 
