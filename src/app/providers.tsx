@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
+import { useHydrateCommerce } from "@/entities/commerce/model/useHydrateCommerce";
+
 interface ProvidersProps {
   children: ReactNode;
 }
@@ -36,6 +38,7 @@ function getQueryClient() {
 
 export function Providers({ children }: ProvidersProps) {
   const queryClient = getQueryClient();
+  useHydrateCommerce();
 
   return (
     <QueryClientProvider client={queryClient}>
