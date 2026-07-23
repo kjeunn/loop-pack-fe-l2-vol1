@@ -75,6 +75,37 @@
   background: transparent;
 }
 
+/* 아이콘(찜)과 텍스트(담기)는 콘텐츠 높이가 달라, 높이를 고정해 두 버튼을 맞춘다.
+   box-sizing으로 padding·border가 높이에 포함되게 해 콘텐츠가 밀어 올리지 않게 한다. */
+.week05-product button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 36px;
+  cursor: pointer;
+}
+
+/* 빈 상태는 외곽선만, 담긴 상태는 빨강으로 채운다.
+   상태는 aria-pressed로만 있으니 그 속성을 시각에도 그대로 재활용한다. */
+.week05-wish-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: #e0245e;
+  stroke-width: 2;
+}
+
+.week05-wish[aria-pressed="true"] .week05-wish-icon {
+  fill: #e0245e;
+}
+
+.week05-cart[aria-pressed="true"] {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
 .week05-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

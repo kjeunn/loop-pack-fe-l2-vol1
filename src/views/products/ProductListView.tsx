@@ -3,7 +3,6 @@
 import { type ChangeEvent, useEffect } from "react";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useQueryStates } from "nuqs";
 
 import { productListQueryOptions } from "@/features/products/api/queries";
@@ -15,6 +14,7 @@ import {
   SORT_OPTIONS,
 } from "@/features/products/ui/filterOptions";
 import type { CategoryId, ProductSort } from "@/types/commerce";
+import { Header } from "@/widgets/header/ui/Header";
 
 import { ProductListResults } from "./ProductListResults";
 import { ProductSearchInput } from "./ProductSearchInput";
@@ -71,14 +71,7 @@ export function ProductListView() {
 
   return (
     <main className="week05-page">
-      <header className="week05-header">
-        <Link href="/">Commerce</Link>
-        <nav aria-label="주요 메뉴">
-          <Link href="/products">상품</Link>
-          <span>위시리스트 0</span>
-          <span>장바구니 0</span>
-        </nav>
-      </header>
+      <Header />
 
       <section className="week05-section">
         <h1>상품 목록</h1>
