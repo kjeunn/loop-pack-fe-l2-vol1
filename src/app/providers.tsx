@@ -7,21 +7,10 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { useHydrateCommerce } from "@/entities/commerce/model/useHydrateCommerce";
+import { makeQueryClient } from "@/shared/api/queryClient";
 
 interface ProvidersProps {
   children: ReactNode;
-}
-
-function makeQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        // 하이드레이션 직후 곧바로 다시 조회하지 않도록 기본 staleTime을 둔다.
-        // 각 queryOptions 팩토리가 필요하면 이 값을 덮어쓴다.
-        staleTime: 1000 * 60,
-      },
-    },
-  });
 }
 
 let browserQueryClient: QueryClient | undefined = undefined;
