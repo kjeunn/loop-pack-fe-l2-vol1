@@ -2,7 +2,7 @@
 
 import { type ChangeEvent, useEffect } from "react";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 
 import { productListQueryOptions } from "@/features/products/api/queries";
@@ -23,12 +23,21 @@ import "@/shared/ui/week-05-layout.css";
 
 export function ProductListView() {
   const [query, setQuery] = useQueryStates(productSearchParsers, { history: "push" });
+  const queryClient = useQueryClient();
   // 결과 목록은 ProductListResults가 직접 조회한다. 여기서는 페이지 이동에 필요한
   // 전체 개수만 쓰며, 같은 query key라 요청은 한 번만 나간다.
   const { data, isPlaceholderData } = useQuery(productListQueryOptions(query));
 
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
+
+  // 다음 페이지를 미리 받아 둔다. "다음"을 누르면 네트워크 대기 없이 곧바로 보인다.
+  // 마지막 페이지에는 다음이 없어 건너뛴다.
+  // 목록 조회와 같은 팩토리라 query key·캐시 정책이 그대로 일치해 충돌하지 않는다.
+  useEffect(() => {
+    if (query.page >= totalPages) return;
+    queryClient.prefetchQuery(productListQueryOptions({ ...query, page: query.page + 1 }));
+  }, [query, totalPages, queryClient]);
 
   // 파서가 걸러낸 값(pageSize=999 등)은 조회에는 안 쓰이지만 주소창에는 그대로 남아,
   // URL이 실제 조회 조건과 다른 말을 한다. 정규화된 값으로 덮어써 둘을 맞춘다.
