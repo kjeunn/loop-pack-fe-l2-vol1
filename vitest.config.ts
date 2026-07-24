@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
+  // 테스트는 클래스명을 검증하지 않으므로 프로젝트 PostCSS(Tailwind)를 태우지 않는다.
+  // 이걸 비우지 않으면 CSS 모듈을 렌더하는 컴포넌트 테스트가 PostCSS 로드에서 실패한다.
+  css: { postcss: { plugins: [] } },
   test: {
     environment: "jsdom",
     globals: true,
