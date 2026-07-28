@@ -36,7 +36,8 @@ export function ProductListView() {
   // 목록 조회와 같은 팩토리라 query key·캐시 정책이 그대로 일치해 충돌하지 않는다.
   useEffect(() => {
     if (query.page >= totalPages) return;
-    queryClient.prefetchQuery(productListQueryOptions({ ...query, page: query.page + 1 }));
+    // 결과를 기다리지 않고 캐시만 채우므로 floating promise를 void로 명시한다.
+    void queryClient.prefetchQuery(productListQueryOptions({ ...query, page: query.page + 1 }));
   }, [query, totalPages, queryClient]);
 
   // 파서가 걸러낸 값(pageSize=999 등)은 조회에는 안 쓰이지만 주소창에는 그대로 남아,
