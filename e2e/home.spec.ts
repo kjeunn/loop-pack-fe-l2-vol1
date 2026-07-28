@@ -11,6 +11,25 @@ test("홈에 배너·카테고리·인기 상품·신상품이 보인다", async
   await expect(page.getByRole("heading", { name: "신상품" })).toBeVisible();
 });
 
+test("홈 첫 로드에서 클라이언트가 /api/home을 재요청하지 않는다", async ({ page }) => {
+  // 서버가 prefetch해 dehydrate로 넘긴 데이터를 클라이언트가 그대로 쓰므로,
+  // 초기 렌더에서 브라우저발 /api/home 요청이 0건이어야 한다(Advanced B의 중복 요청 없음).
+  const homeApiRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/home")) {
+      homeApiRequests.push(request.url());
+    }
+  });
+
+  await page.goto("/");
+  // 데이터가 첫 HTML에 이미 있어 서버 렌더 결과가 곧바로 보인다.
+  await expect(page.getByRole("heading", { name: "매일 새롭게 발견하는 취향" })).toBeVisible();
+  // 하이드레이션 뒤 재요청이 없는지 잠시 지켜본다.
+  await page.waitForTimeout(500);
+
+  expect(homeApiRequests).toHaveLength(0);
+});
+
 test("홈에서 담은 상품이 목록으로 이동해도 담긴 상태로 보인다", async ({ page }) => {
   await page.goto("/");
 

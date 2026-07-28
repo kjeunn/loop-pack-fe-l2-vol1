@@ -1,6 +1,20 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
 // URL 조건 복원과 store 유지는 브라우저 히스토리·라우터가 얽혀 jsdom에서 못 본다 → 진짜 브라우저로 확인한다.
+
+// prefetch는 네트워크 동작이라 jsdom이 못 본다 → 실제 브라우저 요청을 가로채 검증한다.
+// productListQueryOptions가 q·category·sort·page·pageSize를 모두 URL에 담으므로,
+// 어느 조건의 몇 페이지를 요청했는지 searchParams로 정확히 가려낸다.
+function captureListRequests(page: Page): URLSearchParams[] {
+  const requests: URLSearchParams[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === "/api/products") {
+      requests.push(url.searchParams);
+    }
+  });
+  return requests;
+}
 
 test("뒤로·앞으로 가기로 목록 조건이 복원된다", async ({ page }) => {
   await page.goto("/products");
@@ -121,6 +135,54 @@ test("페이지네이션으로 다음·이전을 오간다", async ({ page }) =>
 
   await page.getByRole("button", { name: "이전" }).click();
   await expect(pageIndicator).toContainText("1 /");
+});
+
+test("진입만으로는 다음 페이지를 prefetch하지 않고, 다음 버튼에 hover하면 그때 prefetch한다", async ({
+  page,
+}) => {
+  const requests = captureListRequests(page);
+  await page.goto("/products");
+  await expect(page.getByText(/총 30개/)).toBeVisible();
+
+  // 모든 조회는 이벤트의 결과다. 페이지 진입만으론 다음 페이지를 투기적으로 받지 않는다.
+  expect(requests.some((q) => q.get("page") === "2")).toBe(false);
+
+  // "다음"에 마우스를 올리면 곧 누를 의도로 보고 그때 page=2를 미리 받는다.
+  await page.getByRole("button", { name: "다음" }).hover();
+  await expect.poll(() => requests.some((q) => q.get("page") === "2")).toBe(true);
+});
+
+test("마지막 페이지에서는 다음 버튼이 비활성이라 없는 페이지를 prefetch하지 않는다", async ({
+  page,
+}) => {
+  const requests = captureListRequests(page);
+  // 상품 30개·pageSize 12 → 전체 3페이지. 3페이지엔 다음이 없다.
+  await page.goto("/products?page=3");
+  await expect(page.locator(".week05-pagination span")).toContainText("3 / 3");
+
+  // "다음"이 disabled라 hover·focus 이벤트가 뜨지 않아 없는 page=4를 요청할 수 없다.
+  await expect(page.getByRole("button", { name: "다음" })).toBeDisabled();
+  await page.waitForTimeout(300);
+  expect(requests.some((q) => q.get("page") === "4")).toBe(false);
+});
+
+test("필터를 좁혀 한 페이지가 되면 다음 버튼이 비활성이라 없는 페이지를 prefetch하지 않는다", async ({
+  page,
+}) => {
+  const requests = captureListRequests(page);
+  await page.goto("/products");
+  await expect(page.getByText(/총 30개/)).toBeVisible();
+
+  // 카테고리 하나는 상품 6개 → 1페이지뿐이다. 좁힌 뒤엔 "다음"이 disabled가 되어,
+  // 그 버튼에 hover해도 fashion의 없는 2페이지를 요청하지 않는다.
+  await page.getByLabel("카테고리").selectOption("fashion");
+  await expect(page.getByText(/총 6개/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "다음" })).toBeDisabled();
+
+  const askedForFashionSecondPage = requests.some(
+    (q) => q.get("category") === "fashion" && q.get("page") === "2",
+  );
+  expect(askedForFashionSecondPage).toBe(false);
 });
 
 test("무효한 URL 값은 기본값으로 정규화된다", async ({ page }) => {

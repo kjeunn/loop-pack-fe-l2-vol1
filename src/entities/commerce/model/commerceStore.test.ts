@@ -54,4 +54,31 @@ describe("저장값 복구", () => {
     expect(useCommerceStore.getState().cartIds).toEqual(["p1", "p3"]);
     expect(useCommerceStore.getState().wishlistIds).toEqual(["p5"]);
   });
+
+  it("저장 버전이 현재와 달라도 migrate를 거쳐 버려지지 않고 복원된다", async () => {
+    // migrate 함수가 없으면 persist는 버전 불일치 시 저장값을 통째로 버린다.
+    // version 0(현재 1)을 넣어 migrate 경로를 태우고, 유효한 값이 살아남는지 확인한다.
+    localStorage.setItem(
+      "commerce-store",
+      JSON.stringify({ state: { cartIds: ["p1"], wishlistIds: ["p2"] }, version: 0 }),
+    );
+
+    await useCommerceStore.persist.rehydrate();
+
+    expect(useCommerceStore.getState().cartIds).toEqual(["p1"]);
+    expect(useCommerceStore.getState().wishlistIds).toEqual(["p2"]);
+  });
+
+  it("버전이 다르고 저장값이 손상됐으면 migrate가 안전한 형태로 되돌린다", async () => {
+    localStorage.setItem(
+      "commerce-store",
+      JSON.stringify({ state: { cartIds: [123, "p1"], wishlistIds: null }, version: 0 }),
+    );
+
+    await useCommerceStore.persist.rehydrate();
+
+    // 숫자가 섞인 배열은 통째로 비우고, 배열이 아닌 값도 빈 배열로 복구한다.
+    expect(useCommerceStore.getState().cartIds).toEqual([]);
+    expect(useCommerceStore.getState().wishlistIds).toEqual([]);
+  });
 });
