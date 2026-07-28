@@ -11,40 +11,64 @@ interface ProductSearchInputProps {
 }
 
 export function ProductSearchInput({ value, onSearch }: ProductSearchInputProps) {
-  const [draft, setDraft] = useState(value);
-  const [lastSyncedValue, setLastSyncedValue] = useState(value);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 직전 value 변경이 뒤로/앞으로(popstate) 때문인지 표시한다.
+  // 우리 검색 commit은 pushState라 popstate를 쏘지 않으므로, 이 플래그로 둘을 가른다.
+  const pendingPopStateRef = useRef(false);
+  // input 리마운트 트리거. popstate로 URL이 바뀔 때만 올려 IME 조합 버퍼까지 새로 만든다.
+  const [remountKey, setRemountKey] = useState(0);
 
-  // 뒤로 가기처럼 URL이 밖에서 바뀌면 입력창도 그 값으로 되돌려야 한다.
-  // key로 리마운트하면 타이핑 중 포커스를 잃으므로 렌더 중에 조정한다.
-  if (value !== lastSyncedValue) {
-    setLastSyncedValue(value);
-    setDraft(value);
-  }
-
-  // 확정 전에 화면을 벗어나면 죽은 타이머가 setQuery를 호출한다.
+  // 뒤로/앞으로 네비게이션을 표시만 해둔다. 실제 리마운트는 value가 갱신된 뒤 아래 effect에서 한다.
   useEffect(() => {
+    const handlePopState = () => {
+      pendingPopStateRef.current = true;
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    // popstate로 URL이 바뀐 경우에만 input을 리마운트한다.
+    // 이 effect는 value가 갱신된 뒤 실행되므로 새 value로 리마운트돼 옛 값·조합 버퍼가 남지 않는다.
+    // 우리 검색 commit은 popstate가 없어 리마운트되지 않고 포커스가 유지된다.
+    if (pendingPopStateRef.current) {
+      pendingPopStateRef.current = false;
+      setRemountKey((key) => key + 1);
+    }
+
+    // 대기 중 debounce 취소. 언마운트 + 외부 URL 변경 모두에서 정리돼,
+    // 뒤로 간 뒤 남은 타이머가 옛 검색어를 다시 push하지 않게 한다.
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, []);
+  }, [value]);
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const nextDraft = event.target.value;
-    setDraft(nextDraft);
+    // 사용자가 타이핑하면 직전 popstate 기대는 무효로 둔다(같은 조건으로 back한 뒤 타이핑하는 경우 대비).
+    pendingPopStateRef.current = false;
 
+    const nextValue = event.target.value;
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
-    debounceTimerRef.current = setTimeout(() => onSearch(nextDraft), SEARCH_DEBOUNCE_MS);
+    debounceTimerRef.current = setTimeout(() => onSearch(nextValue), SEARCH_DEBOUNCE_MS);
   }
 
   return (
     <label>
       검색
-      <input name="q" placeholder="상품명 또는 브랜드" value={draft} onChange={handleChange} />
+      {/* 언컨트롤드(defaultValue) + popstate 때만 바뀌는 key.
+          타이핑·자기 commit엔 remountKey가 안 변해 포커스 유지,
+          뒤로/앞으로일 때만 리마운트해 IME 버퍼를 초기화한다. */}
+      <input
+        key={remountKey}
+        defaultValue={value}
+        name="q"
+        placeholder="상품명 또는 브랜드"
+        onChange={handleChange}
+      />
     </label>
   );
 }

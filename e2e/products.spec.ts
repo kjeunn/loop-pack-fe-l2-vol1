@@ -81,6 +81,22 @@ test("검색어를 바꾸면 결과가 필터되고, 없으면 빈 상태를 보
   await expect(page.getByText("조건에 맞는 상품이 없습니다.")).toBeVisible();
 });
 
+test("검색어를 치자마자 뒤로 가면 미완성 검색어가 URL에 새어나가지 않는다", async ({ page }) => {
+  // 먼저 한 번 commit해 뒤로 갈 지점을 만든다.
+  await page.goto("/products");
+  const input = page.getByPlaceholder("상품명 또는 브랜드");
+  await input.fill("니트");
+  await expect(page).toHaveURL(/q=%EB%8B%88%ED%8A%B8/); // "니트" commit 확인
+
+  // 이어서 "샵"을 더 치고 debounce(300ms)가 끝나기 전에 곧바로 뒤로 간다.
+  await input.pressSequentially("샵");
+  await page.goBack();
+
+  // 죽은 타이머가 "니트샵"을 뒤늦게 push하면 안 된다. 시간이 지나도 URL에 "샵"이 없어야 한다.
+  await page.waitForTimeout(500);
+  await expect(page).not.toHaveURL(/%EC%83%B5/);
+});
+
 test("카테고리를 바꾸면 결과가 갱신되고 page가 1로 돌아간다", async ({ page }) => {
   await page.goto("/products");
 
