@@ -31,14 +31,15 @@ export function ProductListView() {
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
 
-  // 다음 페이지를 미리 받아 둔다. "다음"을 누르면 네트워크 대기 없이 곧바로 보인다.
-  // 마지막 페이지에는 다음이 없어 건너뛴다.
+  // 다음 페이지를 미리 받아 둔다. 진입만으로 투기적으로 받지 않고, "다음"에 마우스를
+  // 올리거나(hover) 포커스가 닿았을 때(keyboard) — 곧 누를 의도가 드러난 시점에만 받는다.
+  // 마지막 페이지에선 "다음"이 disabled라 이 이벤트가 뜨지 않아 없는 페이지를 요청하지 않는다.
+  // staleTime 안이면 prefetchQuery가 캐시를 그대로 써, hover를 반복해도 요청이 중복되지 않는다.
   // 목록 조회와 같은 팩토리라 query key·캐시 정책이 그대로 일치해 충돌하지 않는다.
-  useEffect(() => {
-    if (query.page >= totalPages) return;
+  function prefetchNextPage() {
     // 결과를 기다리지 않고 캐시만 채우므로 floating promise를 void로 명시한다.
     void queryClient.prefetchQuery(productListQueryOptions({ ...query, page: query.page + 1 }));
-  }, [query, totalPages, queryClient]);
+  }
 
   // 파서가 걸러낸 값(pageSize=999 등)은 조회에는 안 쓰이지만 주소창에는 그대로 남아,
   // URL이 실제 조회 조건과 다른 말을 한다. 정규화된 값으로 덮어써 둘을 맞춘다.
@@ -132,6 +133,8 @@ export function ProductListView() {
           <button
             type="button"
             onClick={() => goToPage(query.page + 1)}
+            onMouseEnter={prefetchNextPage}
+            onFocus={prefetchNextPage}
             disabled={query.page >= totalPages}
           >
             다음
