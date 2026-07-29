@@ -7,7 +7,7 @@ Loopers 프론트엔드 과정(TypeScript · React · Next.js)의 과제를 수�
 매주 과제를 수행해 PR로 제출하고, 코치 리뷰 피드백을 반영해 수정·보완하는 방식으로 진행합니다.
  
 - **기간**: 2026.06 — 진행 중
-- **스택**: TypeScript · React 19 · Next.js (App Router) · Tailwind CSS v4 · Vitest · Playwright
+- **스택**: TypeScript · React 19 · Next.js (App Router) · TanStack Query · nuqs · Zustand · Tailwind CSS v4 · Vitest · Playwright
 - **이 브랜치(`kjeunn`)**: 주차별 작업을 통합한 브랜치 (main은 upstream 동기화 전용)
 ## 브랜치 구조
  
@@ -49,14 +49,16 @@ Loopers 프론트엔드 과정(TypeScript · React · Next.js)의 과제를 수�
 Next.js(App Router)로 커머스 베이스를 세우고, UI 라이브러리 없이 패턴을 직접 구현했습니다.
  
 - **Select (Headless)** — 로직 한 벌(`useSelect`: 키보드 내비게이션·품절 옵션 스킵·객체 value)로 텍스트/사이즈/썸네일 3종 UI 렌더
-- **Dialog (Compound)** — `Dialog.Trigger/Overlay/Content/Close` 조립, controlled·uncontrolled **이중 API**, Portal 렌더, 중첩 다이얼로그의 전역 자원 처리(스크롤 잠금 refcount · Esc stack), SSR mounted 가드
+- **Dialog (Compound)** — `Dialog.Trigger/Overlay/Panel/Title/Description/Close` 조립, controlled·uncontrolled **이중 API**, Portal 렌더, 중첩 다이얼로그의 전역 자원 처리(스크롤 잠금 refcount · Esc stack), SSR mounted 가드
 - Vitest + Playwright를 직접 셋업하고 Select·Dialog의 **컴포넌트 계약 테스트** 작성
 - FSD 관점의 레이어 정리(shared / features / views) 및 Tailwind v4 도입
-### 5주차 — 상태 관리 아키텍처 (진행 중)
- 
-도구를 먼저 고르지 않고 **Source of Truth를 먼저 찾는** 기준으로 상태 경계를 설계합니다.
- 
-- 서버 상태는 TanStack Query(`queryOptions` 팩토리), 공유·복원이 필요한 검색 조건은 nuqs(URL 상태), 전역 클라이언트 상태는 Zustand(selector 구독), 일시적 UI 상태는 React 로컬 상태
+### [5주차 — 상태 관리 아키텍처](../../tree/feat/week-05)
+
+도구를 먼저 고르지 않고 **Source of Truth를 먼저 찾는** 기준으로 상태 경계를 설계했습니다. 홈·상품 목록을 만들며 값마다 원본의 위치로 저장소를 나눴습니다.
+
+- **상태 경계** — 서버 데이터는 TanStack Query(`queryOptions` 팩토리), 공유·복원이 필요한 검색 조건은 nuqs(URL 상태), 익명 장바구니·위시리스트는 Zustand(persist·id만 저장, 개수는 `ids.length`로 파생), 입력 초안은 React 로컬 상태
+- **Advanced A~D** — persist 영속화(`skipHydration` · zod · `version`/`migrate`) · 홈 서버 프리패치(요청별 QueryClient · `dehydrate`/`HydrationBoundary`) · UX 개선(debounce · `keepPreviousData` · 다음 페이지 prefetch) · 상태 계약 테스트(유닛 70 · E2E 16)
+- **리뷰 반영** — `keepPreviousData`로 이전 목록을 보는 동안 옛 조건의 없는 페이지를 받던 prefetch 경합을, 트리거를 hover/focus로 옮겨 해소 ([커밋 기록](../../commits/feat/week-05))
 ## AI 협업 방식
  
 AI가 생성한 코드도 머지하는 순간 내 코드라는 원칙으로 작업합니다.
