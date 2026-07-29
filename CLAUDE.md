@@ -39,6 +39,7 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 2. **구현 vs 조합.** 내부 구현 늘리기 전 기존 컴포넌트 조합으로 가능한지 먼저.
 3. **God Component.** 상태 5개 이상이거나 이름에 'and'가 필요하면 분리 신호.
 4. **성급한 추상화 금지.** 2번 이상 반복될 때 추상화. 1회용 추상화·빈 래퍼 금지.
+5. **처음부터 분리.** 뷰 안에 종속 컴포넌트(스켈레톤·카드·섹션)를 인라인으로 쌓았다가 나중에 빼지 말고, 별 책임이면 처음 쓸 때 파일로 뺀다. "일단 한 파일에 두고 나중에 분리"는 금지.
 
 ### 계약
 
@@ -104,10 +105,13 @@ const METHODS = ["card", "kakao"] as const satisfies readonly PaymentMethod[];
 
 ESLint 강제 룰은 `eslint.config.mjs`에서 관리. 우회(`eslint-disable`, `ts-ignore`, `--no-verify`) 금지.
 
+**제공된 테스트·픽스처는 계약.** 통과시키려 테스트를 고치지 말고 구현·데이터를 고친다. 테스트 수정이 불가피하면 먼저 확인받는다.
+
 ## 🚀 Git & PR 규칙
 
 - **브랜치:** `feature/weekN-기능명` 또는 `fix/weekN-버그명`. `main` 기준.
 - **커밋 게이트:** husky(`lint-staged`) 통과 필수. `--no-verify` 금지.
 - **커밋 메시지:** `type: 동사 + 대상` (예: `feat: 로그인 기능 구현`)
-- **PR:** 제목에 `[volume-n]`. 본문 핵심 리뷰 포인트 3개 이내 + 하단 문구 필수:
-  > `"○○는 AI로 생성 후 직접 검토·수정했습니다."`
+- **AI 표기는 PR 단위로.** 커밋마다 `Co-Authored-By` 트레일러는 쓰지 않고, PR 본문의 AI 활용 내역으로 모아 남긴다.
+- **PR:** 제목에 `[volume-n]`. 본문 핵심 리뷰 포인트 3개 이내 + 하단 **AI 활용 내역** 필수.
+- **AI 활용 내역:** 요약 한 줄(`"○○는 AI로 생성 후 직접 검토·수정했습니다."`)에 그치지 않고 세 축을 함께 남긴다 — ①AI가 생성한 부분 ②사람이 검토·판단·수정한 지점 ③검증 결과(테스트·lint·build).

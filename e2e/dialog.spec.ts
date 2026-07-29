@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // 중첩 Dialog의 스크롤 잠금·Esc 스택을 진짜 브라우저에서 확인한다(유닛에도 있지만 실제 경로 재확인).
 test("중첩 Dialog: Esc는 위부터 닫고, 배경 스크롤은 마지막까지 잠긴다", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/demo");
 
   await page.getByRole("button", { name: "바깥 Dialog 열기" }).click();
   await page.getByRole("button", { name: "안쪽 Dialog 열기" }).click();
