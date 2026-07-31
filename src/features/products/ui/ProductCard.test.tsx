@@ -2,8 +2,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { useCommerceStore } from "@/entities/commerce/model/commerceStore";
+import { useCartStore } from "@/entities/cart/model/cartStore";
 import type { Product } from "@/entities/product/model/types";
+import { useWishlistStore } from "@/entities/wishlist/model/wishlistStore";
 import { ProductCard } from "@/features/products/ui/ProductCard";
 
 const product = {
@@ -22,7 +23,8 @@ const product = {
 } satisfies Product;
 
 beforeEach(() => {
-  useCommerceStore.setState({ cartIds: [], wishlistIds: [] });
+  useCartStore.setState({ cartIds: [] });
+  useWishlistStore.setState({ wishlistIds: [] });
 });
 
 describe("ProductCard 담기 버튼", () => {
