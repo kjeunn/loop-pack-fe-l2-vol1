@@ -55,7 +55,7 @@
 4. **`ProductCard`가 표현과 행위를 한 컴포넌트에 묶음.** `features/products/ui/ProductCard`가 상품 "표현"과 담기·찜 "행위"(`entities/cart`·`entities/wishlist` 훅)를 함께 들어, 순수 표현의 재사용 경계와 행위의 소유가 흐리다. 현재 import(`features → entities`)는 정상이지만, 표현을 `entities`로 내리면 `entities → features` 역방향이 되므로 조합 위치를 정해야 한다.
 5. **레이어명 혼동.** `src/views`는 FSD Pages 자리인데 비표준 이름이고, `src/app`(Next 예약)과 FSD App/Pages 레이어의 관계가 문서화되어 있지 않다.
 
-### 현재 폴더 트리 (feat/week-06)
+### 이동 전 폴더 트리 (RFC 작성 시점 `6d98656`)
 
 ```
 src/
@@ -68,7 +68,7 @@ src/
   widgets/        header
 ```
 
-### 목표 폴더 트리
+### 목표 폴더 트리 (이동 후 달성)
 
 ```
 src/
