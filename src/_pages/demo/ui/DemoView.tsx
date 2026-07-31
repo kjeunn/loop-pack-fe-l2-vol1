@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 
-import { DialogDemo } from "@/_pages/demo/dialog/DialogDemo";
-import { SelectDemo } from "@/_pages/demo/select/SelectDemo";
-import { SelectDemoSkeleton } from "@/_pages/demo/select/SelectDemoSkeleton";
+import { DialogDemo } from "@/_pages/demo/ui/dialog/DialogDemo";
+import { SelectDemo } from "@/_pages/demo/ui/select/SelectDemo";
+import { SelectDemoSkeleton } from "@/_pages/demo/ui/select/SelectDemoSkeleton";
 import { getProductOptions } from "@/features/product-options/api/products";
 
 // 데이터를 await하는 서버 컴포넌트. 느린 소스면 이 await 동안 Suspense fallback이 스트리밍된다.

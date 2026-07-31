@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { ProductListView } from "@/_pages/products/ProductListView";
+import { ProductListView } from "@/_pages/products/ui/ProductListView";
 import { DEFAULT_PAGE_SIZE } from "@/features/products/model/pagination";
 import { ProductGridSkeleton } from "@/features/products/ui/ProductSkeleton";
 

@@ -140,7 +140,7 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 | 3    | `features/home` → `_pages/home` 흡수 (`ui`·`api` 세그먼트)                                                                                                                      | 이동      | `pnpm check` ✅ · `315fa16`                      |
 | 4    | `types/commerce.ts` 분해 (`HomeResponse`는 `_pages/home/api`로, 나머지 entity·feature·shared·app로)                                                                             | 이동      | `pnpm check` ✅ · `8da9485`                      |
 | 5    | `commerceStore`를 `cartStore`·`wishlistStore` 독립 2 store로 분리, 복원 배관 → `shared/lib/persist`, `entities/commerce` 삭제 (persist 키 `commerce-store` → `cart`·`wishlist`) | 이동+수정 | `pnpm check` ✅ (test 72, 순환 제거) · `9c9fa60` |
-| 6    | `ProductCard` → `widgets/product-card`, 행위 추출 → `features/add-to-cart`·`toggle-wishlist`                                                                                    | 이동+수정 | `pnpm check` ✅ (test 72)                        |
+| 6    | `ProductCard` → `widgets/product-card`, 행위 추출 → `features/add-to-cart`·`toggle-wishlist`                                                                                    | 이동+수정 | `pnpm check` ✅ (test 72) · `eb84b23`            |
 | 7    | 핵심 슬라이스에 Public API `index.ts` 추가                                                                                                                                      | 수정      | `pnpm check`                                     |
 | 8    | `Header`를 `app/layout`에서 렌더 (각 view의 widget import 제거)                                                                                                                 | 수정      | `pnpm check`                                     |
 
@@ -149,6 +149,7 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 > **step 4 — cross-entity 회피:** `Product`를 `entities/product`로 옮기면서 `cart`·`wishlist`가 이를 참조하면 `entities ↔ entities` 같은 레이어 cross-import가 된다. id는 본래 `string`이므로 `ProductId`를 `Product["id"]` → `string`으로 바꿔 의존을 끊었다(cart·wishlist는 id만 저장).
 > **step 5 — 단일 slice로 folding · 테스트 분리:** 독립 store는 slice 결합이 없으므로 `cartSlice`·`wishlistSlice`를 각 store에 인라인하고 `SlicePattern`·`entities/commerce`를 삭제했다. 이로써 entities 간 순환이 제거됐다(cart·wishlist는 각자 store + `shared/lib/persist`만 아래로 참조). store가 사라진 `commerceStore.test`(6)는 store별로 나눠 `cartStore.test`(4)·`wishlistStore.test`(4)로 재작성했다(assertion은 그대로, 대상 store만 분리).
 > **step 6 — ProductSection 이동:** `ProductCard`가 widget이 되면서 이를 렌더하던 `ProductSection`(features/products)이 `feature → widget` 역방향이 된다. `ProductSection`은 home 전용이라 `_pages/home/ui`로 옮겨 `_pages → widget` 하위 참조로 바로잡았다. 담기·찜 버튼은 `features/add-to-cart`·`toggle-wishlist`로 추출해 widget이 조합한다(entities→features 역방향 원천 제거).
+> **step 6b — `_pages` 세그먼트 정합:** step 3에서 `home`만 `ui/`·`api/`로 나뉘고 `products`·`demo`는 flat이었다. 목표 트리는 셋 다 `ui/`라, `products`·`demo`도 `ui/`로 세그먼트화해 일치시켰다(순수 이동, 상대 import는 같은 `ui/` 안이라 유지). `pnpm check` ✅ (test 72).
 
 ### app/api (mock 백엔드) 경계
 
