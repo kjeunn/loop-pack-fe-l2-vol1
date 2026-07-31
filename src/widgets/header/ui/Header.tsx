@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 
-import { useCartCount, useCartHydrated } from "@/entities/cart/model/useCart";
-import { useWishlistCount, useWishlistHydrated } from "@/entities/wishlist/model/useWishlist";
+import { useCartCount, useCartHydrated } from "@/entities/cart";
+import { useWishlistCount, useWishlistHydrated } from "@/entities/wishlist";
 import { Skeleton } from "@/shared/ui/loading/Skeleton";
 
 // 두 화면이 공유하는 헤더. 위시리스트·장바구니 개수를 store에서 파생해 읽는다.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useAddToCart, useIsInCart, useRemoveFromCart } from "@/entities/cart/model/useCart";
+import { useAddToCart, useIsInCart, useRemoveFromCart } from "@/entities/cart";
 
 interface AddToCartButtonProps {
   productId: string;

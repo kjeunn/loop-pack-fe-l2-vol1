@@ -6,8 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-import { useHydrateCart } from "@/entities/cart/model/useCart";
-import { useHydrateWishlist } from "@/entities/wishlist/model/useWishlist";
+import { useHydrateCart } from "@/entities/cart";
+import { useHydrateWishlist } from "@/entities/wishlist";
 import { makeQueryClient } from "@/shared/api/queryClient";
 
 interface ProvidersProps {

@@ -11,7 +11,7 @@ import {
 } from "@floating-ui/react";
 
 import type { SizeOption } from "@/features/product-options/model/types";
-import { useSelect } from "@/shared/lib/select/useSelect";
+import { useSelect } from "@/shared/lib/select";
 
 // SizeSelect와 같은 useSelect 로직을 쓰되, 메뉴를 인라인이 아니라 @floating-ui 팝오버로 띄운다.
 // useSelect가 ref가 아니라 id 기반이라, 메뉴를 FloatingPortal로 빼도

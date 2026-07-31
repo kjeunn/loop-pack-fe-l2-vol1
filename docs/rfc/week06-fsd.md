@@ -141,7 +141,7 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 | 4    | `types/commerce.ts` 분해 (`HomeResponse`는 `_pages/home/api`로, 나머지 entity·feature·shared·app로)                                                                             | 이동      | `pnpm check` ✅ · `8da9485`                      |
 | 5    | `commerceStore`를 `cartStore`·`wishlistStore` 독립 2 store로 분리, 복원 배관 → `shared/lib/persist`, `entities/commerce` 삭제 (persist 키 `commerce-store` → `cart`·`wishlist`) | 이동+수정 | `pnpm check` ✅ (test 72, 순환 제거) · `9c9fa60` |
 | 6    | `ProductCard` → `widgets/product-card`, 행위 추출 → `features/add-to-cart`·`toggle-wishlist`                                                                                    | 이동+수정 | `pnpm check` ✅ (test 72) · `eb84b23`            |
-| 7    | 핵심 슬라이스에 Public API `index.ts` 추가                                                                                                                                      | 수정      | `pnpm check`                                     |
+| 7    | 핵심 슬라이스에 Public API `index.ts` 추가                                                                                                                                      | 수정      | `pnpm check` ✅ (test 72)                        |
 | 8    | `Header`를 `app/layout`에서 렌더 (각 view의 widget import 제거)                                                                                                                 | 수정      | `pnpm check`                                     |
 
 > **순서 근거:** `HomeResponse` 타입 분해(4)를 `features/home` 흡수(3) **뒤**에 둔다. 흡수 전에 `HomeResponse`만 `_pages`로 옮기면 아직 `features/home`에 있는 `homeQueryOptions`가 `_pages`를 import하는 `features → _pages` 역방향이 잠깐 생긴다(typecheck는 통과해 `pnpm check`로 안 걸리므로 순서로 막는다). 홈 쿼리를 먼저 `_pages`로 옮긴 뒤 타입을 그 옆에 둔다.
@@ -150,6 +150,7 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 > **step 5 — 단일 slice로 folding · 테스트 분리:** 독립 store는 slice 결합이 없으므로 `cartSlice`·`wishlistSlice`를 각 store에 인라인하고 `SlicePattern`·`entities/commerce`를 삭제했다. 이로써 entities 간 순환이 제거됐다(cart·wishlist는 각자 store + `shared/lib/persist`만 아래로 참조). store가 사라진 `commerceStore.test`(6)는 store별로 나눠 `cartStore.test`(4)·`wishlistStore.test`(4)로 재작성했다(assertion은 그대로, 대상 store만 분리).
 > **step 6 — ProductSection 이동:** `ProductCard`가 widget이 되면서 이를 렌더하던 `ProductSection`(features/products)이 `feature → widget` 역방향이 된다. `ProductSection`은 home 전용이라 `_pages/home/ui`로 옮겨 `_pages → widget` 하위 참조로 바로잡았다. 담기·찜 버튼은 `features/add-to-cart`·`toggle-wishlist`로 추출해 widget이 조합한다(entities→features 역방향 원천 제거).
 > **step 6b — `_pages` 세그먼트 정합:** step 3에서 `home`만 `ui/`·`api/`로 나뉘고 `products`·`demo`는 flat이었다. 목표 트리는 셋 다 `ui/`라, `products`·`demo`도 `ui/`로 세그먼트화해 일치시켰다(순수 이동, 상대 import는 같은 `ui/` 안이라 유지). `pnpm check` ✅ (test 72).
+> **step 7 — Public API 범위(실측 후 축소):** 처음엔 여러 슬라이스에 index.ts를 뒀으나, RFC 원칙("숨길 내부가 있을 때만")에 맞춰 **내부를 실제 은닉하는 4개(`entities/cart`·`wishlist`·`shared/ui/dialog`·`shared/lib/select`)만 남기고** 파일 하나뿐인 얇은 barrel(`entities/product`·`add-to-cart`·`toggle-wishlist`·`product-card`·`header`)은 제거했다. 특히 `features/products` barrel은 client 전용 `searchParams`(nuqs `createParser`)를 섞어, server 컴포넌트 `app/products/page`가 import하자 **RSC 빌드가 깨졌다** → barrel을 없애고 세그먼트별 deep import로 되돌렸다(barrel이 client/server를 섞으면 생기는 실제 비용).
 
 ### app/api (mock 백엔드) 경계
 
@@ -244,10 +245,14 @@ import { WishlistButton } from "@/features/toggle-wishlist";
 
 ### Public API 사용 여부와 방식
 
-**"경계를 계약으로 표현할 것이 있는 슬라이스에만" `index.ts`를 둔다.** 습관적 `export *` barrel은 만들지 않는다.
+**"숨길 내부가 있는 슬라이스에만" `index.ts`를 둔다.** 파일 하나뿐이라 감출 게 없으면 경로가 곧 계약이므로 습관적 barrel을 만들지 않는다. (처음엔 여러 슬라이스에 뒀다가, 이 원칙에 맞춰 은닉하는 4개만 남기고 축소했다.)
 
-- **둔다** — `entities/cart`·`entities/wishlist`(각 store 내부 은닉), `entities/product`, `features/*`, `widgets/product-card`, `shared/ui/dialog`, `shared/lib/select`. 외부는 공개 훅·컴포넌트만 알면 되고 내부 파일은 감춘다.
-- **안 둔다** — `shared/lib/cn` 같은 단일 유틸. 파일 경로가 곧 계약이라 `index.ts`는 barrel일 뿐이다.
+- **둔다(4개, 내부를 실제 은닉)**
+  - `entities/cart`·`entities/wishlist` — store 인스턴스(`cartStore`·`wishlistStore`)를 숨기고 읽기·행위 훅만 공개. 외부가 store를 직접 조작하지 못하게 한다.
+  - `shared/ui/dialog` — compound 내부(`DialogRoot`·`DialogOverlay`·`DialogPanel` 등)를 숨기고 `Dialog`만 공개.
+  - `shared/lib/select` — headless 훅 내부를 숨기고 `useSelect` + 계약 타입만 공개.
+- **안 둔다** — 컴포넌트·타입 하나뿐이라 감출 내부가 없는 슬라이스(`entities/product`, `features/add-to-cart`·`toggle-wishlist`, `widgets/product-card`·`header`, `shared/lib/cn`). 경로가 곧 계약이라 index는 barrel일 뿐이다. deep import로 둔다.
+- **`features/products`는 barrel을 두지 않는다** — 넓은 표면에 client 전용 `searchParams`(nuqs `createParser`)가 섞여, 한 barrel로 묶으면 server 컴포넌트가 import할 때 RSC 빌드가 깨진다(step 7 실측). 세그먼트별 deep import로 client/server 경계를 지킨다.
 
 ---
 

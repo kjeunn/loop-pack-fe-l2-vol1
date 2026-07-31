@@ -3,7 +3,7 @@
 import Image from "next/image";
 
 import type { ThumbnailOption } from "@/features/product-options/model/types";
-import { useSelect } from "@/shared/lib/select/useSelect";
+import { useSelect } from "@/shared/lib/select";
 
 // select2 — 썸네일 옵션. 같은 useSelect에 <li> 안쪽 생김새만 다르게 심는다.
 // 품절은 stock 수량에서 파생한다(isItemDisabled). 옵션 상태는 훅이 실어 보낸 data-*로 스타일링.

@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 
 import { ProductListView } from "@/_pages/products/ui/ProductListView";
+// features/products는 barrel(index)을 두지 않는다 — client 전용 searchParams(nuqs createParser)가
+// 섞여 server에서 평가하면 빌드가 깨진다. 세그먼트를 직접 import한다.
 import { DEFAULT_PAGE_SIZE } from "@/features/products/model/pagination";
 import { ProductGridSkeleton } from "@/features/products/ui/ProductSkeleton";
 
