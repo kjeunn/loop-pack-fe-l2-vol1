@@ -1,7 +1,7 @@
 import { createParser, parseAsNumberLiteral, parseAsString, parseAsStringLiteral } from "nuqs";
 
+import type { CategoryId, ProductSort } from "@/entities/product/model/types";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_VALUES } from "@/features/products/model/pagination";
-import type { CategoryId, ProductSort } from "@/types/commerce";
 
 export const CATEGORY_VALUES = [
   "all",

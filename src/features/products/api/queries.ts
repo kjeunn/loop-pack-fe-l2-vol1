@@ -1,8 +1,17 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
+import type { Category, Product } from "@/entities/product/model/types";
 import { DEFAULT_PAGE_SIZE } from "@/features/products/model/pagination";
+import type { ProductListQuery } from "@/features/products/model/query";
 import { fetchJson } from "@/shared/api/fetcher";
-import type { ProductListQuery, ProductListResponse } from "@/types/commerce";
+
+export type ProductListResponse = {
+  products: Product[];
+  categories: Category[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+};
 
 // 목록은 조건(q·category·sort·page)마다 다른 캐시 엔트리가 된다.
 // 방금 보던 조건으로 되돌아오는 경우만 재요청을 아끼면 되므로 staleTime은 짧게 둔다.

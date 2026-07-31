@@ -1,4 +1,4 @@
-import type { ApiErrorResponse } from "@/types/commerce";
+import type { ApiErrorResponse } from "@/shared/api/types";
 
 // 브라우저는 상대경로로 fetch할 수 있지만, 서버 프리패치는 절대 URL이 필요하다.
 // 프로덕션은 NEXT_PUBLIC_BASE_URL을 두고, 없으면 로컬 개발 기본값을 쓴다.

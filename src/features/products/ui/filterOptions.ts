@@ -1,5 +1,5 @@
+import type { CategoryId, ProductSort } from "@/entities/product/model/types";
 import { PAGE_SIZE_VALUES } from "@/features/products/model/pagination";
-import type { CategoryId, ProductSort } from "@/types/commerce";
 
 // 필터 드롭다운의 표시 텍스트.
 // satisfies는 각 value가 유효한 타입인지만 검증하고 모든 값을 덮었는지는 강제하지 않으니,

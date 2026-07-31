@@ -3,8 +3,8 @@
 import Image from "next/image";
 
 import { useAddToCart, useIsInCart, useRemoveFromCart } from "@/entities/cart/model/useCart";
+import type { Product } from "@/entities/product/model/types";
 import { useIsWishlisted, useToggleWishlist } from "@/entities/wishlist/model/useWishlist";
-import type { Product } from "@/types/commerce";
 
 interface ProductCardProps {
   product: Product;

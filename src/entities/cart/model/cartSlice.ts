@@ -1,7 +1,6 @@
 import type { SlicePattern } from "@/entities/commerce/model/types";
-import type { Product } from "@/types/commerce";
 
-type ProductId = Product["id"];
+type ProductId = string;
 
 export interface CartSlice {
   cartIds: ProductId[];

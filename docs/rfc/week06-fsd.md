@@ -133,19 +133,20 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 
 > 순수 이동과 수정을 분리한다. 각 단계 뒤 `pnpm check` 통과를 검증으로 삼는다.
 
-| 순서 | 작업                                                                                                                                                                            | 성격      | 검증                                 |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------ |
-| 1    | 이 RFC 커밋 (파일 이동 전)                                                                                                                                                      | docs      | 커밋 `1a4e619`                       |
-| 2    | `views → _pages` 개명                                                                                                                                                           | 순수 이동 | `pnpm check` ✅ · `5b29255`          |
-| 3    | `features/home` → `_pages/home` 흡수 (`ui`·`api` 세그먼트)                                                                                                                      | 이동      | `pnpm check` ✅ · `315fa16`          |
-| 4    | `types/commerce.ts` 분해 (`HomeResponse`는 `_pages/home/api`로, 나머지 entity·feature·shared·app로)                                                                             | 이동      | `pnpm check`                         |
-| 5    | `commerceStore`를 `cartStore`·`wishlistStore` 독립 2 store로 분리, 복원 배관 → `shared/lib/persist`, `entities/commerce` 삭제 (persist 키 `commerce-store` → `cart`·`wishlist`) | 이동+수정 | `pnpm check` + import 순환 없음 확인 |
-| 6    | `ProductCard` → `widgets/product-card`, 행위 추출 → `features/add-to-cart`·`toggle-wishlist`                                                                                    | 이동+수정 | `pnpm check` + ProductCard 테스트    |
-| 7    | 핵심 슬라이스에 Public API `index.ts` 추가                                                                                                                                      | 수정      | `pnpm check`                         |
-| 8    | `Header`를 `app/layout`에서 렌더 (각 view의 widget import 제거)                                                                                                                 | 수정      | `pnpm check`                         |
+| 순서 | 작업                                                                                                                                                                            | 성격      | 검증                                  |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------------------- |
+| 1    | 이 RFC 커밋 (파일 이동 전)                                                                                                                                                      | docs      | 커밋 `1a4e619`                        |
+| 2    | `views → _pages` 개명                                                                                                                                                           | 순수 이동 | `pnpm check` ✅ · `5b29255`           |
+| 3    | `features/home` → `_pages/home` 흡수 (`ui`·`api` 세그먼트)                                                                                                                      | 이동      | `pnpm check` ✅ · `315fa16`           |
+| 4    | `types/commerce.ts` 분해 (`HomeResponse`는 `_pages/home/api`로, 나머지 entity·feature·shared·app로)                                                                             | 이동      | `pnpm check` ✅ (해시 step5에서 백필) |
+| 5    | `commerceStore`를 `cartStore`·`wishlistStore` 독립 2 store로 분리, 복원 배관 → `shared/lib/persist`, `entities/commerce` 삭제 (persist 키 `commerce-store` → `cart`·`wishlist`) | 이동+수정 | `pnpm check` + import 순환 없음 확인  |
+| 6    | `ProductCard` → `widgets/product-card`, 행위 추출 → `features/add-to-cart`·`toggle-wishlist`                                                                                    | 이동+수정 | `pnpm check` + ProductCard 테스트     |
+| 7    | 핵심 슬라이스에 Public API `index.ts` 추가                                                                                                                                      | 수정      | `pnpm check`                          |
+| 8    | `Header`를 `app/layout`에서 렌더 (각 view의 widget import 제거)                                                                                                                 | 수정      | `pnpm check`                          |
 
 > **순서 근거:** `HomeResponse` 타입 분해(4)를 `features/home` 흡수(3) **뒤**에 둔다. 흡수 전에 `HomeResponse`만 `_pages`로 옮기면 아직 `features/home`에 있는 `homeQueryOptions`가 `_pages`를 import하는 `features → _pages` 역방향이 잠깐 생긴다(typecheck는 통과해 `pnpm check`로 안 걸리므로 순서로 막는다). 홈 쿼리를 먼저 `_pages`로 옮긴 뒤 타입을 그 옆에 둔다.
 > **persist 키 변경(5):** 단일 store를 나누며 키가 `commerce-store` → `cart`·`wishlist`로 바뀌어 기존 저장값은 이어지지 않는다. 사용자에게 보이는 동작(담기·찜 유지)은 그대로이며, 실사용자가 없어 데이터 이월은 무의미하다.
+> **step 4 — cross-entity 회피:** `Product`를 `entities/product`로 옮기면서 `cart`·`wishlist`가 이를 참조하면 `entities ↔ entities` 같은 레이어 cross-import가 된다. id는 본래 `string`이므로 `ProductId`를 `Product["id"]` → `string`으로 바꿔 의존을 끊었다(cart·wishlist는 id만 저장).
 
 ### app/api (mock 백엔드) 경계
 

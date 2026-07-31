@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { useCommerceStore } from "@/entities/commerce/model/commerceStore";
+import type { Product } from "@/entities/product/model/types";
 import { ProductCard } from "@/features/products/ui/ProductCard";
-import type { Product } from "@/types/commerce";
 
 const product = {
   id: "p1",

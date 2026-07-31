@@ -5,6 +5,7 @@ import { type ChangeEvent, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 
+import type { CategoryId, ProductSort } from "@/entities/product/model/types";
 import { productListQueryOptions } from "@/features/products/api/queries";
 import { type PageSize } from "@/features/products/model/pagination";
 import { productSearchParsers } from "@/features/products/model/searchParams";
@@ -13,7 +14,6 @@ import {
   PAGE_SIZE_OPTIONS,
   SORT_OPTIONS,
 } from "@/features/products/ui/filterOptions";
-import type { CategoryId, ProductSort } from "@/types/commerce";
 import { Header } from "@/widgets/header/ui/Header";
 
 import { ProductListResults } from "./ProductListResults";
