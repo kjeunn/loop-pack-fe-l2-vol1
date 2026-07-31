@@ -40,8 +40,9 @@
 
 ### 이번 주에 하지 않을 것과 이유
 
-- **에러 경계 배선(4단계)** — `throwOnError` 전역 정책·컴포넌트 `ErrorBoundary`·공통 `ApiError` 구현은 4단계에서 분리 진행한다(기존 전역 `app/error.tsx`는 유지). 이 RFC의 O·4단계에는 설계만 남긴다.
 - **route `loading.tsx` 추가** — 목록 로딩은 Query `isPending`이 스켈레톤을 그리므로 중복이다. O에서 근거를 남긴다.
+
+> (4단계 에러 경계는 별도 `feat:` 커밋으로 **구현 완료** — throwOnError 전역 정책·`ApiError`·결과 영역 `ErrorBoundary`. 4단계 절 참고.)
 
 ---
 
@@ -267,7 +268,7 @@ import { WishlistButton } from "@/features/toggle-wishlist";
 
 목록 로딩은 Query `isPending`이 `ProductListResults`에서 스켈레톤으로 그린다. route `loading.tsx`/Suspense는 **추가하지 않는다** — 같은 범위를 두 번 덮어 중복이기 때문이다. `isPending`은 조건 변경 시 부분 로딩까지 표현하므로 이 화면엔 이쪽이 맞다.
 
-### 에러 경계 (설계만, 구현은 4단계)
+### 에러 경계 (구현 완료 — 4단계)
 
 - **인라인** — 4xx·빈 결과·네트워크 실패는 `ProductListResults` 자리 안에서 표시한다(나머지 화면을 가리지 않음). 0단계에서 이 경계가 이미 동작함을 확인했다.
 - **경계 전파** — 5xx는 결과 영역을 감싼 컴포넌트 `ErrorBoundary`로(헤더·필터 유지), 예상 밖 렌더링 오류는 전역 route `error.tsx`로 전파하고 `reset`을 제공한다. `throwOnError` 기준(5xx→경계, 4xx·빈결과·네트워크→인라인)은 4단계에서 배선한다.
@@ -293,8 +294,8 @@ import { WishlistButton } from "@/features/toggle-wishlist";
 
 ## 4단계 — 에러 처리 설계
 
-> 현재는 TanStack Query의 `isLoading`·`isError`·`error`로 **인라인 처리만** 한다(`throwOnError`·React `ErrorBoundary` 없음). `app/error.tsx`(전역 route 경계)는 있으나 쿼리가 인라인 처리해 도달하지 않는다.
-> 방향: **공통 ErrorBoundary로 전부 바꾸지 않는다.** 복구 가능한 오류는 인라인으로 두어 부분 실패가 화면 전체를 가리지 않게 하고, 예상 밖 오류만 경계로 전파한다. 표는 설계, 재현 결과는 구현 시 채운다.
+> **구현 완료(별도 `feat:` 커밋).** `fetcher`가 실패를 `ApiError`(network·http·business)로 던지고, QueryClient 전역 `throwOnError`가 5xx만 경계로 전파한다. `ProductListResults`를 감싼 컴포넌트 `ErrorBoundary`가 결과 영역만 fallback으로 그려 헤더·필터는 유지한다.
+> 방향: **공통 ErrorBoundary로 전부 바꾸지 않는다.** 복구 가능한 오류(4xx·네트워크)는 인라인으로 두어 부분 실패가 화면 전체를 가리지 않게 하고, 예상 밖 오류(5xx·렌더링)만 경계로 전파한다.
 
 ### 실패 유형별 처리
 
@@ -353,6 +354,13 @@ React `ErrorBoundary`는 **이벤트 핸들러·비동기 콜백의 오류를 �
 route `loading.tsx`/Suspense는 라우트 전환의 초기 로딩을, Query `isPending`은 조건 변경 시 데이터 로딩을 맡는다. 현재 목록은 `isPending`이 스켈레톤을 그리므로 route `loading.tsx`는 추가하지 않는다(중복).
 
 > 검증용 `scenario`는 mock 전용 제어값이다. 사용자 URL·`ProductListQuery`에 넣지 않는다. 임시 `throw`로 `error.tsx`를 검증했다면 검증 후 제거한다.
+
+### 실패 재현 결과
+
+- **5xx (경계 전파):** `_pages/products/ui/ProductListView.test.tsx` 통합 테스트로 재현·검증 — `fetch`를 500으로 mock하면 `ApiError("http", 500)` → 전역 `throwOnError` 정책이 결과 경계로 전파 → 결과 영역에 "다시 시도" fallback, **헤더의 "상품" 링크·카테고리 select는 생존** 확인(부분 실패, 요구 #1). 수동 재현: mock API에 `GET /api/products?scenario=error`(500) 직접 호출로 500 응답 확인.
+- **4xx·네트워크 (인라인):** `throwOnError`가 `false`라 `ProductListResults`의 `isError`로 결과 영역 안에서 표시된다(위치·구조는 0단계와 동일). 다만 네트워크 실패 문구는 브라우저 원문(0단계에서 확인한 `Failed to fetch`)에서 `ApiError`의 사용자 안내("네트워크 연결을 확인해 주세요.")로 바뀐다.
+- **예상 밖 렌더링 오류:** 전역 `app/error.tsx`가 잡아 fallback+`reset` 제공(Next 기본 route 경계).
+- **비즈니스·저장소 오류:** 표의 "해당 없음" 근거 참고(현재 발생 불가).
 
 ## 5단계 — 삭제 시나리오 자가 검증
 
