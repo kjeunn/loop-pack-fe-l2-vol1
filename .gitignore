@@ -43,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code worktree (harness 격리 작업 트리 — 프로젝트 대상 아님)
+.claude/worktrees/

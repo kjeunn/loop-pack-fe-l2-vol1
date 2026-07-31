@@ -54,7 +54,7 @@ const eslintConfig = defineConfig([
   },
 
   // Override default ignores of eslint-config-next.
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", ".claude/**"]),
 
   // prettier와 충돌하는 포맷 룰을 끈다. 반드시 마지막에 둔다.
   eslintConfigPrettier,
