@@ -391,6 +391,8 @@ RFC 전체가 세운 import 불변식을 사람 눈이 아니라 도구로 강�
 ## Advanced B — 변경 반경 실험 (구현 전 예상, 실제는 이동 후 대조)
 
 > 두 요구사항의 변경 반경을 이동 전에 예측한다. 실제 구현·diff 대조는 이동 후 `실제 결과`·`차이` 열을 채운다. 새 행위는 page 또는 widget에서 조합하고, feature가 다른 feature를 직접 import하거나 무관한 `shared`를 여럿 건드리면 경계를 재검토한다.
+>
+> **상태:** B-1·B-2는 Advanced(선택) 범위라 **이번 주에는 기능을 구현하지 않아 예상만 기록**한다(`실제 결과`·`차이` 열은 구현 시 채운다). 예측은 이동이 끝난 최종 구조 기준이라, 지금 구현해도 이 반경을 벗어나지 않는다는 판단까지가 이번 주 산출물이다.
 
 ### B-1. 검색·카테고리·정렬 조건 전체 초기화
 
@@ -449,4 +451,4 @@ FSD 구조 점검용 `architecture-review` SKILL을 `.claude/skills/architecture
 
 ### 검증
 
-`pnpm check` — test 70 passed / lint / typecheck / build 통과. 이동 단계마다 재검증 예정.
+`pnpm check` — **test 74 passed / lint / typecheck / build 통과**(이동 단계마다 재검증). 최종 74 = 이동 완료(72) + 검색 desync 회귀 테스트(+1) + 5xx 부분 실패 통합 테스트(+1). 순수 이동과 수정을 커밋 단위로 분리했고, 검색 버그 수정은 별도 `fix:`, 4단계 에러 처리는 별도 `feat:` 커밋으로 남겼다.
