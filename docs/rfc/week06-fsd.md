@@ -431,7 +431,13 @@ RFC 초안 구조(RADIO), 현재 import 맵 분석과 순환 의존 발견, 에�
 
 ### architecture-review SKILL
 
-FSD 구조 점검용 `architecture-review` SKILL을 `~/.claude/skills/architecture-review/SKILL.md`에 작성했다. 폴더를 레이어로 매핑하고 import 방향 위반·같은 레이어 슬라이스 간 직접 의존·entities의 상위 침범·shared의 비즈니스 로직을 점검하되, **코드 수정안이 아니라 구조적 판단만** 내도록 제약했다. 마이그레이션 완료 후 이 SKILL로 실제 구조를 점검하고, 지적 중 **수용한 것과 반려한 것을 각각 근거와 함께** 이 절에 추가한다(현재는 이동 전이라 미실행).
+FSD 구조 점검용 `architecture-review` SKILL을 `.claude/skills/architecture-review/SKILL.md`(repo에 커밋, 기존 두 SKILL과 나란히)에 작성했다. 폴더를 레이어로 매핑하고 import 방향·같은 레이어 슬라이스 직접 의존·순환·entities 상위 침범·shared 비즈니스·Public API 우회·App Router 경계를 8개 렌즈로 점검하되, **코드 수정안이 아니라 구조적 판단만** 내도록 제약했다.
+
+**이동 완료 후 이 SKILL로 실제 구조를 점검한 결과:**
+
+- **기계 위반(방향·순환·같은 레이어 cross·상대경로): 0건** — 렌즈 1~7 통과. shared 도메인 누수 없음, `index.ts` 4개 모두 소비됨, feature/page 경계 적절.
+- **판단 필요 ① — 반려(현행 유지):** mock 백엔드 `app/api/{home,products}/route.ts`가 프론트의 응답 타입(`HomeResponse`·`ProductListResponse`)을 import한다. `app → 하위`라 방향은 합법이나 "서버가 프론트 타입을 참조"하는 결합. **반려** — 응답 집계 타입은 도메인 명사가 아니라 그 fetch를 소유한 `_pages`·`features`에 두는 게 소유권상 맞고, mock은 프론트에 종속된 임시 stand-in이라 프론트 계약에 맞추는 게 자연스럽다(실서버 전환 시 공유 스키마로 이동).
+- **판단 필요 ② — 반려(유지):** 위젯 테스트가 store를 deep import(`useCartStore` 등)해 상태를 리셋한다. **반려** — Public API는 훅만 노출하고 `setState`는 의도적으로 안 주므로 테스트 셋업엔 store 직접 접근이 필요하다. production 누수는 0이라 실용적으로 허용.
 
 ### 검증
 
