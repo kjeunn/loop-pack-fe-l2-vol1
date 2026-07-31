@@ -5,6 +5,13 @@ import { type ChangeEvent, useEffect, useRef, useState } from "react";
 // 타이핑이 멈춘 뒤에만 URL을 갱신해 글자마다 요청이 나가지 않게 한다.
 const SEARCH_DEBOUNCE_MS = 300;
 
+// 대기 중인 debounce 타이머를 취소한다. 입력·popstate·정리 세 시점에서 같은 정리를 하므로 공통화한다.
+function clearTimer(ref: { current: ReturnType<typeof setTimeout> | null }) {
+  if (ref.current) {
+    clearTimeout(ref.current);
+  }
+}
+
 interface ProductSearchInputProps {
   value: string;
   onSearch: (value: string) => void;
@@ -25,9 +32,7 @@ export function ProductSearchInput({ value, onSearch }: ProductSearchInputProps)
       // 뒤로/앞으로 직후, 대기 중이던 debounce가 발화해 stale 검색어를 URL에 push하지 않도록
       // 여기서 즉시 취소한다. value 변경 effect의 cleanup만으로는 popstate와 타이머 사이 경합 창이 남아,
       // input은 이동한 값으로 리마운트되는데 URL만 옛 입력값으로 갈라질 수 있다.
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
+      clearTimer(debounceTimerRef);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -44,11 +49,7 @@ export function ProductSearchInput({ value, onSearch }: ProductSearchInputProps)
 
     // 대기 중 debounce 취소. 언마운트 + 외부 URL 변경 모두에서 정리돼,
     // 뒤로 간 뒤 남은 타이머가 옛 검색어를 다시 push하지 않게 한다.
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
+    return () => clearTimer(debounceTimerRef);
   }, [value]);
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
@@ -56,9 +57,7 @@ export function ProductSearchInput({ value, onSearch }: ProductSearchInputProps)
     pendingPopStateRef.current = false;
 
     const nextValue = event.target.value;
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
+    clearTimer(debounceTimerRef);
     debounceTimerRef.current = setTimeout(() => onSearch(nextValue), SEARCH_DEBOUNCE_MS);
   }
 
