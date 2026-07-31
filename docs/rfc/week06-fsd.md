@@ -141,8 +141,8 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 | 4    | `types/commerce.ts` 분해 (`HomeResponse`는 `_pages/home/api`로, 나머지 entity·feature·shared·app로)                                                                             | 이동      | `pnpm check` ✅ · `8da9485`                      |
 | 5    | `commerceStore`를 `cartStore`·`wishlistStore` 독립 2 store로 분리, 복원 배관 → `shared/lib/persist`, `entities/commerce` 삭제 (persist 키 `commerce-store` → `cart`·`wishlist`) | 이동+수정 | `pnpm check` ✅ (test 72, 순환 제거) · `9c9fa60` |
 | 6    | `ProductCard` → `widgets/product-card`, 행위 추출 → `features/add-to-cart`·`toggle-wishlist`                                                                                    | 이동+수정 | `pnpm check` ✅ (test 72) · `eb84b23`            |
-| 7    | 핵심 슬라이스에 Public API `index.ts` 추가                                                                                                                                      | 수정      | `pnpm check` ✅ (test 72)                        |
-| 8    | `Header`를 `app/layout`에서 렌더 (각 view의 widget import 제거)                                                                                                                 | 수정      | `pnpm check`                                     |
+| 7    | 핵심 슬라이스에 Public API `index.ts` 추가                                                                                                                                      | 수정      | `pnpm check` ✅ (test 72) · `4bc6f70`            |
+| 8    | `Header`를 `app/layout`에서 렌더 (각 view의 widget import 제거)                                                                                                                 | 미실행    | 건너뜀 (근거: 아래 step 8 노트)                  |
 
 > **순서 근거:** `HomeResponse` 타입 분해(4)를 `features/home` 흡수(3) **뒤**에 둔다. 흡수 전에 `HomeResponse`만 `_pages`로 옮기면 아직 `features/home`에 있는 `homeQueryOptions`가 `_pages`를 import하는 `features → _pages` 역방향이 잠깐 생긴다(typecheck는 통과해 `pnpm check`로 안 걸리므로 순서로 막는다). 홈 쿼리를 먼저 `_pages`로 옮긴 뒤 타입을 그 옆에 둔다.
 > **persist 키 변경(5):** 단일 store를 나누며 키가 `commerce-store` → `cart`·`wishlist`로 바뀌어 기존 저장값은 이어지지 않는다. 사용자에게 보이는 동작(담기·찜 유지)은 그대로이며, 실사용자가 없어 데이터 이월은 무의미하다.
@@ -151,6 +151,7 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 > **step 6 — ProductSection 이동:** `ProductCard`가 widget이 되면서 이를 렌더하던 `ProductSection`(features/products)이 `feature → widget` 역방향이 된다. `ProductSection`은 home 전용이라 `_pages/home/ui`로 옮겨 `_pages → widget` 하위 참조로 바로잡았다. 담기·찜 버튼은 `features/add-to-cart`·`toggle-wishlist`로 추출해 widget이 조합한다(entities→features 역방향 원천 제거).
 > **step 6b — `_pages` 세그먼트 정합:** step 3에서 `home`만 `ui/`·`api/`로 나뉘고 `products`·`demo`는 flat이었다. 목표 트리는 셋 다 `ui/`라, `products`·`demo`도 `ui/`로 세그먼트화해 일치시켰다(순수 이동, 상대 import는 같은 `ui/` 안이라 유지). `pnpm check` ✅ (test 72).
 > **step 7 — Public API 범위(실측 후 축소):** 처음엔 여러 슬라이스에 index.ts를 뒀으나, RFC 원칙("숨길 내부가 있을 때만")에 맞춰 **내부를 실제 은닉하는 4개(`entities/cart`·`wishlist`·`shared/ui/dialog`·`shared/lib/select`)만 남기고** 파일 하나뿐인 얇은 barrel(`entities/product`·`add-to-cart`·`toggle-wishlist`·`product-card`·`header`)은 제거했다. 특히 `features/products` barrel은 client 전용 `searchParams`(nuqs `createParser`)를 섞어, server 컴포넌트 `app/products/page`가 import하자 **RSC 빌드가 깨졌다** → barrel을 없애고 세그먼트별 deep import로 되돌렸다(barrel이 client/server를 섞으면 생기는 실제 비용).
+> **step 8 — 건너뜀(근거):** `Header`를 `app/layout`에서 렌더하려 했으나 이득 대비 비용이 커 **하지 않는다.** ① `_pages → widgets`(Header)는 하위 참조라 **규칙 위반이 아니다**(고칠 게 없음). ② Header가 각 view의 `.week05-page` 안에 있어 포커스 스타일(`.week05-page *:focus-visible`)을 받는데, layout으로 빼면 그 스코프 밖이라 스타일이 깨진다(CSS 재작업 필요). ③ 현재 헤더 없는 `/demo`까지 헤더를 갖게 돼 route group이 필요하다. 중복은 `<Header />` 2줄뿐이라, "필요 없는 건 하지 않는 것도 설계" 원칙에 따라 각 view가 Header를 조합하는 현행을 유지한다.
 
 ### app/api (mock 백엔드) 경계
 
