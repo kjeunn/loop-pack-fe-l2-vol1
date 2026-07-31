@@ -358,16 +358,18 @@ route `loading.tsx`/Suspense는 라우트 전환의 초기 로딩을, Query `isP
 
 > 이동 전 **예상**을 목표 트리 기준으로 먼저 적는다. 이동 후 실제와 대조해 응집을 검증한다.
 
-### 위시리스트 기능을 통째로 제거한다면 (예상)
+### 위시리스트 기능을 통째로 제거한다면
 
 - **삭제할 폴더·파일**: `entities/wishlist/` 전체, `features/toggle-wishlist/` 전체
 - **수정할 파일**: `widgets/header/ui/Header.tsx`(찜 개수·`useWishlistHydrated` 제거), `widgets/product-card/ui/ProductCard.tsx`(`WishlistButton` 제거), `app/providers.tsx`(`useHydrateWishlist` 호출 제거)
 - **판정(예상)**: 삭제 대상이 `entities/wishlist`·`features/toggle-wishlist` 두 폴더로 완전 응집한다. 독립 store라 다른 store(cart)를 전혀 건드리지 않고, 수정은 명시적 소비처(Header·ProductCard·providers) 세 곳뿐이라 grep 없이 예측 가능 → 응집 성공. 독립 2 store 선택 덕에 단일 store의 '세그먼트 편집' 대가가 사라진 것이 이 시나리오에서 그대로 드러난다.
+- **실측 결과(이동 후 grep)**: 삭제 = `entities/wishlist`(4파일)·`features/toggle-wishlist`(1파일) — **예상 일치**. 수정 = production 3개(`providers`·`Header`·`ProductCard`) **예상 일치** + **테스트 2개(`Header.test`·`ProductCard.test`)** 도 wishlist를 참조해 함께 손대야 함(예상에서 빠졌던 부분 — 위젯 테스트가 cart·wishlist를 함께 검증하기 때문). **여러 레이어로 흩어지지 않아 폴더 단위 삭제 + 명시적 소비처 수정으로 끝남 → 응집 확인.**
 
-### 신상품 뱃지를 상품 카드에 추가한다면 (예상)
+### 신상품 뱃지를 상품 카드에 추가한다면
 
 - **터치할 파일**: `widgets/product-card/ui/ProductCard.tsx`(뱃지 렌더)가 중심. 판정 기준을 기존 `Product.createdAt` 파생으로 두면 이 한 곳뿐. 새 필드(`isNew`)가 필요하면 `entities/product/model/types.ts` + mock 데이터(`app/api/_data/commerce.ts`)까지.
 - **판정(예상)**: 표현 변경이라 `widgets/product-card` 한 곳이 중심이고 자신 있게 예측 가능 → 경계 양호.
+- **실측 결과(이동 후 확인)**: `Product`에 `createdAt` 존재, `ProductCard`가 `product`를 받아 렌더 → 뱃지는 `widgets/product-card/ui/ProductCard.tsx` **한 곳**에 `createdAt` 파생으로 추가하면 끝(타입·mock 변경 불필요). **예상 일치 → 경계 양호 확인.**
 
 ## Advanced A — 의존성 하네스 (계획, 선택)
 
