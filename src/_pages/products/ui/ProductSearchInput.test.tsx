@@ -45,6 +45,27 @@ describe("ProductSearchInput debounce", () => {
     act(() => vi.advanceTimersByTime(300));
     expect(onSearch).not.toHaveBeenCalled();
   });
+
+  it("뒤로가기(popstate)가 발생하면 대기 중이던 debounce를 즉시 취소한다", () => {
+    // 회귀: 입력 도중 debounce 마감 전에 뒤로가기를 누르면, popstate는 왔지만
+    // URL(value) 갱신이 React에 도착하기 전이라 value 변경 cleanup은 아직 못 돈다.
+    // 이때 대기 타이머가 발화하면 옛 입력값을 URL에 push해 input과 URL이 갈라진다.
+    vi.useFakeTimers();
+    const onSearch = vi.fn();
+    render(<ProductSearchInput value="가디건" onSearch={onSearch} />);
+    const input = screen.getByRole("textbox");
+
+    // "가디저" 입력 → 타이머 대기(아직 URL 반영 전)
+    fireEvent.change(input, { target: { value: "가디저" } });
+
+    // debounce가 끝나기 전에 뒤로가기. value rerender 없이 popstate만 온 상태.
+    act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+
+    // 시간을 다 흘려도 onSearch는 호출되지 않아야 한다.
+    // popstate 핸들러가 타이머를 즉시 취소했기 때문. 취소가 없으면 "가디저"가 push돼 desync.
+    act(() => vi.advanceTimersByTime(300));
+    expect(onSearch).not.toHaveBeenCalled();
+  });
 });
 
 // 뒤로/앞으로(popstate)일 때만 input을 리마운트해 IME 조합 버퍼까지 초기화하는 게 트샵 버그의 수정이다.
