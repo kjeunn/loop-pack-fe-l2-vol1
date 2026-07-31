@@ -5,8 +5,8 @@ import { useQueryStates } from "nuqs";
 
 import { productListQueryOptions } from "@/features/products/api/queries";
 import { productSearchParsers } from "@/features/products/model/searchParams";
-import { ProductCard } from "@/features/products/ui/ProductCard";
 import { ProductGridSkeleton } from "@/features/products/ui/ProductSkeleton";
+import { ProductCard } from "@/widgets/product-card/ui/ProductCard";
 
 // 목록의 로딩·에러·빈·성공 네 상태를 그린다.
 // 조회 조건도 결과도 스스로 읽는다. 부모와 같은 query key라 캐시를 공유해 요청은 한 번만 나간다.

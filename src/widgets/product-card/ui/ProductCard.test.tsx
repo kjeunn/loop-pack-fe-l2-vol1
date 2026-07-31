@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useCartStore } from "@/entities/cart/model/cartStore";
 import type { Product } from "@/entities/product/model/types";
 import { useWishlistStore } from "@/entities/wishlist/model/wishlistStore";
-import { ProductCard } from "@/features/products/ui/ProductCard";
+import { ProductCard } from "@/widgets/product-card/ui/ProductCard";
 
 const product = {
   id: "p1",

@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { homeQueryOptions } from "@/_pages/home/api/queries";
-import { ProductSection } from "@/features/products/ui/ProductSection";
+import { ProductSection } from "@/_pages/home/ui/ProductSection";
 import { Header } from "@/widgets/header/ui/Header";
 
 import { HomeSkeleton } from "./HomeSkeleton";

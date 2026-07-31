@@ -1,5 +1,5 @@
 import type { Product } from "@/entities/product/model/types";
-import { ProductCard } from "@/features/products/ui/ProductCard";
+import { ProductCard } from "@/widgets/product-card/ui/ProductCard";
 
 interface ProductSectionProps {
   title: string;
