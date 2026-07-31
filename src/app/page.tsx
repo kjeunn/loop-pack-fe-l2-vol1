@@ -1,7 +1,7 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 
-import { HomeView } from "@/_pages/home/HomeView";
-import { homeQueryOptions } from "@/features/home/api/queries";
+import { homeQueryOptions } from "@/_pages/home/api/queries";
+import { HomeView } from "@/_pages/home/ui/HomeView";
 import { getServerQueryClient } from "@/shared/api/getServerQueryClient";
 
 // app은 라우팅만. 화면 조합은 _pages가 소유한다.

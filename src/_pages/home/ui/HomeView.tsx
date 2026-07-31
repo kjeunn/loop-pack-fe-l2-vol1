@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 
-import { homeQueryOptions } from "@/features/home/api/queries";
+import { homeQueryOptions } from "@/_pages/home/api/queries";
 import { ProductSection } from "@/features/products/ui/ProductSection";
 import { Header } from "@/widgets/header/ui/Header";
 

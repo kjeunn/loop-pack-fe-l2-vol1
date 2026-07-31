@@ -147,6 +147,19 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 > **순서 근거:** `HomeResponse` 타입 분해(4)를 `features/home` 흡수(3) **뒤**에 둔다. 흡수 전에 `HomeResponse`만 `_pages`로 옮기면 아직 `features/home`에 있는 `homeQueryOptions`가 `_pages`를 import하는 `features → _pages` 역방향이 잠깐 생긴다(typecheck는 통과해 `pnpm check`로 안 걸리므로 순서로 막는다). 홈 쿼리를 먼저 `_pages`로 옮긴 뒤 타입을 그 옆에 둔다.
 > **persist 키 변경(5):** 단일 store를 나누며 키가 `commerce-store` → `cart`·`wishlist`로 바뀌어 기존 저장값은 이어지지 않는다. 사용자에게 보이는 동작(담기·찜 유지)은 그대로이며, 실사용자가 없어 데이터 이월은 무의미하다.
 
+### 진행 로그
+
+> 각 이동 단계의 실제 검증 결과. 코드 커밋과 함께 갱신한다.
+
+- [x] 1. RFC 커밋 (이동 전) — `1a4e619`
+- [x] 2. `views → _pages` 개명 — `pnpm check` ✅ (10파일 git rename) · `5b29255`
+- [x] 3. `features/home` → `_pages/home` 흡수 (`ui`·`api` 세그먼트화) — `pnpm check` ✅ (test 70·lint·typecheck·build)
+- [ ] 4. `types/commerce.ts` 분해
+- [ ] 5. `commerceStore` → `cartStore`·`wishlistStore` 2분리 + `shared/lib/persist`
+- [ ] 6. `ProductCard` → `widgets/product-card`, 행위 → `features/add-to-cart`·`toggle-wishlist`
+- [ ] 7. 핵심 슬라이스 Public API `index.ts`
+- [ ] 8. `Header`를 `app/layout`에서 렌더
+
 ### app/api (mock 백엔드) 경계
 
 `src/app/api`의 Route Handler·fixture는 **전환 범위에서 제외**한다. 프론트엔드(`entities`·`features`)와 mock 백엔드(`app/api`)는 HTTP 경계로 나뉜다. 단, 프론트↔API가 공유하는 계약 타입(`Product`·`Category`·`ProductSort`)은 `entities/product/model`에 두어, 양쪽이 한 곳을 아래로 import한다(`app/api` → `entities`는 하위 참조라 합법). mock 전용 제어값 `MockApiScenario`는 `app/api` 내부에만 둔다.
