@@ -2,7 +2,7 @@
 
 import { type ChangeEvent, useEffect } from "react";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryErrorResetBoundary, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 
 import type { CategoryId, ProductSort } from "@/entities/product/model/types";
@@ -14,6 +14,7 @@ import {
   PAGE_SIZE_OPTIONS,
   SORT_OPTIONS,
 } from "@/features/products/ui/filterOptions";
+import { ErrorBoundary } from "@/shared/ui/error/ErrorBoundary";
 import { Header } from "@/widgets/header/ui/Header";
 
 import { ProductListResults } from "./ProductListResults";
@@ -26,7 +27,12 @@ export function ProductListView() {
   const queryClient = useQueryClient();
   // 결과 목록은 ProductListResults가 직접 조회한다. 여기서는 페이지 이동에 필요한
   // 전체 개수만 쓰며, 같은 query key라 요청은 한 번만 나간다.
-  const { data, isPlaceholderData } = useQuery(productListQueryOptions(query));
+  // 이 관찰자는 껍데기(헤더·필터·페이지네이션)라 5xx여도 던지지 않는다(throwOnError:false).
+  // 5xx 경계 전파는 결과 영역(ProductListResults + 그 ErrorBoundary)이 전담해, 껍데기는 살아남는다.
+  const { data, isPlaceholderData } = useQuery({
+    ...productListQueryOptions(query),
+    throwOnError: false,
+  });
 
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
@@ -122,7 +128,26 @@ export function ProductListView() {
       </section>
 
       <section className="week05-section" aria-label="상품 검색 결과" aria-busy={isPlaceholderData}>
-        <ProductListResults />
+        {/* 5xx는 여기서 경계로 잡아 결과 영역만 fallback을 그린다(헤더·필터·페이지네이션은 유지).
+            reset은 쿼리 에러까지 지워 전체 새로고침 없이 다시 조회한다. 4xx·네트워크는 던지지 않아
+            ProductListResults 안에서 인라인으로 처리된다. */}
+        <QueryErrorResetBoundary>
+          {({ reset }) => (
+            <ErrorBoundary
+              onReset={reset}
+              fallback={({ reset }) => (
+                <p role="alert">
+                  상품을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.{" "}
+                  <button type="button" onClick={reset}>
+                    다시 시도
+                  </button>
+                </p>
+              )}
+            >
+              <ProductListResults />
+            </ErrorBoundary>
+          )}
+        </QueryErrorResetBoundary>
         <nav className="week05-pagination" aria-label="페이지 이동">
           <button type="button" onClick={() => goToPage(query.page - 1)} disabled={query.page <= 1}>
             이전

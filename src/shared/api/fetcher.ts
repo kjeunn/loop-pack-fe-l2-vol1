@@ -1,3 +1,4 @@
+import { ApiError } from "@/shared/api/apiError";
 import type { ApiErrorResponse } from "@/shared/api/types";
 
 // 브라우저는 상대경로로 fetch할 수 있지만, 서버 프리패치는 절대 URL이 필요하다.
@@ -10,16 +11,22 @@ function resolveUrl(path: string): string {
   return `${baseUrl}${path}`;
 }
 
-// 클라이언트 조회 계층. mock API는 실패 시 ApiErrorResponse(message)를 400/500으로 준다.
-// 실패를 throw로 바꿔 TanStack Query의 isError·error.message로 흘려보낸다.
+// 클라이언트 조회 계층. 실패를 ApiError(kind·status)로 바꿔 TanStack Query로 흘려보낸다.
+// 전역 throwOnError 정책이 kind·status를 보고 5xx는 경계로, 4xx·네트워크는 인라인으로 가른다.
 // no-store는 서버 프리패치가 자기 API를 부를 때 이 라우트를 매 요청 렌더로 만들어,
 // 빌드 타임에 빈 데이터가 구워지는 것을 막는다. 클라이언트 캐싱은 React Query가 맡는다.
 export async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(resolveUrl(path), { cache: "no-store" });
+  let response: Response;
+  try {
+    response = await fetch(resolveUrl(path), { cache: "no-store" });
+  } catch {
+    // fetch 자체가 거부되면 네트워크 실패(오프라인 등)다. HTTP status가 없다.
+    throw new ApiError("network", null, "네트워크 연결을 확인해 주세요.");
+  }
 
   if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as ApiErrorResponse | null;
-    throw new Error(error?.message ?? "요청을 처리하지 못했습니다.");
+    const body = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+    throw new ApiError("http", response.status, body?.message ?? "요청을 처리하지 못했습니다.");
   }
 
   return response.json() as Promise<T>;
