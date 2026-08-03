@@ -21,6 +21,11 @@
   padding-bottom: 24px;
 }
 
+/* 헤더 버튼(장바구니 비우기)은 활성일 때 클릭 가능한 손 모양으로(빈 장바구니로 disabled면 기본 커서). */
+.week05-header button:not(:disabled) {
+  cursor: pointer;
+}
+
 .week05-hero {
   position: relative;
   /* 배너 이미지가 fill로 깔리므로 자식 z-index를 이 안에 가둔다. */
@@ -43,6 +48,38 @@
      블러로 확대 아티팩트를 감추고, scale로 블러 때문에 비는 가장자리를 메운다. */
   filter: blur(4px);
   transform: scale(1.05);
+  z-index: 0;
+}
+
+/* 블러 이미지 위에 아래→위 어두운 그라데이션을 깔아 어떤 이미지에서도 텍스트 대비를 확보한다. */
+.week05-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.15) 55%, transparent);
+}
+
+/* 배너 텍스트: 그라데이션 위에 흰색 + 그림자로 얹는다. 설명(작게)–제목(크게) 순으로 쌓인다. */
+.week05-hero > p,
+.week05-hero > h1 {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.week05-hero > p {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  opacity: 0.95;
+}
+
+.week05-hero > h1 {
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 /* 사진 위에서도 기존 어두운 본문 색을 유지하려고 흰 스크림을 덧댄다. */
@@ -69,7 +106,8 @@
 
 .week05-categories a,
 .week05-product button,
-.week05-pagination button {
+.week05-pagination button,
+.week05-filters button {
   padding: 8px 12px;
   border: 1px solid #c8c8c8;
   background: transparent;
@@ -77,7 +115,8 @@
 
 /* 아이콘(찜)과 텍스트(담기)는 콘텐츠 높이가 달라, 높이를 고정해 두 버튼을 맞춘다.
    box-sizing으로 padding·border가 높이에 포함되게 해 콘텐츠가 밀어 올리지 않게 한다. */
-.week05-product button {
+.week05-product button,
+.week05-filters button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -137,6 +176,12 @@
   border: 1px solid #c8c8c8;
   background: transparent;
   color: inherit;
+}
+
+/* 초기화 버튼을 옆 select와 같은 40px 높이로 키우고, 라벨 텍스트가 없으니 아래로 정렬해 select 바닥에 맞춘다. */
+.week05-filters button {
+  height: 40px;
+  align-self: flex-end;
 }
 
 .week05-pagination {
