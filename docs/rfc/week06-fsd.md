@@ -10,7 +10,7 @@
 | 동작                                                                                    | 확인 방법                                                                                                                                                                          | 결과                                                                                                                                                                                                                                                                                                                                                                                                        |
 | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 홈·상품 목록의 정상·로딩·에러·빈 상태                                                   | 정상: `/`·`/products` 진입 / 로딩: DevTools 네트워크 Slow 3G로 스켈레톤 확인 / 빈 상태: `/products?q=존재하지않는상품` / 에러: DevTools request blocking으로 `/api/products*` 차단 | 에러(네트워크 실패): 요청 차단 시 카테고리·정렬·페이지네이션·헤더는 그대로 유지되고 **결과 목록 영역에만** 데이터 없이 `Failed to fetch` 표시 확인 ✅ (조회 실패가 나머지 화면을 가리지 않음 → 4단계 #1 근거). HTTP 500 경로의 API 문구 표시는 `scenario`가 UI에 미배선이라 4단계에서 검증. 정상: 목록·홈 렌더 확인 ✅ / 로딩: 스켈레톤 표시 확인 ✅ / 빈 상태: `조건에 맞는 상품이 없습니다.` 표시 확인 ✅ |
-| 검색·카테고리·정렬·페이지네이션                                                         | 검색 `?q=가디건`(2개), 카테고리 `?category=fashion`(6개), 정렬 `?sort=price-desc`, 페이지 `?page=2&pageSize=15` 각각·조합 진입해 목록 갱신 확인                                    | 검색·카테고리·정렬·페이지 표시 모두 URL과 일치하게 갱신 확인 ✅. 잘못된 URL 파라미터(`pageSize=5`, `page=0`, 미지원 category/sort)는 nuqs 파서가 유효값·기본값으로 걸러 안전하게 렌더 확인 ✅ (경계·오류 입력 보존 대상). page가 마지막을 넘으면 뷰가 1페이지로 되돌려 재조회 확인 ✅                                                                                                                       |
+| 검색·카테고리·정렬·페이지네이션                                                         | 검색 `?q=가디건`(2개), 카테고리 `?category=fashion`(6개), 정렬 `?sort=price-desc`, 페이지 `?page=2&pageSize=15` 각각·조합 진입해 목록 갱신 확인                                    | 검색·카테고리·정렬·페이지 표시 모두 URL과 일치하게 갱신 확인 ✅. 잘못된 URL 파라미터(`pageSize=5`, `page=0`, 미지원 category/sort)는 nuqs 파서가 유효값·기본값으로 걸러 안전하게 렌더 확인 ✅ (경계·오류 입력 보존 대상). page가 마지막을 넘으면(`?page=99`) 서버 `page.tsx`가 응답으로 검사해 1페이지 캐노니컬 URL로 redirect 확인 ✅ (통합 테스트 `app/products/page.test.tsx`)                           |
 | URL 공유·새로고침·뒤로/앞으로 가기                                                      | `/products?category=fashion&sort=price-desc` 복사→새 탭에서 필터·정렬 복원 확인, 새로고침 후 동일, 필터 변경 뒤 뒤로/앞으로 이동 시 이전 URL 상태 복원                             | 새 탭 복원·새로고침 유지·뒤로/앞으로 상태 복원 모두 확인 ✅                                                                                                                                                                                                                                                                                                                                                 |
 | 홈·목록에서 장바구니·위시리스트 상태 동기화, 페이지 이동 중 Zustand 상태·헤더 개수 유지 | `/`에서 담기→`/products`로 이동해 헤더 배지 수 유지 확인, 목록에서 위시리스트 토글→홈으로 이동해 동기화 확인                                                                       | 홈에서 담기·찜 시 헤더 배지 증가, `/products` 이동 후 개수 유지, 목록 찜 토글이 홈에 동기화, 새로고침 후 persist 유지 모두 확인 ✅                                                                                                                                                                                                                                                                          |
 | `pnpm check` 통과                                                                       | CI 커맨드 실행                                                                                                                                                                     | ✅ test 70 passed / lint / typecheck / build 통과                                                                                                                                                                                                                                                                                                                                                           |
@@ -151,7 +151,7 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 > **step 5 — 단일 slice로 folding · 테스트 분리:** 독립 store는 slice 결합이 없으므로 `cartSlice`·`wishlistSlice`를 각 store에 인라인하고 `SlicePattern`·`entities/commerce`를 삭제했다. 이로써 entities 간 순환이 제거됐다(cart·wishlist는 각자 store + `shared/lib/persist`만 아래로 참조). store가 사라진 `commerceStore.test`(6)는 store별로 나눠 `cartStore.test`(4)·`wishlistStore.test`(4)로 재작성했다(assertion은 그대로, 대상 store만 분리).
 > **step 6 — ProductSection 이동:** `ProductCard`가 widget이 되면서 이를 렌더하던 `ProductSection`(features/products)이 `feature → widget` 역방향이 된다. `ProductSection`은 home 전용이라 `_pages/home/ui`로 옮겨 `_pages → widget` 하위 참조로 바로잡았다. 담기·찜 버튼은 `features/add-to-cart`·`toggle-wishlist`로 추출해 widget이 조합한다(entities→features 역방향 원천 제거).
 > **step 6b — `_pages` 세그먼트 정합:** step 3에서 `home`만 `ui/`·`api/`로 나뉘고 `products`·`demo`는 flat이었다. 목표 트리는 셋 다 `ui/`라, `products`·`demo`도 `ui/`로 세그먼트화해 일치시켰다(순수 이동, 상대 import는 같은 `ui/` 안이라 유지). `pnpm check` ✅ (test 72).
-> **step 7 — Public API 범위(실측 후 축소):** 처음엔 여러 슬라이스에 index.ts를 뒀으나, RFC 원칙("숨길 내부가 있을 때만")에 맞춰 **내부를 실제 은닉하는 4개(`entities/cart`·`wishlist`·`shared/ui/dialog`·`shared/lib/select`)만 남기고** 파일 하나뿐인 얇은 barrel(`entities/product`·`add-to-cart`·`toggle-wishlist`·`product-card`·`header`)은 제거했다. 특히 `features/products` barrel은 client 전용 `searchParams`(nuqs `createParser`)를 섞어, server 컴포넌트 `app/products/page`가 import하자 **RSC 빌드가 깨졌다** → barrel을 없애고 세그먼트별 deep import로 되돌렸다(barrel이 client/server를 섞으면 생기는 실제 비용).
+> **step 7 — Public API 범위(실측 후 축소):** 처음엔 여러 슬라이스에 index.ts를 뒀으나, RFC 원칙("숨길 내부가 있을 때만")에 맞춰 **내부를 실제 은닉하는 4개(`entities/cart`·`wishlist`·`shared/ui/dialog`·`shared/lib/select`)만 남기고** 파일 하나뿐인 얇은 barrel(`entities/product`·`add-to-cart`·`toggle-wishlist`·`product-card`·`header`)은 제거했다. 특히 `features/products` barrel은 당시 client 전용이던 `searchParams`(nuqs `createParser`를 `"nuqs"`에서 import)를 섞어, server 컴포넌트 `app/products/page`가 import하자 **RSC 빌드가 깨졌다** → barrel을 없애고 세그먼트별 deep import로 되돌렸다(barrel이 client/server를 섞으면 생기는 실제 비용). 이후 A에서 서버 프리패치를 위해 `searchParams`를 `nuqs/server`로 옮겨 server-safe로 만들었고(server page가 같은 파서를 재사용), deep import는 그대로 둔다.
 > **step 8 — 건너뜀(근거):** `Header`를 `app/layout`에서 렌더하려 했으나 이득 대비 비용이 커 **하지 않는다.** ① `_pages → widgets`(Header)는 하위 참조라 **규칙 위반이 아니다**(고칠 게 없음). ② Header가 각 view의 `.week05-page` 안에 있어 포커스 스타일(`.week05-page *:focus-visible`)을 받는데, layout으로 빼면 그 스코프 밖이라 스타일이 깨진다(CSS 재작업 필요). ③ 현재 헤더 없는 `/demo`까지 헤더를 갖게 돼 route group이 필요하다. 중복은 `<Header />` 2줄뿐이라, "필요 없는 건 하지 않는 것도 설계" 원칙에 따라 각 view가 Header를 조합하는 현행을 유지한다.
 
 ### app/api (mock 백엔드) 경계
@@ -255,7 +255,7 @@ import { WishlistButton } from "@/features/toggle-wishlist";
   - `shared/ui/dialog` — compound 내부(`DialogRoot`·`DialogOverlay`·`DialogPanel` 등)를 숨기고 `Dialog`만 공개.
   - `shared/lib/select` — headless 훅 내부를 숨기고 `useSelect` + 계약 타입만 공개.
 - **안 둔다** — 컴포넌트·타입 하나뿐이라 감출 내부가 없는 슬라이스(`entities/product`, `features/add-to-cart`·`toggle-wishlist`, `widgets/product-card`·`header`, `shared/lib/cn`). 경로가 곧 계약이라 index는 barrel일 뿐이다. deep import로 둔다.
-- **`features/products`는 barrel을 두지 않는다** — 넓은 표면에 client 전용 `searchParams`(nuqs `createParser`)가 섞여, 한 barrel로 묶으면 server 컴포넌트가 import할 때 RSC 빌드가 깨진다(step 7 실측). 세그먼트별 deep import로 client/server 경계를 지킨다.
+- **`features/products`는 barrel을 두지 않는다** — step 7 당시 client 전용이던 `searchParams`가 섞여, 한 barrel로 묶으면 server 컴포넌트 import 시 RSC 빌드가 깨졌다(실측). 세그먼트별 deep import로 되돌렸다. 이후 A에서 `searchParams`를 `nuqs/server`로 바꿔 server-safe가 됐지만(서버 page가 파서 재사용), barrel을 다시 만들지 않는 건 Public API 원칙(숨길 내부 없음)에 따른 것.
 
 ---
 
@@ -263,16 +263,18 @@ import { WishlistButton } from "@/features/toggle-wishlist";
 
 ### TanStack Query 캐시 정책 — 유지
 
-폴더 이동으로 캐시 정책을 바꾸지 않는다. 목록은 `staleTime` 1분·`keepPreviousData`·`gcTime` 기본(5분)을 유지하고, `queryKey`를 정규화 요청값으로 두어 서버 프리패치와 클라이언트가 같은 키로 캐시를 재사용한다. 홈도 현행 유지.
+폴더 이동으로 캐시 정책을 바꾸지 않는다. 목록은 `staleTime` 1분·`keepPreviousData`·`gcTime` 기본(5분)을 유지한다. **홈·상품 목록 모두 서버에서 현재 URL 조건을 프리패치**하고, `queryKey`를 정규화 요청값으로 둔다 — 서버와 클라이언트가 같은 키를 써(파서를 `nuqs/server` loader로 공유) 하이드레이션 후 재요청이 없고, waterfall이 사라진다. (상품 목록 서버 프리패치는 A에서 서버 redirect와 함께 추가했다.)
 
 ### 로딩 경계
 
-목록 로딩은 Query `isPending`이 `ProductListResults`에서 스켈레톤으로 그린다. route `loading.tsx`/Suspense는 **추가하지 않는다** — 같은 범위를 두 번 덮어 중복이기 때문이다. `isPending`은 조건 변경 시 부분 로딩까지 표현하므로 이 화면엔 이쪽이 맞다.
+목록 로딩은 Query `isPending`이 `ProductListResults`에서 스켈레톤으로 그린다. 데이터 로딩용 route `loading.tsx`는 **추가하지 않는다** — 같은 범위를 두 번 덮어 중복이고, `isPending`이 조건 변경 시 부분 로딩까지 표현하기 때문이다.
+
+단, `app/products/page.tsx`에는 `Suspense` 경계가 **있다.** 이건 데이터 로딩용이 아니라 `ProductListView`가 `useSearchParams`(nuqs)를 읽어 Next가 요구하는 prerender 경계다(없으면 페이지 전체가 클라이언트 렌더로 떨어진다). page.tsx는 async 서버 컴포넌트로 목록을 프리패치해 `HydrationBoundary`로 넘기므로(클라 재요청 없음, waterfall 제거) 첫 HTML에 목록이 담기고, 이 Suspense는 그 위에서 useSearchParams 경계로만 남는다. "loading.tsx 미도입"과 "useSearchParams용 Suspense"는 성격이 다르므로 코드 주석에도 그렇게 명시했다.
 
 ### 에러 경계 (구현 완료 — 4단계)
 
-- **인라인** — 4xx·빈 결과·네트워크 실패는 `ProductListResults` 자리 안에서 표시한다(나머지 화면을 가리지 않음). 0단계에서 이 경계가 이미 동작함을 확인했다.
-- **경계 전파** — 5xx는 결과 영역을 감싼 컴포넌트 `ErrorBoundary`로(헤더·필터 유지), 예상 밖 렌더링 오류는 전역 route `error.tsx`로 전파하고 `reset`을 제공한다. `throwOnError` 기준(5xx→경계, 4xx·빈결과·네트워크→인라인)은 4단계에서 배선한다.
+- **인라인(data 우선)** — 4xx·빈 결과·네트워크, 그리고 **직전 목록이 남은 배경 5xx 실패**는 `ProductListResults` 자리 안에서 표시한다(나머지 화면·목록을 가리지 않음). 배경 실패는 상단 "다시 시도" 배너로만 알린다.
+- **경계 전파** — **보여줄 데이터가 없는 첫 조회 5xx**만 결과 영역을 감싼 컴포넌트 `ErrorBoundary`로(헤더·필터 유지), 예상 밖 렌더링 오류는 전역 route `error.tsx`로 전파하고 `reset`을 제공한다. `throwOnError` 기준(`isServerError(error) && query.state.data === undefined`)은 4단계에서 배선했다.
 - **단일 에러 관문** — `shared/api/fetcher`가 `!response.ok`를 throw로 바꿔 Query의 `isError`·`error.message`로 흘려보낸다. 화면별 문구는 shared에 넣지 않는다.
 
 ### 이번 주에 하지 않을 최적화
@@ -295,25 +297,26 @@ import { WishlistButton } from "@/features/toggle-wishlist";
 
 ## 4단계 — 에러 처리 설계
 
-> **구현 완료(별도 `feat:` 커밋).** `fetcher`가 실패를 `ApiError`(network·http·business)로 던지고, QueryClient 전역 `throwOnError`가 5xx만 경계로 전파한다. `ProductListResults`를 감싼 컴포넌트 `ErrorBoundary`가 결과 영역만 fallback으로 그려 헤더·필터는 유지한다.
-> 방향: **공통 ErrorBoundary로 전부 바꾸지 않는다.** 복구 가능한 오류(4xx·네트워크)는 인라인으로 두어 부분 실패가 화면 전체를 가리지 않게 하고, 예상 밖 오류(5xx·렌더링)만 경계로 전파한다.
+> **구현 완료(별도 `feat:` 커밋).** `fetcher`가 실패를 `ApiError`(network·http·business)로 던지고, QueryClient 전역 `throwOnError`가 **5xx이고 보여줄 데이터가 없을 때만** 경계로 전파한다. `ProductListResults`를 감싼 컴포넌트 `ErrorBoundary`가 결과 영역만 fallback으로 그려 헤더·필터는 유지한다.
+> 방향: **data 우선 + 공통 ErrorBoundary로 전부 바꾸지 않는다.** 복구 가능한 오류(4xx·네트워크)와 **직전 목록이 남아 있는 배경 재조회 실패**는 인라인(배너)으로 두어 멀쩡한 화면을 덮지 않고, **보여줄 게 없는 첫 조회 5xx·예상 밖 렌더링 오류만** 경계로 전파한다.
 
 ### 실패 유형별 처리
 
-| 실패 유형                                  | 처리 위치                           | Error Boundary 전파 | 사용자 UI                        | 재시도 방법                          | 이 경계를 선택한 이유                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| ------------------------------------------ | ----------------------------------- | ------------------- | -------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 상품 목록 조회 실패(5xx)                   | 컴포넌트 `ErrorBoundary`(결과 영역) | 예                  | 결과 영역 fallback + "다시 시도" | `reset()`(전체 새로고침 없이 재조회) | 예상 밖 서버 오류라 경계로 전파하되, route 전체가 아닌 결과 영역만 감싸 헤더·필터를 살린다(요구 #1)                                                                                                                                                                                                                                                                                                                                                             |
-| 잘못된 검색 조건(4xx)                      | `ProductListResults`(인라인)        | 아니오              | 결과 영역 메시지                 | URL 조건 수정 / refetch              | 사용자가 조건만 바꾸면 복구. 나머지 화면 유지                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| 네트워크 실패                              | `ProductListResults`(인라인)        | 아니오              | 결과 영역 메시지                 | refetch                              | 일시적, 재요청으로 복구. 나머지 화면 유지                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| 예상하지 못한 렌더링 오류                  | route `error.tsx`(경계)             | 예                  | 전역 fallback + `reset`          | `reset()`                            | 복구 지점 불명, 경계가 유일한 안전망                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| 장바구니 행위의 비즈니스 오류              | 해당 없음(현재)                     | —                   | —                                | —                                    | mock이 담기·찜 실패를 내지 않음. 서버 검증(재고·중복)이 붙으면 이벤트 핸들러에서 인라인 처리(토스트)                                                                                                                                                                                                                                                                                                                                                            |
-| 클라이언트 저장소 오류(localStorage quota) | persist storage 어댑터              | 아니오              | (해당 없음)                      | —                                    | **현재 해당 없음** — persist가 id 배열만 저장해 수 KB 수준이라 quota 초과 불가. 쿼리·렌더 경계와 무관한 저장소 부류라 `throwOnError`·ErrorBoundary가 잡지 못함. **읽기 손상(형태 불일치)은 persist의 zod `.catch()` sanitize가 안전 기본값으로 이미 복구**하므로 별도 방어가 필요 없다. **향후 조건**: 상품 상세를 통째로 저장하거나 항목 수가 무제한으로 늘면 write 경로의 storage 어댑터 `try/catch`(quota 시 저장 건너뜀/오래된 항목 evict) + 개수 상한 필요 |
+| 실패 유형                                  | 처리 위치                           | Error Boundary 전파 | 사용자 UI                         | 재시도 방법                          | 이 경계를 선택한 이유                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------ | ----------------------------------- | ------------------- | --------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 첫 조회 5xx(보여줄 데이터 없음)            | 컴포넌트 `ErrorBoundary`(결과 영역) | 예                  | 결과 영역 fallback + "다시 시도"  | `reset()`(전체 새로고침 없이 재조회) | 예상 밖 서버 오류이고 보여줄 게 없어 경계로 전파하되, route 전체가 아닌 결과 영역만 감싸 헤더·필터를 살린다(요구 #1)                                                                                                                                                                                                                                                                                                                                            |
+| 배경 재조회 5xx(직전 목록 있음)            | `ProductListResults`(인라인 배너)   | 아니오              | 목록 유지 + 상단 "다시 시도" 배너 | 배너의 refetch                       | 사용자가 요청 안 한 배경 실패가 멀쩡한 목록을 덮으면 안 됨(data 우선). 데이터 있으면 `throwOnError`가 `false`                                                                                                                                                                                                                                                                                                                                                   |
+| 잘못된 검색 조건(4xx)                      | `ProductListResults`(인라인)        | 아니오              | 결과 영역 메시지                  | URL 조건 수정 / refetch              | 사용자가 조건만 바꾸면 복구. 나머지 화면 유지                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| 네트워크 실패                              | `ProductListResults`(인라인)        | 아니오              | 결과 영역 메시지                  | refetch                              | 일시적, 재요청으로 복구. 나머지 화면 유지                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 예상하지 못한 렌더링 오류                  | route `error.tsx`(경계)             | 예                  | 전역 fallback + `reset`           | `reset()`                            | 복구 지점 불명, 경계가 유일한 안전망                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 장바구니 행위의 비즈니스 오류              | 해당 없음(현재)                     | —                   | —                                 | —                                    | mock이 담기·찜 실패를 내지 않음. 서버 검증(재고·중복)이 붙으면 이벤트 핸들러에서 인라인 처리(토스트)                                                                                                                                                                                                                                                                                                                                                            |
+| 클라이언트 저장소 오류(localStorage quota) | persist storage 어댑터              | 아니오              | (해당 없음)                       | —                                    | **현재 해당 없음** — persist가 id 배열만 저장해 수 KB 수준이라 quota 초과 불가. 쿼리·렌더 경계와 무관한 저장소 부류라 `throwOnError`·ErrorBoundary가 잡지 못함. **읽기 손상(형태 불일치)은 persist의 zod `.catch()` sanitize가 안전 기본값으로 이미 복구**하므로 별도 방어가 필요 없다. **향후 조건**: 상품 상세를 통째로 저장하거나 항목 수가 무제한으로 늘면 write 경로의 storage 어댑터 `try/catch`(quota 시 저장 건너뜀/오래된 항목 evict) + 개수 상한 필요 |
 
 ### 전파 기준 (`throwOnError`) — 쿼리는 전역, 뮤테이션은 개별
 
-`throwOnError`는 `(error) => boolean` 함수를 받으므로, 정책을 한 곳에 둔다.
+`throwOnError`는 `(error, query) => boolean` 함수를 받으므로(둘째 인자로 `query.state.data`를 봐 보여줄 데이터 유무까지 판단), 정책을 한 곳에 둔다.
 
-- **useQuery → QueryClient 전역 default에 정책 함수.** `shared/api/queryClient`의 `defaultOptions.queries.throwOnError = (error) => isServerError(error)`. 5xx·미상만 `true`(경계), 4xx·빈결과·네트워크는 `false`라 화면 안에서 `isError`로 처리된다. "복구 가능=인라인"이 함수가 `false`를 반환해 자동으로 지켜지며, 정책을 쿼리마다 반복하지 않는다. 예외 쿼리만 `useQuery({ throwOnError })`로 개별 override.
+- **useQuery → QueryClient 전역 default에 정책 함수.** `shared/api/queryClient`의 `defaultOptions.queries.throwOnError = (error, query) => isServerError(error) && query.state.data === undefined`. 5xx라도 **보여줄 데이터가 없을 때(첫 조회 실패)만** 경계로 던진다. 이미 데이터가 있으면(배경 재조회 실패) `false`라 던지지 않고, 멀쩡한 목록을 경계로 덮는 대신 화면 안에서 인라인 배너로 알린다(data 우선). 4xx·네트워크는 항상 `false`. "복구 가능=인라인"이 함수가 `false`를 반환해 자동으로 지켜지며, 정책을 쿼리마다 반복하지 않는다. 예외 쿼리만 `useQuery({ throwOnError })`로 개별 override(`useShellProductList`는 껍데기라 항상 `false`).
 - **useMutation → per-call.** 담기·찜·결제는 실패 UX가 행위마다 다르고(토스트·인라인·다이얼로그), 뮤테이션 오류는 이벤트 핸들러에서 나 경계가 못 잡는다. 던지지 않고 `onError`/`isError`로 행위별 인라인 처리한다.
 - 이 기준은 위 표의 `전파` 열과 일치해야 한다.
 
@@ -352,14 +355,15 @@ React `ErrorBoundary`는 **이벤트 핸들러·비동기 콜백의 오류를 �
 
 ### 로딩 경계와의 구분
 
-route `loading.tsx`/Suspense는 라우트 전환의 초기 로딩을, Query `isPending`은 조건 변경 시 데이터 로딩을 맡는다. 현재 목록은 `isPending`이 스켈레톤을 그리므로 route `loading.tsx`는 추가하지 않는다(중복).
+Query `isPending`은 조건 변경 시 데이터 로딩을 맡아 목록 스켈레톤을 그리므로, 데이터 로딩용 route `loading.tsx`는 추가하지 않는다(중복). `app/products/page.tsx`의 `Suspense`는 데이터 로딩이 아니라 `useSearchParams`용 prerender 경계이며(위 O 섹션 참고), 그 fallback이 초기 껍데기를 겸한다.
 
 > 검증용 `scenario`는 mock 전용 제어값이다. 사용자 URL·`ProductListQuery`에 넣지 않는다. 임시 `throw`로 `error.tsx`를 검증했다면 검증 후 제거한다.
 
 ### 실패 재현 결과
 
-- **5xx (경계 전파):** `_pages/products/ui/ProductListView.test.tsx` 통합 테스트로 재현·검증 — `fetch`를 500으로 mock하면 `ApiError("http", 500)` → 전역 `throwOnError` 정책이 결과 경계로 전파 → 결과 영역에 "다시 시도" fallback, **헤더의 "상품" 링크·카테고리 select는 생존** 확인(부분 실패, 요구 #1). 수동 재현: mock API에 `GET /api/products?scenario=error`(500) 직접 호출로 500 응답 확인.
-- **4xx·네트워크 (인라인):** `throwOnError`가 `false`라 `ProductListResults`의 `isError`로 결과 영역 안에서 표시된다(위치·구조는 0단계와 동일). 다만 네트워크 실패 문구는 브라우저 원문(0단계에서 확인한 `Failed to fetch`)에서 `ApiError`의 사용자 안내("네트워크 연결을 확인해 주세요.")로 바뀐다.
+- **첫 조회 5xx (경계 전파):** `_pages/products/ui/ProductListView.test.tsx` 통합 테스트로 재현·검증 — `fetch`를 500으로 mock하면 `ApiError("http", 500)` → 보여줄 데이터가 없어 전역 `throwOnError` 정책이 결과 경계로 전파 → 결과 영역에 "다시 시도" fallback, **헤더의 "상품" 링크·카테고리 select는 생존** 확인(부분 실패, 요구 #1). 수동 재현: mock API에 `GET /api/products?scenario=error`(500) 직접 호출로 500 응답 확인.
+- **배경 재조회 5xx (인라인 배너):** `_pages/products/ui/ProductListResults.test.tsx` 통합 테스트로 재현·검증 — 첫 조회 성공으로 목록을 그린 뒤 재조회를 500으로 실패시키면, 데이터가 있어 던지지 않고 **목록은 유지된 채 상단 "다시 시도" 배너**만 뜬다(data 우선, 멀쩡한 화면을 덮지 않음).
+- **4xx·네트워크 (인라인):** `throwOnError`가 `false`라 `ProductListResults`가 data 우선으로 걸러 결과 영역 안에서 표시된다. 네트워크 실패 문구는 브라우저 원문(0단계에서 확인한 `Failed to fetch`)에서 `ApiError`의 사용자 안내("네트워크 연결을 확인해 주세요.")로 바뀐다.
 - **예상 밖 렌더링 오류:** 전역 `app/error.tsx`가 잡아 fallback+`reset` 제공(Next 기본 route 경계).
 - **비즈니스·저장소 오류:** 표의 "해당 없음" 근거 참고(현재 발생 불가).
 
@@ -380,14 +384,20 @@ route `loading.tsx`/Suspense는 라우트 전환의 초기 로딩을, Query `isP
 - **판정(예상)**: 표현 변경이라 `widgets/product-card` 한 곳이 중심이고 자신 있게 예측 가능 → 경계 양호.
 - **실측 결과(이동 후 확인)**: `Product`에 `createdAt` 존재, `ProductCard`가 `product`를 받아 렌더 → 뱃지는 `widgets/product-card/ui/ProductCard.tsx` **한 곳**에 `createdAt` 파생으로 추가하면 끝(타입·mock 변경 불필요). **예상 일치 → 경계 양호 확인.**
 
-## Advanced A — 의존성 하네스 (계획, 선택)
+## Advanced A — 의존성 하네스 (적용 완료, 선택 과제)
 
-RFC 전체가 세운 import 불변식을 사람 눈이 아니라 도구로 강제한다. 최소 2개 규칙을 자동 검증한다.
+RFC 전체가 세운 import 불변식을 사람 눈이 아니라 도구로 강제한다. 두 규칙을 자동 검증한다.
 
 1. 하위 레이어가 상위 레이어를 import하지 않는다(역방향 금지).
 2. 같은 레이어의 서로 다른 슬라이스를 직접 import하지 않는다.
 
-도구 후보: `eslint-plugin-import`의 `no-restricted-imports` zones, `eslint-plugin-boundaries`, `@feature-sliced/steiger`. 구현은 Advanced라 선택이며, 이번 주엔 규칙 설계까지 기록하고 도입 시 `eslint.config.mjs`에 추가한다.
+**도구 선택 — `eslint-plugin-boundaries`.** 후보 셋을 비교했다.
+
+- `eslint-plugin-import`의 `import/no-restricted-paths`(zones): 역방향(규칙1)은 zone 하나로 깔끔하나, cross-slice(규칙2)는 슬라이스마다 형제를 나열해야 해 **슬라이스가 늘면 조용히 깨진다** — 사람 손을 타는 fragile한 규칙.
+- `@feature-sliced/steiger`: FSD 네이티브지만 **별도 CLI**라 `eslint`·lint-staged·`pnpm check` 게이트 밖에 놓이고, `_pages`·`src/app` 이중역할 커스텀에 오탐이 난다.
+- `eslint-plugin-boundaries`: 레이어를 element로 선언하고 `*`로 슬라이스를 capture하면, 위→아래 단방향을 `policies` 하나로 표현하고 **cross-slice는 자동 차단**된다. 슬라이스를 추가해도 설정을 고칠 필요가 없어(선언형) 사람 규율에 기대지 않는다. 기존 eslint 게이트 안에 들어온다.
+
+`eslint.config.mjs`에 `boundaries/dependencies`(default disallow + 레이어별 allow)로 적용했다. 같은 슬라이스 내부 세그먼트 협력은 한 element라 검사 대상이 아니다. 역방향·cross-slice 위반을 각각 심은 probe로 **둘 다 error로 잡히는 것을 실측**했고, 현 구조는 위반 0으로 통과한다.
 
 ## Advanced B — 변경 반경 실험 (구현 전 예상, 실제는 이동 후 대조)
 
