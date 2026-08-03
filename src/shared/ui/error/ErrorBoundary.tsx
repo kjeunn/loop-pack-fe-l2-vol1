@@ -4,8 +4,8 @@ import { Component, type ReactNode } from "react";
 
 interface ErrorBoundaryProps {
   fallback: (props: { error: Error; reset: () => void }) => ReactNode;
-  // 경계를 초기화할 때 함께 호출한다. QueryErrorResetBoundary의 reset을 연결해
-  // 쿼리 에러 상태까지 지워 다음 렌더에서 다시 조회하게 한다.
+  // 경계를 초기화할 때 함께 호출한다.
+  // QueryErrorResetBoundary의 reset을 연결해 쿼리 에러 상태까지 지워, 다음 렌더에서 다시 조회하게 한다.
   onReset?: () => void;
   children: ReactNode;
 }

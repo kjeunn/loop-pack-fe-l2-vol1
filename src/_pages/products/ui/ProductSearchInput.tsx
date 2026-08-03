@@ -29,8 +29,8 @@ export function ProductSearchInput({ value, onSearch }: ProductSearchInputProps)
   useEffect(() => {
     const handlePopState = () => {
       pendingPopStateRef.current = true;
-      // 뒤로/앞으로 직후, 대기 중이던 debounce가 발화해 stale 검색어를 URL에 push하지 않도록
-      // 여기서 즉시 취소한다. value 변경 effect의 cleanup만으로는 popstate와 타이머 사이 경합 창이 남아,
+      // 뒤로/앞으로 직후 대기 중이던 debounce가 발화하면 stale 검색어가 URL에 push되므로 여기서 즉시 취소한다.
+      // value 변경 effect의 cleanup만으로는 popstate와 타이머 사이 경합 창이 남아,
       // input은 이동한 값으로 리마운트되는데 URL만 옛 입력값으로 갈라질 수 있다.
       clearTimer(debounceTimerRef);
     };
