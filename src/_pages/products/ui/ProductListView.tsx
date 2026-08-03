@@ -2,9 +2,10 @@
 
 import { type ChangeEvent, useEffect } from "react";
 
-import { QueryErrorResetBoundary, useQuery, useQueryClient } from "@tanstack/react-query";
+import { QueryErrorResetBoundary, useQueryClient } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 
+import { useShellProductList } from "@/_pages/products/api/useShellProductList";
 import type { CategoryId, ProductSort } from "@/entities/product/model/types";
 import { productListQueryOptions } from "@/features/products/api/queries";
 import { type PageSize } from "@/features/products/model/pagination";
@@ -25,20 +26,15 @@ import "@/shared/ui/week-05-layout.css";
 export function ProductListView() {
   const [query, setQuery] = useQueryStates(productSearchParsers, { history: "push" });
   const queryClient = useQueryClient();
-  // 결과 목록은 ProductListResults가 직접 조회한다. 여기서는 페이지 이동에 필요한
-  // 전체 개수만 쓰며, 같은 query key라 요청은 한 번만 나간다.
-  // 이 관찰자는 껍데기(헤더·필터·페이지네이션)라 5xx여도 던지지 않는다(throwOnError:false).
-  // 5xx 경계 전파는 결과 영역(ProductListResults + 그 ErrorBoundary)이 전담해, 껍데기는 살아남는다.
-  const { data, isPlaceholderData } = useQuery({
-    ...productListQueryOptions(query),
-    throwOnError: false,
-  });
+  // 전체 개수(totalCount)는 페이지네이션에만 쓰는 껍데기 정보라 껍데기 관찰자로 읽는다.
+  // 결과 목록은 ProductListResults가 직접 조회하며, 같은 query key라 요청은 한 번만 나간다.
+  const { data, isPlaceholderData } = useShellProductList(query);
 
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
 
-  // 다음 페이지를 미리 받아 둔다. 진입만으로 투기적으로 받지 않고, "다음"에 마우스를
-  // 올리거나(hover) 포커스가 닿았을 때(keyboard) — 곧 누를 의도가 드러난 시점에만 받는다.
+  // 다음 페이지를 미리 받아 둔다. 진입만으로 투기적으로 받지 않고,
+  // "다음"에 마우스를 올리거나(hover) 포커스가 닿았을 때(keyboard) — 곧 누를 의도가 드러난 시점에만 받는다.
   // 마지막 페이지에선 "다음"이 disabled라 이 이벤트가 뜨지 않아 없는 페이지를 요청하지 않는다.
   // staleTime 안이면 prefetchQuery가 캐시를 그대로 써, hover를 반복해도 요청이 중복되지 않는다.
   // 목록 조회와 같은 팩토리라 query key·캐시 정책이 그대로 일치해 충돌하지 않는다.
@@ -55,12 +51,8 @@ export function ProductListView() {
     setQuery(query, { history: "replace" });
   }, [query, setQuery]);
 
-  // 마지막 페이지를 넘는 page는 형식상 유효해 파서가 거를 수 없다(전체 개수는 서버만 안다).
-  // 응답이 온 뒤 첫 페이지로 되돌린다. 다른 무효값과 같은 규칙(무효면 기본값)을 쓴다.
-  useEffect(() => {
-    if (!data || query.page <= totalPages) return;
-    setQuery({ page: 1 }, { history: "replace" });
-  }, [data, query.page, totalPages, setQuery]);
+  // 마지막 페이지를 넘는 page(전체 개수는 서버만 안다)는 서버 page.tsx가 응답으로 검사해
+  // 첫 페이지로 redirect한다. 클라이언트는 유효한 page만 받으므로 여기서 되돌릴 필요가 없다.
 
   // 검색·카테고리·정렬을 바꾸면 이전 페이지가 유효하지 않으므로 page를 1로 되돌린다.
   // 한 객체로 넘겨 URL 쓰기가 한 번에 일어나게 한다(조회도 한 번).
@@ -129,8 +121,8 @@ export function ProductListView() {
 
       <section className="week05-section" aria-label="상품 검색 결과" aria-busy={isPlaceholderData}>
         {/* 5xx는 여기서 경계로 잡아 결과 영역만 fallback을 그린다(헤더·필터·페이지네이션은 유지).
-            reset은 쿼리 에러까지 지워 전체 새로고침 없이 다시 조회한다. 4xx·네트워크는 던지지 않아
-            ProductListResults 안에서 인라인으로 처리된다. */}
+            reset은 쿼리 에러까지 지워 전체 새로고침 없이 다시 조회한다.
+            4xx·네트워크는 던지지 않아 ProductListResults 안에서 인라인으로 처리된다. */}
         <QueryErrorResetBoundary>
           {({ reset }) => (
             <ErrorBoundary
