@@ -93,11 +93,12 @@ src/
       api(queries·ProductListResponse)  model(searchParams·pagination·ProductListQuery)  ui(ProductSection·ProductSkeleton·filterOptions)
     add-to-cart/ui/AddToCartButton      # ProductCard 에서 추출
     toggle-wishlist/ui/WishlistButton
+    clear-cart/ui/ClearCartButton       # 장바구니 비우기 (Advanced B-2)
     product-options/api·model·ui        # 유지
   entities/
     product/model/types.ts          # Product·Category·CategoryId·ProductSort
     cart/model/                     # 독립 store (persist "cart")
-      cartStore· useCart(useCartCount·useIsInCart·useAddToCart·useRemoveFromCart)
+      cartStore· useCart(useCartCount·useIsInCart·useAddToCart·useRemoveFromCart·useClearCart)
     wishlist/model/                 # 독립 store (persist "wishlist")
       wishlistStore· useWishlist(useWishlistCount·useIsWishlisted·useToggleWishlist)
   shared/
@@ -208,13 +209,13 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 
 ## D — 상태 분류표 (새 구조 기준)
 
-| 상태             | Source of Truth                | 소유 슬라이스/레이어                                 | 소비하는 곳                                  | 이동 후에도 중복 저장하지 않는 방법                                                       |
-| ---------------- | ------------------------------ | ---------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 상품 조회 결과   | 서버 / TanStack Query          | `features/products/api`(목록), `_pages/home/api`(홈) | `_pages/products`, `_pages/home`             | 서버 응답을 store에 복사하지 않음. queryKey를 정규화 요청값으로 두어 프리패치 캐시 재사용 |
-| 검색·정렬·페이지 | URL / nuqs                     | `features/products/model`(searchParams)              | `_pages/products`                            | URL이 SoT. 별도 `useState`로 동기화하지 않음                                              |
-| 장바구니         | Zustand persist(키 `cart`)     | `entities/cart/model`                                | `widgets/header`, `features/add-to-cart`     | id 배열만 저장, 이름·가격은 서버 응답이 소유. 개수는 length로 파생                        |
-| 위시리스트       | Zustand persist(키 `wishlist`) | `entities/wishlist/model`                            | `widgets/header`, `features/toggle-wishlist` | id 배열만 저장, 상세는 서버 응답이 소유. 개수는 length로 파생                             |
-| Dialog 열림 여부 | React 로컬 상태                | `shared/ui/dialog`(해당 UI)                          | 해당 UI                                      | 로컬 상태/컨텍스트로만, 외부 저장소에 두지 않음                                           |
+| 상태             | Source of Truth                | 소유 슬라이스/레이어                                 | 소비하는 곳                                           | 이동 후에도 중복 저장하지 않는 방법                                                       |
+| ---------------- | ------------------------------ | ---------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 상품 조회 결과   | 서버 / TanStack Query          | `features/products/api`(목록), `_pages/home/api`(홈) | `_pages/products`, `_pages/home`                      | 서버 응답을 store에 복사하지 않음. queryKey를 정규화 요청값으로 두어 프리패치 캐시 재사용 |
+| 검색·정렬·페이지 | URL / nuqs                     | `features/products/model`(searchParams)              | `_pages/products`                                     | URL이 SoT. 별도 `useState`로 동기화하지 않음                                              |
+| 장바구니         | Zustand persist(키 `cart`)     | `entities/cart/model`                                | `widgets/header`, `features/add-to-cart`·`clear-cart` | id 배열만 저장, 이름·가격은 서버 응답이 소유. 개수는 length로 파생                        |
+| 위시리스트       | Zustand persist(키 `wishlist`) | `entities/wishlist/model`                            | `widgets/header`, `features/toggle-wishlist`          | id 배열만 저장, 상세는 서버 응답이 소유. 개수는 length로 파생                             |
+| Dialog 열림 여부 | React 로컬 상태                | `shared/ui/dialog`(해당 UI)                          | 해당 UI                                               | 로컬 상태/컨텍스트로만, 외부 저장소에 두지 않음                                           |
 
 ---
 
@@ -222,18 +223,19 @@ import { useIsWishlisted } from "@/entities/wishlist"; // ❌ entity ↔ entity
 
 ### 각 슬라이스의 공개 / 숨김
 
-| 슬라이스                   | 공개(계약)                                                                                          | 숨김(내부 세부)                                 |
-| -------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `entities/cart`            | `useCartCount`·`useIsInCart`·`useAddToCart`·`useRemoveFromCart`·`useCartHydrated`·`useHydrateCart`  | `cartStore` 인스턴스, persist·sanitize 설정     |
-| `entities/wishlist`        | `useWishlistCount`·`useIsWishlisted`·`useToggleWishlist`·`useWishlistHydrated`·`useHydrateWishlist` | `wishlistStore` 인스턴스, persist·sanitize 설정 |
-| `shared/lib/persist`       | `useHasHydrated(store)`·`useRehydrate(store)` (제네릭, **각 entity가 자기 store로 감싸 소비**)      | 복원 구독·`onFinishHydration` 세부              |
-| `entities/product`         | `Product`·`Category`·`CategoryId`·`ProductSort` 타입                                                | (model만)                                       |
-| `features/products`        | `productListQueryOptions`·`ProductListResponse`·`productSearchParsers`·UI(`ProductSection` 등)      | 정규화·페이지네이션 내부                        |
-| `features/add-to-cart`     | `<AddToCartButton>`                                                                                 | 담기/빼기 토글 내부 로직                        |
-| `features/toggle-wishlist` | `<WishlistButton>`                                                                                  | 토글 내부 로직                                  |
-| `widgets/product-card`     | `<ProductCard>`                                                                                     | 표현+행위 조합 방식                             |
-| `shared/ui/dialog`         | compound `Dialog.*`                                                                                 | 오버레이·포털·컨텍스트 세부                     |
-| `shared/lib/select`        | `useSelect` + `getXxxProps`                                                                         | 키보드·포커스 상태 관리                         |
+| 슬라이스                   | 공개(계약)                                                                                                        | 숨김(내부 세부)                                 |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `entities/cart`            | `useCartCount`·`useIsInCart`·`useAddToCart`·`useRemoveFromCart`·`useClearCart`·`useCartHydrated`·`useHydrateCart` | `cartStore` 인스턴스, persist·sanitize 설정     |
+| `entities/wishlist`        | `useWishlistCount`·`useIsWishlisted`·`useToggleWishlist`·`useWishlistHydrated`·`useHydrateWishlist`               | `wishlistStore` 인스턴스, persist·sanitize 설정 |
+| `shared/lib/persist`       | `useHasHydrated(store)`·`useRehydrate(store)` (제네릭, **각 entity가 자기 store로 감싸 소비**)                    | 복원 구독·`onFinishHydration` 세부              |
+| `entities/product`         | `Product`·`Category`·`CategoryId`·`ProductSort` 타입                                                              | (model만)                                       |
+| `features/products`        | `productListQueryOptions`·`ProductListResponse`·`productSearchParsers`·UI(`ProductSection` 등)                    | 정규화·페이지네이션 내부                        |
+| `features/add-to-cart`     | `<AddToCartButton>`                                                                                               | 담기/빼기 토글 내부 로직                        |
+| `features/toggle-wishlist` | `<WishlistButton>`                                                                                                | 토글 내부 로직                                  |
+| `features/clear-cart`      | `<ClearCartButton>`(index 없이 deep import)                                                                       | 비우기 처리·`entities/cart` 연결(Advanced B-2)  |
+| `widgets/product-card`     | `<ProductCard>`                                                                                                   | 표현+행위 조합 방식                             |
+| `shared/ui/dialog`         | compound `Dialog.*`                                                                                               | 오버레이·포털·컨텍스트 세부                     |
+| `shared/lib/select`        | `useSelect` + `getXxxProps`                                                                                       | 키보드·포커스 상태 관리                         |
 
 > **hydration 배선:** store 인스턴스는 Public API로 숨기므로, 제네릭 `useHasHydrated(store)`·`useRehydrate(store)`(shared/lib/persist)는 각 entity가 **자기 store로 감싸** `useCartHydrated`·`useHydrateCart` 등으로 공개한다. `Header`는 `useCartHydrated()`·`useWishlistHydrated()`를 조합해 게이트하고, `providers`는 `useHydrateCart()`·`useHydrateWishlist()`로 두 store를 마운트 후 복원한다. 두 store가 독립이라 각 개수는 자기 store의 복원 여부로만 게이트된다.
 
@@ -256,7 +258,7 @@ import { WishlistButton } from "@/features/toggle-wishlist";
   - `entities/cart`·`entities/wishlist` — store 인스턴스(`cartStore`·`wishlistStore`)를 숨기고 읽기·행위 훅만 공개. 외부가 store를 직접 조작하지 못하게 한다.
   - `shared/ui/dialog` — compound 내부(`DialogRoot`·`DialogOverlay`·`DialogPanel` 등)를 숨기고 `Dialog`만 공개.
   - `shared/lib/select` — headless 훅 내부를 숨기고 `useSelect` + 계약 타입만 공개.
-- **안 둔다** — 컴포넌트·타입 하나뿐이라 감출 내부가 없는 슬라이스(`entities/product`, `features/add-to-cart`·`toggle-wishlist`, `widgets/product-card`·`header`, `shared/lib/cn`). 경로가 곧 계약이라 index는 barrel일 뿐이다. deep import로 둔다.
+- **안 둔다** — 컴포넌트·타입 하나뿐이라 감출 내부가 없는 슬라이스(`entities/product`, `features/add-to-cart`·`toggle-wishlist`·`clear-cart`, `widgets/product-card`·`header`, `shared/lib/cn`). 경로가 곧 계약이라 index는 barrel일 뿐이다. deep import로 둔다.
 - **`features/products`는 barrel을 두지 않는다** — step 7 당시 client 전용이던 `searchParams`가 섞여, 한 barrel로 묶으면 server 컴포넌트 import 시 RSC 빌드가 깨졌다(실측). 세그먼트별 deep import로 되돌렸다. 이후 A에서 `searchParams`를 `nuqs/server`로 바꿔 server-safe가 됐지만(서버 page가 파서 재사용), barrel을 다시 만들지 않는 건 Public API 원칙(숨길 내부 없음)에 따른 것.
 
 ---
@@ -407,29 +409,29 @@ RFC 전체가 세운 import 불변식을 사람 눈이 아니라 도구로 강�
 
 > 두 요구사항의 변경 반경을 이동 전에 예측한다. 실제 구현·diff 대조는 이동 후 `실제 결과`·`차이` 열을 채운다. 새 행위는 page 또는 widget에서 조합하고, feature가 다른 feature를 직접 import하거나 무관한 `shared`를 여럿 건드리면 경계를 재검토한다.
 >
-> **상태:** B-1·B-2는 Advanced(선택) 범위라 **이번 주에는 기능을 구현하지 않아 예상만 기록**한다(`실제 결과`·`차이` 열은 구현 시 채운다). 예측은 이동이 끝난 최종 구조 기준이라, 지금 구현해도 이 반경을 벗어나지 않는다는 판단까지가 이번 주 산출물이다.
+> **상태:** B-1·B-2 **둘 다 구현 완료** — 아래 `실제 결과`·`차이` 열을 실제 diff로 채웠다. 변경 반경이 예측을 (거의) 벗어나지 않음을 실증했고, 벗어난 세부는 `차이` 열에 남겼다.
 
 ### B-1. 검색·카테고리·정렬 조건 전체 초기화
 
 - **새 feature 슬라이스 필요?** 아니오(예상). 초기화는 상품 목록 브라우징의 일부이고, 기존 URL 상태(`features/products/model/searchParams`)를 기본값으로 되돌리는 한 동작이다. 새 슬라이스 대신 기존 `features/products`에 리셋 헬퍼를 두거나 `_pages/products`의 버튼이 `setQuery`로 기본값을 쓴다.
 
-| 관점              | 구현 전 예상                                                                                                                 | 실제 결과 | 차이가 난 이유 |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------- | -------------- |
-| 수정한 슬라이스   | `_pages/products`(초기화 버튼) + `features/products/model`(기본값·리셋 헬퍼, 필요 시)                                        | (이동 후) | (이동 후)      |
-| 변경한 Public API | `features/products`가 이미 `productSearchParsers`(기본값) 공개 → 그걸 쓰면 변경 없음. 리셋 헬퍼를 공개하면 `index.ts`에 추가 | (이동 후) | (이동 후)      |
-| 새로 생긴 의존    | `_pages/products → features/products`(이미 존재). 새 역방향·같은 레이어 cross 없음                                           | (이동 후) | (이동 후)      |
+| 관점              | 구현 전 예상                                                                                                                 | 실제 결과                                                         | 차이가 난 이유                                                                                                                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 수정한 슬라이스   | `_pages/products`(초기화 버튼) + `features/products/model`(기본값·리셋 헬퍼, 필요 시)                                        | `_pages/products/ui/ProductListView`만(초기화 버튼·`handleReset`) | 리셋 헬퍼 불필요 — `setQuery(null)`이 파서 기본값으로 되돌림. 단 비제어 검색 인풋을 비우려 리마운트 `key`를 추가(예측엔 없던 세부, 여전히 `_pages/products` 안) |
+| 변경한 Public API | `features/products`가 이미 `productSearchParsers`(기본값) 공개 → 그걸 쓰면 변경 없음. 리셋 헬퍼를 공개하면 `index.ts`에 추가 | 변경 없음                                                         | 헬퍼를 안 만들어 공개할 것도 없음                                                                                                                               |
+| 새로 생긴 의존    | `_pages/products → features/products`(이미 존재). 새 역방향·같은 레이어 cross 없음                                           | 새 의존 없음(`_pages/products → features/products` 그대로)        | 예측대로                                                                                                                                                        |
 
 ### B-2. 장바구니 전체 비우기 (위시리스트도 대칭)
 
 - **새 feature 슬라이스 필요?** 예(예상). "전체 비우기"는 버튼 UI(+확인 다이얼로그)를 가진 사용자 행위라 `features/clear-cart`가 정당하다. 상태 변경(`clearCart`)은 store라 `entities/cart`에 둔다(상태=entity, 행위=feature).
 
-| 관점              | 구현 전 예상                                                                                                                                                    | 실제 결과 | 차이가 난 이유 |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------- |
-| 수정한 슬라이스   | `entities/cart`(`clearCart` 액션·`useClearCart` 추가) + `features/clear-cart`(신규 버튼, 확인은 `shared/ui/dialog`) + 배치처(`widgets/header` 또는 장바구니 뷰) | (이동 후) | (이동 후)      |
-| 변경한 Public API | `entities/cart` `index.ts`에 `useClearCart` 추가, `features/clear-cart` `index.ts`(신규) `<ClearCartButton>`                                                    | (이동 후) | (이동 후)      |
-| 새로 생긴 의존    | `features/clear-cart → entities/cart`·`shared/ui/dialog`(하위, 정상), 배치처 → `features/clear-cart`(하위). feature→feature 없음                                | (이동 후) | (이동 후)      |
+| 관점              | 구현 전 예상                                                                                                                                                    | 실제 결과                                                                                                       | 차이가 난 이유                                                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 수정한 슬라이스   | `entities/cart`(`clearCart` 액션·`useClearCart` 추가) + `features/clear-cart`(신규 버튼, 확인은 `shared/ui/dialog`) + 배치처(`widgets/header` 또는 장바구니 뷰) | `entities/cart`(`clearCart`·`useClearCart`) + `features/clear-cart`(`ClearCartButton`) + `widgets/header`(배치) | **확인 다이얼로그 생략**(빈 장바구니 `disabled`로 대체) → `shared/ui/dialog` 의존 없음. 배치는 **헤더** — 장바구니 페이지가 없어 데모 타협(정식은 cart/마이페이지) |
+| 변경한 Public API | `entities/cart` `index.ts`에 `useClearCart` 추가, `features/clear-cart` `index.ts`(신규) `<ClearCartButton>`                                                    | `entities/cart/index.ts`에 `useClearCart` 추가                                                                  | `features/clear-cart`는 **index 미생성** — 파일 하나뿐이라 deep import(`add-to-cart`·`toggle-wishlist`와 일관한 Public API 원칙)                                   |
+| 새로 생긴 의존    | `features/clear-cart → entities/cart`·`shared/ui/dialog`(하위, 정상), 배치처 → `features/clear-cart`(하위). feature→feature 없음                                | `features/clear-cart → entities/cart`(만) · `widgets/header → features/clear-cart`(하위, 정상)                  | **dialog 의존 없음**(다이얼로그 생략). feature→feature 없음(boundaries 하네스 통과)                                                                                |
 
-- **2 store 응집 검증(예상):** `clear-cart`는 `entities/cart`만 건드리고 `entities/wishlist`는 전혀 손대지 않는다 → 독립 2 store 결정이 변경 반경에서도 격리됨을 증명한다. 위시리스트 비우기는 `entities/wishlist` + `features/clear-wishlist`로 대칭이다.
+- **2 store 응집 검증(실측):** `clear-cart`가 `entities/cart`만 건드리고 `entities/wishlist`는 전혀 손대지 않음을 `ClearCartButton.test`가 **비운 뒤 wishlist가 그대로임을 assertion으로 고정** → 독립 2 store 격리를 변경 반경에서도 실증했다. 위시리스트 비우기는 `entities/wishlist` + `features/clear-wishlist`로 대칭이다.
 
 ## AI 활용 내역
 
