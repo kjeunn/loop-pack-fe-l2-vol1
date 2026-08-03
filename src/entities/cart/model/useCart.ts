@@ -19,6 +19,10 @@ export function useRemoveFromCart() {
   return useCartStore((state) => state.removeFromCart);
 }
 
+export function useClearCart() {
+  return useCartStore((state) => state.clearCart);
+}
+
 // 복원 여부·복원 트리거는 도메인 무지 배관을 cart store로 감싸 공개한다(store 인스턴스는 숨김).
 export function useCartHydrated() {
   return useHasHydrated(useCartStore);

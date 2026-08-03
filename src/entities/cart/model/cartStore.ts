@@ -8,6 +8,7 @@ export type CartStore = {
   cartIds: ProductId[];
   addToCart: (productId: ProductId) => void;
   removeFromCart: (productId: ProductId) => void;
+  clearCart: () => void;
 };
 
 // 저장값은 id 목록뿐. 문자열 배열이 아니면(손댔거나 옛 구조) 비워 안전한 상태로 되돌린다.
@@ -30,6 +31,7 @@ export const useCartStore = create<CartStore>()(
           ),
         removeFromCart: (productId) =>
           set((state) => ({ cartIds: state.cartIds.filter((id) => id !== productId) })),
+        clearCart: () => set({ cartIds: [] }),
       }),
       {
         // localStorage 키.

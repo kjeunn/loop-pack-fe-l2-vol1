@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, useEffect } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 
 import { QueryErrorResetBoundary, useQueryClient } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
@@ -29,6 +29,9 @@ export function ProductListView() {
 
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / query.pageSize));
+
+  // 초기화가 비제어 검색 인풋(defaultValue)까지 비우도록, 리셋 시 이 key를 올려 인풋을 리마운트한다.
+  const [filterResetKey, setFilterResetKey] = useState(0);
 
   // 다음 페이지를 미리 받아 둔다. 진입만으로 투기적으로 받지 않고,
   // "다음"에 마우스를 올리거나(hover) 포커스가 닿았을 때(keyboard) — 곧 누를 의도가 드러난 시점에만 받는다.
@@ -75,12 +78,19 @@ export function ProductListView() {
     setQuery({ page });
   }
 
+  // 검색·카테고리·정렬·페이지·표시개수를 기본값으로 되돌린다(URL에서 제거하면 파서 기본값으로).
+  // 제어 select는 자동으로 되돌아가고, 비제어 검색 인풋은 key를 올려 리마운트로 비운다.
+  function handleReset() {
+    setQuery(null);
+    setFilterResetKey((key) => key + 1);
+  }
+
   return (
     <>
       <section className="week05-section">
         <h1>상품 목록</h1>
         <div className="week05-filters">
-          <ProductSearchInput value={query.q} onSearch={handleSearch} />
+          <ProductSearchInput key={filterResetKey} value={query.q} onSearch={handleSearch} />
           <label>
             카테고리
             <select value={query.category} onChange={handleCategoryChange}>
@@ -111,6 +121,9 @@ export function ProductListView() {
               ))}
             </select>
           </label>
+          <button type="button" onClick={handleReset}>
+            초기화
+          </button>
         </div>
       </section>
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { useCartCount, useCartHydrated } from "@/entities/cart";
 import { useWishlistCount, useWishlistHydrated } from "@/entities/wishlist";
+import { ClearCartButton } from "@/features/clear-cart/ui/ClearCartButton";
 import { Skeleton } from "@/shared/ui/loading/Skeleton";
 
 // 두 화면이 공유하는 헤더. 위시리스트·장바구니 개수를 store에서 파생해 읽는다.
@@ -30,6 +31,8 @@ export function Header() {
         ) : (
           <Skeleton className="inline-block h-5 w-20 rounded align-middle" />
         )}
+        {/* 정식 위치는 장바구니 페이지지만, 이 프로젝트엔 그 페이지가 없어 개수를 보여주는 헤더에 둔다(데모 타협). */}
+        <ClearCartButton />
       </nav>
     </header>
   );
