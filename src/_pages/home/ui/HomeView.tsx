@@ -6,19 +6,14 @@ import Link from "next/link";
 
 import { homeQueryOptions } from "@/_pages/home/api/queries";
 import { ProductSection } from "@/_pages/home/ui/ProductSection";
-import { Header } from "@/widgets/header/ui/Header";
 
 import { HomeSkeleton } from "./HomeSkeleton";
-
-import "@/shared/ui/week-05-layout.css";
 
 export function HomeView() {
   const { data, isLoading, isError, error } = useQuery(homeQueryOptions());
 
   return (
-    <main className="week05-page">
-      <Header />
-
+    <>
       {isLoading && <HomeSkeleton />}
 
       {isError && (
@@ -57,6 +52,6 @@ export function HomeView() {
           <ProductSection title="신상품" products={data.newProducts} />
         </>
       )}
-    </main>
+    </>
   );
 }

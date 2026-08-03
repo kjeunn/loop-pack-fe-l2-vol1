@@ -16,12 +16,9 @@ import {
   SORT_OPTIONS,
 } from "@/features/products/ui/filterOptions";
 import { ErrorBoundary } from "@/shared/ui/error/ErrorBoundary";
-import { Header } from "@/widgets/header/ui/Header";
 
 import { ProductListResults } from "./ProductListResults";
 import { ProductSearchInput } from "./ProductSearchInput";
-
-import "@/shared/ui/week-05-layout.css";
 
 export function ProductListView() {
   const [query, setQuery] = useQueryStates(productSearchParsers, { history: "push" });
@@ -79,9 +76,7 @@ export function ProductListView() {
   }
 
   return (
-    <main className="week05-page">
-      <Header />
-
+    <>
       <section className="week05-section">
         <h1>상품 목록</h1>
         <div className="week05-filters">
@@ -120,9 +115,10 @@ export function ProductListView() {
       </section>
 
       <section className="week05-section" aria-label="상품 검색 결과" aria-busy={isPlaceholderData}>
-        {/* 5xx는 여기서 경계로 잡아 결과 영역만 fallback을 그린다(헤더·필터·페이지네이션은 유지).
-            reset은 쿼리 에러까지 지워 전체 새로고침 없이 다시 조회한다.
-            4xx·네트워크는 던지지 않아 ProductListResults 안에서 인라인으로 처리된다. */}
+        {/* 첫 조회 5xx로 보여줄 데이터가 없으면 결과와 페이지네이션을 함께 경계 fallback으로 바꾼다.
+            페이지네이션은 결과 집합 안의 이동이라 데이터와 운명을 같이한다(조건을 바꿔 재시도하는
+            필터는 경계 밖에 있어 유지된다). reset은 쿼리 에러까지 지워 전체 새로고침 없이 다시 조회한다.
+            4xx·네트워크·배경 실패는 던지지 않아 ProductListResults 안에서 인라인으로 처리된다. */}
         <QueryErrorResetBoundary>
           {({ reset }) => (
             <ErrorBoundary
@@ -137,27 +133,31 @@ export function ProductListView() {
               )}
             >
               <ProductListResults />
+              <nav className="week05-pagination" aria-label="페이지 이동">
+                <button
+                  type="button"
+                  onClick={() => goToPage(query.page - 1)}
+                  disabled={query.page <= 1}
+                >
+                  이전
+                </button>
+                <span>
+                  {query.page} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => goToPage(query.page + 1)}
+                  onMouseEnter={prefetchNextPage}
+                  onFocus={prefetchNextPage}
+                  disabled={query.page >= totalPages}
+                >
+                  다음
+                </button>
+              </nav>
             </ErrorBoundary>
           )}
         </QueryErrorResetBoundary>
-        <nav className="week05-pagination" aria-label="페이지 이동">
-          <button type="button" onClick={() => goToPage(query.page - 1)} disabled={query.page <= 1}>
-            이전
-          </button>
-          <span>
-            {query.page} / {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => goToPage(query.page + 1)}
-            onMouseEnter={prefetchNextPage}
-            onFocus={prefetchNextPage}
-            disabled={query.page >= totalPages}
-          >
-            다음
-          </button>
-        </nav>
       </section>
-    </main>
+    </>
   );
 }

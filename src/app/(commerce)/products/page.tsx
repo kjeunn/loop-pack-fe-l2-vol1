@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { redirect } from "next/navigation";
 
@@ -11,12 +9,12 @@ import {
   loadProductListSearchParams,
   serializeProductListSearchParams,
 } from "@/features/products/model/searchParams";
-import { ProductGridSkeleton } from "@/features/products/ui/ProductSkeleton";
 import { getServerQueryClient } from "@/shared/api/getServerQueryClient";
 
 // app은 라우팅만. 화면 조합은 _pages가 소유한다.
-// 목록을 서버에서 프리패치해 첫 HTML에 담고(홈과 일관, waterfall 제거), 그 응답으로 page 범위를 검사한다.
-// ProductListView가 useSearchParams(nuqs)를 읽으므로 Suspense 경계는 유지한다(없으면 페이지가 클라 렌더로 떨어짐).
+// searchParams를 서버에서 읽어 라우트가 동적이 되므로, useSearchParams의 CSR-bailout이 사라져
+// Suspense 경계가 필요 없다(빌드로 확인). fetchQuery로 목록을 프리패치해 page 범위를 검사(초과 시 redirect)하고,
+// HydrationBoundary로 넘겨 클라 재요청을 막는다(홈과 일관, waterfall 제거).
 export default async function ProductList({
   searchParams,
 }: {
@@ -35,9 +33,7 @@ export default async function ProductList({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <Suspense fallback={<ProductGridSkeleton count={query.pageSize} />}>
-        <ProductListView />
-      </Suspense>
+      <ProductListView />
     </HydrationBoundary>
   );
 }

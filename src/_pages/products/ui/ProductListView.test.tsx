@@ -24,9 +24,10 @@ function renderView() {
 describe("ProductListView 부분 실패 — 결과 영역만 경계로", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("목록 조회가 5xx로 실패해도 헤더·카테고리 필터는 살고 결과 영역만 fallback을 그린다", async () => {
+  it("목록 조회가 5xx로 실패하면 결과+페이지네이션은 fallback으로 바뀌고 필터는 살아남는다", async () => {
     // 5xx → fetchJson이 ApiError("http", 500)로 던지고, throwOnError 정책이 결과 경계로 전파한다.
-    // 껍데기(헤더·필터·페이지네이션)를 보는 관찰자는 throwOnError:false라 던지지 않는다.
+    // 필터를 보는 관찰자는 throwOnError:false라 던지지 않는다.
+    // (헤더는 (commerce) layout이 렌더하므로 ProductListView 단독 렌더엔 없다 — 헤더 생존은 layout의 책임.)
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ message: "서버 오류" }), { status: 500 }),
     );
@@ -36,8 +37,10 @@ describe("ProductListView 부분 실패 — 결과 영역만 경계로", () => {
     // 결과 영역: 경계 fallback("다시 시도")이 뜬다.
     expect(await screen.findByRole("button", { name: "다시 시도" })).toBeInTheDocument();
 
-    // 껍데기는 살아 있다: 헤더의 상품 링크와 카테고리 select가 그대로 있다.
-    expect(screen.getByRole("link", { name: "상품" })).toBeInTheDocument();
+    // 필터는 살아 있다: 카테고리 select가 그대로 있다(조건을 바꿔 재시도 가능).
     expect(screen.getByRole("combobox", { name: /카테고리/ })).toBeInTheDocument();
+
+    // 페이지네이션은 결과와 함께 fallback으로 바뀌어 사라진다.
+    expect(screen.queryByRole("navigation", { name: "페이지 이동" })).not.toBeInTheDocument();
   });
 });
