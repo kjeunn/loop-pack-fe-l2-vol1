@@ -6,7 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-import { useHydrateCommerce } from "@/entities/commerce/model/useHydrateCommerce";
+import { useHydrateCart } from "@/entities/cart";
+import { useHydrateWishlist } from "@/entities/wishlist";
 import { makeQueryClient } from "@/shared/api/queryClient";
 
 interface ProvidersProps {
@@ -27,7 +28,8 @@ function getQueryClient() {
 
 export function Providers({ children }: ProvidersProps) {
   const queryClient = getQueryClient();
-  useHydrateCommerce();
+  useHydrateCart();
+  useHydrateWishlist();
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -16,6 +16,6 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     // e2e(Playwright)는 별도 러너라 vitest 대상에서 제외한다.
-    exclude: ["e2e/**", "node_modules/**"],
+    exclude: ["e2e/**", "node_modules/**", ".claude/**"],
   },
 });

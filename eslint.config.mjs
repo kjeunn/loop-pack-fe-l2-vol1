@@ -2,6 +2,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import eslintConfigPrettier from "eslint-config-prettier";
+import boundaries from "eslint-plugin-boundaries";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 
 const eslintConfig = defineConfig([
@@ -53,8 +54,81 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // ── FSD 의존 방향 하네스 (RFC Advanced A) ──
+  // RFC가 세운 두 불변식을 사람 눈이 아니라 도구로 강제한다.
+  //   1. 하위 레이어가 상위 레이어를 import하지 않는다(역방향 금지).
+  //   2. 같은 레이어의 다른 슬라이스를 직접 import하지 않는다.
+  // 선언형이라 슬라이스를 새로 추가해도 이 설정을 고칠 필요가 없다.
+  // 같은 슬라이스 안(세그먼트끼리)은 한 element라 검사 대상이 아니다 — 협력은 허용된다.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: { boundaries },
+    settings: {
+      // 최상위 폴더를 레이어 element로 매핑한다. `*`로 슬라이스명을 capture해
+      // 같은 레이어의 다른 슬라이스를 서로 다른 element로 구분한다.
+      // src/app은 Next 라우팅이자 FSD App 레이어를 겸한다(별도 _app 없음).
+      "boundaries/elements": [
+        { type: "app", pattern: "src/app" },
+        { type: "pages", pattern: "src/_pages/*", capture: ["slice"] },
+        { type: "widgets", pattern: "src/widgets/*", capture: ["slice"] },
+        { type: "features", pattern: "src/features/*", capture: ["slice"] },
+        { type: "entities", pattern: "src/entities/*", capture: ["slice"] },
+        { type: "shared", pattern: "src/shared" },
+      ],
+    },
+    rules: {
+      // default: disallow → 아래 policies에 없는 방향은 전부 막힌다.
+      // 각 레이어는 자기보다 아래 레이어만 허용한다(위→아래 단방향).
+      // allow에 자기 레이어 타입이 없으므로 같은 레이어 cross-slice는 자동 차단된다(불변식 2).
+      "boundaries/dependencies": [
+        "error",
+        {
+          default: "disallow",
+          policies: [
+            {
+              from: { element: { type: "app" } },
+              allow: {
+                to: {
+                  element: {
+                    types: { anyOf: ["pages", "widgets", "features", "entities", "shared"] },
+                  },
+                },
+              },
+            },
+            {
+              from: { element: { type: "pages" } },
+              allow: {
+                to: {
+                  element: { types: { anyOf: ["widgets", "features", "entities", "shared"] } },
+                },
+              },
+            },
+            {
+              from: { element: { type: "widgets" } },
+              allow: {
+                to: { element: { types: { anyOf: ["features", "entities", "shared"] } } },
+              },
+            },
+            {
+              from: { element: { type: "features" } },
+              allow: { to: { element: { types: { anyOf: ["entities", "shared"] } } } },
+            },
+            {
+              from: { element: { type: "entities" } },
+              allow: { to: { element: { type: "shared" } } },
+            },
+            {
+              from: { element: { type: "shared" } },
+              allow: { to: { element: { type: "shared" } } },
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Override default ignores of eslint-config-next.
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", ".claude/**"]),
 
   // prettier와 충돌하는 포맷 룰을 끈다. 반드시 마지막에 둔다.
   eslintConfigPrettier,
