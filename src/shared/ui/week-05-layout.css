@@ -1,0 +1,234 @@
+.week05-page {
+  width: min(100% - 32px, 1200px);
+  margin: 0 auto;
+  padding: 24px 0 64px;
+}
+
+.week05-header,
+.week05-header nav,
+.week05-categories,
+.week05-filters,
+.week05-pagination,
+.week05-product > div:last-child {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.week05-header {
+  justify-content: space-between;
+  padding-bottom: 24px;
+}
+
+/* 헤더 버튼(장바구니 비우기)은 활성일 때 클릭 가능한 손 모양으로(빈 장바구니로 disabled면 기본 커서). */
+.week05-header button:not(:disabled) {
+  cursor: pointer;
+}
+
+.week05-hero {
+  position: relative;
+  /* 배너 이미지가 fill로 깔리므로 자식 z-index를 이 안에 가둔다. */
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 32px;
+  background: #ececec;
+}
+
+.week05-hero-image {
+  object-fit: cover;
+  /* cover는 기본이 가운데 크롭이라 인물·상품 상단이 잘린다. 위쪽을 기준으로 맞춘다. */
+  object-position: top;
+  /* 원본이 400x400 상품 사진이라 와이드 히어로를 채우려면 3배 확대된다.
+     블러로 확대 아티팩트를 감추고, scale로 블러 때문에 비는 가장자리를 메운다. */
+  filter: blur(4px);
+  transform: scale(1.05);
+  z-index: 0;
+}
+
+/* 블러 이미지 위에 아래→위 어두운 그라데이션을 깔아 어떤 이미지에서도 텍스트 대비를 확보한다. */
+.week05-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.62), rgba(0, 0, 0, 0.15) 55%, transparent);
+}
+
+/* 배너 텍스트: 그라데이션 위에 흰색 + 그림자로 얹는다. 설명(작게)–제목(크게) 순으로 쌓인다. */
+.week05-hero > p,
+.week05-hero > h1 {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+.week05-hero > p {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  opacity: 0.95;
+}
+
+.week05-hero > h1 {
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* 사진 위에서도 기존 어두운 본문 색을 유지하려고 흰 스크림을 덧댄다. */
+.week05-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0.35));
+}
+
+.week05-hero > p,
+.week05-hero > h1 {
+  position: relative;
+}
+
+.week05-section {
+  margin-top: 40px;
+}
+
+.week05-section > h1,
+.week05-section > h2 {
+  margin-bottom: 16px;
+}
+
+.week05-categories a,
+.week05-product button,
+.week05-pagination button,
+.week05-filters button {
+  padding: 8px 12px;
+  border: 1px solid #c8c8c8;
+  background: transparent;
+}
+
+/* 아이콘(찜)과 텍스트(담기)는 콘텐츠 높이가 달라, 높이를 고정해 두 버튼을 맞춘다.
+   box-sizing으로 padding·border가 높이에 포함되게 해 콘텐츠가 밀어 올리지 않게 한다. */
+.week05-product button,
+.week05-filters button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 36px;
+  cursor: pointer;
+}
+
+/* 빈 상태는 외곽선만, 담긴 상태는 빨강으로 채운다.
+   상태는 aria-pressed로만 있으니 그 속성을 시각에도 그대로 재활용한다. */
+.week05-wish-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: #e0245e;
+  stroke-width: 2;
+}
+
+.week05-wish[aria-pressed="true"] .week05-wish-icon {
+  fill: #e0245e;
+}
+
+.week05-cart[aria-pressed="true"] {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.week05-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.week05-product {
+  display: grid;
+  gap: 8px;
+}
+
+.week05-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #ececec;
+  object-fit: cover;
+}
+
+.week05-filters label {
+  display: grid;
+  gap: 6px;
+}
+
+.week05-filters input,
+.week05-filters select {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #c8c8c8;
+  background: transparent;
+  color: inherit;
+}
+
+/* 초기화 버튼을 옆 select와 같은 40px 높이로 키우고, 라벨 텍스트가 없으니 아래로 정렬해 select 바닥에 맞춘다. */
+.week05-filters button {
+  height: 40px;
+  align-self: flex-end;
+}
+
+.week05-pagination {
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.week05-page a:focus-visible,
+.week05-page button:focus-visible,
+.week05-page input:focus-visible,
+.week05-page select:focus-visible {
+  outline: 3px solid #2557a7;
+  outline-offset: 3px;
+}
+
+@media (max-width: 960px) {
+  .week05-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .week05-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .week05-filters label {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .week05-header {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .week05-header nav {
+    width: 100%;
+  }
+
+  .week05-hero {
+    min-height: 180px;
+    padding: 24px;
+  }
+
+  .week05-grid {
+    gap: 24px 12px;
+  }
+}
