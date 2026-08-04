@@ -1,4 +1,6 @@
-import type { HomeResponse } from "@/types/commerce";
+// 원본 starter는 @/types/commerce를 가리켰으나, 그 타입은 week-06 FSD 이관으로
+// _pages/home/api로 옮겨졌다. 실재 위치로만 정정한다(banner 계약 파생 의도는 유지).
+import type { HomeResponse } from "@/_pages/home/api/queries";
 
 import styles from "./HeroSection.module.css";
 
