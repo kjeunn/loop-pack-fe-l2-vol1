@@ -12,7 +12,7 @@ const sortValues = [
   "price-asc",
   "price-desc",
 ] as const satisfies readonly ProductSort[];
-const scenarioValues = ["empty", "error"] as const satisfies readonly MockApiScenario[];
+const scenarioValues = ["empty", "error", "slow"] as const satisfies readonly MockApiScenario[];
 
 const isProductSort = (value: string): value is ProductSort =>
   sortValues.some((sort) => sort === value);
