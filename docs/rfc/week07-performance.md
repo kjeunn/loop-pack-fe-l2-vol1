@@ -138,3 +138,48 @@ Before 값은 CLI observed다(실브라우저 Before-①은 ①a 적용 전 상�
 - **비용이 과도**: 이미지만 셸로 올리려면 Hero의 이미지와 오버레이(copy)를 쪼개고 copy 데이터 흐름을 다시 짜야 한다(이중 fetch·HydrationBoundary 상향 등) — "Route Handler·FSD 재설계 금지"와 충돌하고 데이터 소유권을 흔든다.
 - **요구는 확인·판단**: line 82는 발견 시점을 확인하고 우선순위를 높일 이유가 있는지 판단하라는 것이지 hoist를 강제하지 않는다. 발견이 prod에서 이미 최적이므로 개입하지 않는다.
 - **UX상 우위도 아님**: prod(데이터 ~500ms)에선 hoist 유무 차이가 미미하다. slow에서 hoist는 이미지를 일찍 보여주지만 텍스트 없는 빈 오버레이를 노출하고, 제외 쪽은 일관된 전체 스켈레톤을 보인다 — 어느 쪽도 명확한 UX 우위가 없다. 전제는 prod 홈 데이터가 계속 빠르다는 것이고, 느려지면 재검토한다.
+
+## 2단계 — 목록 pending·갱신·CLS
+
+### 6-state 처리
+
+`ProductListResults`가 실패 케이스를 먼저 걸러내고 목록을 마지막에 그린다. 대부분은 5·6주차 구현이라 그대로 두고, 측정으로 드러난 문제만 손봤다.
+
+| 상태                  | 처리                                                                                    | 확인                      |
+| --------------------- | --------------------------------------------------------------------------------------- | ------------------------- |
+| 데이터 없는 최초 진입 | route `loading.tsx` 스켈레톤                                                            | 실측                      |
+| 이전 데이터 갱신      | `keepPreviousData`로 목록 유지 + 펄스 딤                                                | 실측                      |
+| 성공 + 0건            | "조건에 맞는 상품이 없습니다"                                                           | 실측(검색 무매칭 `q=zzz`) |
+| 최초 실패             | 서버 prefetch 5xx → `app/error.tsx`(재시도); 클라 4xx·network → `!data → role="alert"`  | 실측(scenario=error)      |
+| 갱신 실패             | 클라 4xx·network → `isError && data` 인라인 오류·재시도(목록 유지); 5xx → ErrorBoundary | 코드                      |
+| 취소                  | 활성 key만 반영(stale 무시) + AbortSignal 취소                                          | 실측(0단계·아래)          |
+
+에러는 두 경로로 갈린다. 초기 로드(서버 prefetch) 5xx는 라우트 경계 `app/error.tsx`가, hydration 이후 클라 쿼리 실패는 ProductListResults(4xx·network는 인라인, 5xx는 `QueryErrorResetBoundary`)가 맡는다. scenario=error(500)는 서버 prefetch를 깨 error.tsx 경로로 확인된다.
+
+### 측정으로 잡은 변경 `[실측]`
+
+- **전환 CLS 제거**: 원인이 둘이다 — 상품명 줄 수(1↔2줄)로 카드 높이가 가변이고, `all↔카테고리`에서 겹치는 상품이 `product.id` key로 DOM이 유지된 채 자리를 옮긴다. 상품명을 2줄로 clamp(높이 고정)하고 key를 `${product.id}-${index}`로 바꿔(위치가 바뀌면 새로 mount) 없앴다. 전환 CLS **0.13~0.15 → 0.000**.
+- **갱신 중 표시**: 이전 목록을 유지한 채 새 조건을 기다릴 때 `aria-busy` 목록을 은은히 펄스(opacity)시켜 알린다(스크린리더는 aria-busy, 시각은 펄스). opacity라 CLS 없음.
+- **AbortSignal**: `fetchJson`이 signal을 fetch에 전달. 1.5s 내 5연속 변경 시 완료 1건·취소 4건. 정합성은 활성 key가, 취소는 낭비 요청 감소를 맡는다.
+
+### 최초 진입 pending — 방식 비교
+
+목록은 서버 prefetch+hydration(6주차 설계)이라 클라 `isPending` 스켈레톤이 우회된다. 스켈레톤을 띄우는 세 방식을 실측 비교했다.
+
+| 방식                        | 스켈레톤     | TTFB   | 목록 초기 HTML | RSC 자기호출 | 6주차 설계·계약                                         |
+| --------------------------- | ------------ | ------ | -------------- | ------------ | ------------------------------------------------------- |
+| A: SSR + Suspense 스트리밍  | ✓            | 빠름   | ✓              | 유지         | 유지(단 큰 재구조화)                                    |
+| B: 클라 주도(prefetch 제거) | ✓ (SSR HTML) | 0.013s | ✗              | 해소         | 깨짐(CSR-bailout 재도입·서버 redirect 계약 테스트 실패) |
+| **C: `loading.tsx`** (채택) | ✓            | 빠름   | ✓              | 유지         | 유지(page.tsx·테스트 무변경)                            |
+
+**채택 — `loading.tsx`**: 6주차가 CSR-bailout·waterfall 제거를 위해 client/Suspense에서 SSR-prefetch로 바꾼 결정을 되돌리지 않는다. route-level Suspense fallback으로 스켈레톤만 얹어 프리패치 대기 중 pending UI를 보이고, 끝나면 실제 목록으로 교체한다. 하드로드 실측: ~0.4s에 스켈레톤 → 완료 후 실제 10개, loading→page CLS **0.000**. B는 스켈레톤·TTFB는 좋았으나 6주차 SSR 설계를 되돌려 CSR-bailout을 재도입하고 서버 redirect 계약 테스트를 깼고, A는 설계를 유지하나 `ProductListView` 분리 등 재구조화가 커, 같은 결과를 최소 변경으로 얻는 C를 택했다.
+
+### AbortSignal — 판단 근거
+
+0단계에서 취소는 이미 활성 key만 반영해 화면이 덮이지 않음을 확인했다(AbortSignal 없이도 정합성 안전). AbortSignal은 정합성이 아니라 쓸모없어진 요청의 낭비를 줄이려 추가했다(체크리스트 항목).
+
+### 상태 소유권·완료조건 확인
+
+- **isPending / isFetching / isPlaceholderData 분담**: `isPending`(데이터 없음)은 최초 진입 스켈레톤을 맡는다 — 단 하드로드는 서버 prefetch로 hydrate돼 route `loading.tsx`가 대신 담당한다. `isPlaceholderData`(이전 데이터 유지)는 갱신 중 표시(aria-busy 펄스 딤)를, `isFetching`은 배경 재조회 표시(재시도 버튼 비활성)를 맡는다.
+- **서버 응답을 store에 복사하지 않는다**: 목록은 TanStack Query 캐시에서만 읽는다. products의 `useState`는 검색 인풋 리마운트 key·필터 리셋 key(UI 상태)뿐이고, 서버 응답을 Zustand·로컬 상태로 옮기지 않는다.
+- **URL active query ↔ 화면 일치**: 조건을 연속으로 바꿔도 활성 query key의 결과만 화면에 반영된다(0단계 취소·뒤로가기 실측). AbortSignal이 앞선 요청을 취소해 늦은 완료가 현재 화면을 덮지 않으며, 취소는 `AbortError`를 그대로 던져(네트워크 오류로 오변환하지 않음) 오류 UI로 노출되지 않는다.
