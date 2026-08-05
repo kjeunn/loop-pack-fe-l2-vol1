@@ -175,6 +175,31 @@
   object-fit: cover;
 }
 
+/* 갱신 중(이전 목록을 유지한 채 새 조건을 기다리는 중)엔 목록을 은은히 펄스시켜 로딩을 시각으로 알린다.
+   aria-busy 하나로 스크린리더 신호와 시각 신호를 함께 낸다. opacity라 레이아웃에 영향이 없어 CLS를 만들지 않는다. */
+[aria-busy="true"] .week05-grid {
+  animation: week05-updating 1.2s ease-in-out infinite;
+}
+
+@keyframes week05-updating {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* 모션을 줄이도록 설정한 사용자에겐 펄스 대신 정적 딤만 보인다. */
+@media (prefers-reduced-motion: reduce) {
+  [aria-busy="true"] .week05-grid {
+    animation: none;
+    opacity: 0.55;
+  }
+}
+
 .week05-filters label {
   display: grid;
   gap: 6px;
