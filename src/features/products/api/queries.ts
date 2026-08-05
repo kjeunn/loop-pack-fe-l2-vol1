@@ -54,9 +54,12 @@ export function productListQueryOptions(query: ProductListQuery) {
     queryKey: scenario
       ? (["products", normalized, scenario] as const)
       : (["products", normalized] as const),
-    queryFn: () =>
+    // 조건을 빠르게 바꾸면 TanStack이 이전 조회의 signal을 abort한다. 그 signal을 fetch에 전달해
+    // 쓸모없어진 요청을 실제로 취소한다(정합성은 활성 key가, 취소는 낭비 감소를 맡는다).
+    queryFn: ({ signal }) =>
       fetchJson<ProductListResponse>(
         withScenario(`/api/products?${toSearchParams(normalized)}`, scenario),
+        { signal },
       ),
     staleTime: PRODUCTS_STALE_TIME,
     // 페이지·필터를 바꿀 때 스켈레톤으로 깜빡이지 않고 이전 목록을 유지한다.
