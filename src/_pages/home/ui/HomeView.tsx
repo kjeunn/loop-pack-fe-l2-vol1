@@ -5,8 +5,8 @@ import Link from "next/link";
 
 import { homeQueryOptions } from "@/_pages/home/api/queries";
 import { ProductSection } from "@/_pages/home/ui/ProductSection";
-// Week 7 Before: 최적화하지 않은 고용량 원본을 LCP로 두는 제공 픽스처.
-// examples에 그대로 두어(contract 테스트·no-img-element 예외 유지) 여기서 조합만 한다.
+// Week 7 홈 LCP인 Hero. 원본을 next/image로 표시폭에 맞춰 최적화한다.
+// 제공 픽스처라 examples에 두고 여기서 조합만 한다.
 import { HeroSection } from "@/examples/week-07-performance/HeroSection";
 
 import { HomeSkeleton } from "./HomeSkeleton";
