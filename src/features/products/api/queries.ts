@@ -4,6 +4,7 @@ import type { Category, Product } from "@/entities/product/model/types";
 import { DEFAULT_PAGE_SIZE } from "@/features/products/model/pagination";
 import type { ProductListQuery } from "@/features/products/model/query";
 import { fetchJson } from "@/shared/api/fetcher";
+import { readMockScenario, withScenario } from "@/shared/api/mockScenario";
 
 export type ProductListResponse = {
   products: Product[];
@@ -19,18 +20,6 @@ export type ProductListResponse = {
 // 캐시가 이미 비워져 스켈레톤부터 다시 뜨는데, 아끼는 메모리는 상품 30개 규모라 없다.
 const PRODUCTS_STALE_TIME = 1000 * 60;
 
-// 측정 전용 mock 시나리오 플래그. 사용자 URL 상태(searchParams)엔 넣지 않고
-// 빌드 env 하나로 서버 prefetch와 클라 요청이 같은 값을 읽어 query key가 일치하게 한다.
-// 값은 app/api의 MockApiScenario와 같지만, features가 app 레이어를 import하면 FSD 상방
-// 의존이 되므로 여기 값만 따로 둔다.
-const MOCK_SCENARIOS = ["slow", "empty", "error"] as const;
-type MockScenario = (typeof MOCK_SCENARIOS)[number];
-
-function readMockScenario(): MockScenario | null {
-  const value = process.env.NEXT_PUBLIC_MOCK_SCENARIO;
-  return MOCK_SCENARIOS.find((scenario) => scenario === value) ?? null;
-}
-
 // 부분 조건을 완전한 요청값으로 채운다. query key와 요청 파라미터가 같은 값을 쓰도록
 // 이 정규화 결과 하나로 둘 다 만든다(서버 프리패치 시 key 일치가 캐시 재사용의 조건).
 function normalize(query: ProductListQuery): Required<ProductListQuery> {
@@ -44,7 +33,7 @@ function normalize(query: ProductListQuery): Required<ProductListQuery> {
   };
 }
 
-function toSearchParams(query: Required<ProductListQuery>, scenario: MockScenario | null): string {
+function toSearchParams(query: Required<ProductListQuery>): string {
   const params = new URLSearchParams({
     q: query.q,
     category: query.category,
@@ -52,9 +41,6 @@ function toSearchParams(query: Required<ProductListQuery>, scenario: MockScenari
     page: String(query.page),
     pageSize: String(query.pageSize),
   });
-  if (scenario) {
-    params.set("scenario", scenario);
-  }
   return params.toString();
 }
 
@@ -69,7 +55,9 @@ export function productListQueryOptions(query: ProductListQuery) {
       ? (["products", normalized, scenario] as const)
       : (["products", normalized] as const),
     queryFn: () =>
-      fetchJson<ProductListResponse>(`/api/products?${toSearchParams(normalized, scenario)}`),
+      fetchJson<ProductListResponse>(
+        withScenario(`/api/products?${toSearchParams(normalized)}`, scenario),
+      ),
     staleTime: PRODUCTS_STALE_TIME,
     // 페이지·필터를 바꿀 때 스켈레톤으로 깜빡이지 않고 이전 목록을 유지한다.
     placeholderData: keepPreviousData,
