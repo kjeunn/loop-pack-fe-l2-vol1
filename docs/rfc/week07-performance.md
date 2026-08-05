@@ -35,11 +35,11 @@ Before 구성: 최적화하지 않은 7.5MB 원본(`hero-original.jpg`)을 `Hero
 - **filmstrip 표시 순서** (Header · 페이지 제목 · Hero) `[실측]`: 필름스트립 65컷(0~9.1s). FCP 1.02s에 Header·제목이 그려지고 Hero 자리는 계속 비어 있다가, 다운로드가 끝나는 8.9s에야 Hero가 채워진다 — 이 8초 공백이 LCP 지연의 원인이다.
 - **Network waterfall** (document · 홈 데이터 · Hero 이미지 요청 시작 순서와 전송 크기) `[실측]`: document `/`(7.4KB, 623ms) 직후 +642ms에 `hero-original.jpg`(7,368.7KB)가 시작해 로드에 8.16s 소요(675ms→8830ms) — CSS·JS·상품 이미지(webp 3~70KB)는 같은 구간에서 1s 내 병렬 완료. Hero 발견은 672ms로 이르다(상품 이미지 +0.94s·데이터 `_rsc` +1.53s보다 앞서 Hero가 먼저 발견됨). `[HTML]` 확인: Hero는 `<link rel="preload" as="image">`로 예약되고 `width/height`가 명시되며 `loadingAttr`이 비어 lazy가 아니다 — 발견·치수는 최적, 병목은 페이로드 크기뿐. Lighthouse "Improve image delivery" 절감 추정 7,099 KiB `[실측]`.
 - **목록 slow 녹화** `[실측]` (Network Preserve log HAR + Performance trace, `scenario=slow` 배선 경유):
-  - **데이터 없는 최초 진입**: 하드 로드 시 SSR이 항상 prefetch하므로 클라 스켈레톤 없이 **서버에서 1.5s 블록** 후 목록이 한 번에 뜬다(현재 미개선 동작).
+  - **데이터 없는 최초 진입**: 하드 로드 시 SSR이 항상 prefetch하므로 클라 스켈레톤 없이 **서버에서 1.5s 블록** 후 목록이 한 번에 뜬다(Before 동작 — 2단계에서 `loading.tsx`로 개선).
   - **기존 목록 갱신**: 목록이 있는 상태에서 카테고리 변경 시 `keepPreviousData`로 이전 목록을 유지한 채 1.5s 재요청한다(즉시 비우지 않음).
-  - **취소된 요청**: 카테고리를 1.5s 내 연속 변경(fashion +4079~5591ms · goods +5459~6971ms)하면 두 요청이 겹친다. 먼저 끝난 fashion 응답(5591ms)은 활성 key가 goods라 화면에 반영되지 않아, 늦은 이전 요청이 현재 화면을 덮지 않는다. (AbortSignal 미사용이라 네트워크 취소가 아니라 TanStack이 비활성 key 결과를 무시하는 방식.)
+  - **취소된 요청**: 카테고리를 1.5s 내 연속 변경(fashion +4079~5591ms · goods +5459~6971ms)하면 두 요청이 겹친다. 먼저 끝난 fashion 응답(5591ms)은 활성 key가 goods라 화면에 반영되지 않아, 늦은 이전 요청이 현재 화면을 덮지 않는다. (당시 AbortSignal 미사용이라 네트워크 취소가 아니라 TanStack이 비활성 key 결과를 무시하는 방식 — 2단계에서 AbortSignal 추가.)
   - **URL 복원(뒤로가기)** `[실측]`: 카테고리 변경은 `history: "push"`로 쌓여, 취소 시퀀스(…→fashion→goods) 뒤 뒤로가기를 누르면 URL이 직전 `category=fashion`으로 복원되고 화면도 fashion으로 돌아온다(URL↔화면 일치). 취소된 fashion 요청은 화면 반영만 막혔을 뿐 완료돼 캐시에 남아, 이 복원이 재요청 없이 즉시 이뤄진다.
-  - **전환 시 CLS** `[실측]`: 느린 목록이 최종 렌더될 때 Layout Shift score **0.164**(입력 근접 제외) 관찰 — 카테고리별 상품 수·높이 차로 콘텐츠가 밀린다. 홈 CLS 0과 대비되며, fallback 공간 예약은 2단계에서 다룬다.
+  - **전환 시 CLS** `[실측]`: 느린 목록이 최종 렌더될 때 Layout Shift score **0.164**(입력 근접 제외) 관찰. 홈 CLS 0과 대비된다. 정확한 원인 분석과 수정은 2단계에서 다룬다.
 
 ### 가설
 
@@ -182,4 +182,4 @@ Before 값은 CLI observed다(실브라우저 Before-①은 ①a 적용 전 상�
 
 - **isPending / isFetching / isPlaceholderData 분담**: `isPending`(데이터 없음)은 최초 진입 스켈레톤을 맡는다 — 단 하드로드는 서버 prefetch로 hydrate돼 route `loading.tsx`가 대신 담당한다. `isPlaceholderData`(이전 데이터 유지)는 갱신 중 표시(aria-busy 펄스 딤)를, `isFetching`은 배경 재조회 표시(재시도 버튼 비활성)를 맡는다.
 - **서버 응답을 store에 복사하지 않는다**: 목록은 TanStack Query 캐시에서만 읽는다. products의 `useState`는 검색 인풋 리마운트 key·필터 리셋 key(UI 상태)뿐이고, 서버 응답을 Zustand·로컬 상태로 옮기지 않는다.
-- **URL active query ↔ 화면 일치**: 조건을 연속으로 바꿔도 활성 query key의 결과만 화면에 반영된다(0단계 취소·뒤로가기 실측). AbortSignal이 앞선 요청을 취소해 늦은 완료가 현재 화면을 덮지 않으며, 취소는 `AbortError`를 그대로 던져(네트워크 오류로 오변환하지 않음) 오류 UI로 노출되지 않는다.
+- **URL active query ↔ 화면 일치**: 조건을 연속으로 바꿔도 활성 query key의 결과만 화면에 반영되므로, 앞선 요청이 늦게 끝나도 현재 화면을 덮지 않는다(0단계 취소·뒤로가기 실측 — AbortSignal 없이도 성립). AbortSignal은 그 요청을 아예 취소해 낭비를 줄일 뿐이며, 취소는 `AbortError`를 그대로 던져(네트워크 오류로 오변환하지 않음) 오류 UI로 노출되지 않는다.
