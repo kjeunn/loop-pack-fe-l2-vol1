@@ -48,12 +48,14 @@ Before 구성: 최적화하지 않은 7.5MB 원본(`hero-original.jpg`)을 `Hero
 - **반증 방법**: Hero만 렌더 치수로 리사이즈+최신 포맷으로 교체했을 때 LCP만 떨어지고 FCP·CLS가 불변인지 확인한다 — 불변이 아니면 크기 외 다른 원인이다.
 - **가장 작은 변경**: Hero 이미지를 렌더 치수에 맞춰 리사이즈하고 webp/avif로 변환(발견·preload·치수는 이미 최적이라 손대지 않음).
 
-## 1단계 — Hero LCP
+## 1단계 — Hero LCP와 렌더링 경계
 
-### After SHA와 조건
+### 변경 개요
 
-- **After SHA (1단계)**: `ff85cab`
-- 조건은 0단계와 동일(Device Desktop · Performance만 · Simulated). Hero를 `next/image`로 바꿔 원본을 소스로 두고 표시폭(<=1200px) 후보·webp로 리사이즈한다.
+1단계는 두 변경으로 나눠 각각 측정·커밋한다. 조건은 0단계와 동일(Device Desktop · Performance만 · Simulated; 단 셸 FCP는 "렌더링 경계"의 측정 주의 참고).
+
+- **이미지 최적화(LCP)**: `ff85cab` — Hero를 `next/image`로 바꿔 원본을 소스로 두고 표시폭(<=1200px) 후보·webp로 리사이즈한다. 이하 "LCP 구간 분해"~"검증".
+- **셸 렌더링 경계(FCP)**: `d92de5f` — 셸을 `await` 밖으로. 아래 "렌더링 경계" 절.
 
 ### LCP 구간 분해 (Before) `[실측]`
 
@@ -106,3 +108,33 @@ Before·After 모두 제목(텍스트) 먼저 → Hero 이미지 나중 순서�
 
 - 육안 품질: 원본 대비 열화 없음(작성자 확인).
 - 회귀: 테스트 88개·lint·typecheck·build 통과. LCP element·비율·문구 유지, CLS 무이동.
+
+### 렌더링 경계 — 셸을 await 밖으로 (FCP) `[실측]`
+
+**After SHA**: `d92de5f`
+
+**측정 방법 주의**: 이 문제는 서버 응답 지연(TTFB)이 원인이라 Lighthouse **simulate가 FCP를 오보**한다(홈 slow에서 simulate FCP 0.26s인데 observed는 1.87s). 서버 대기 시간을 FCP에 반영하지 못하기 때문이다. 그래서 이 절은 observed·실측(HAR TTFB · Performance filmstrip)으로 판단한다.
+
+**문제(Before)**: 홈 데이터가 느릴 때 `app/(commerce)/page.tsx`가 `await queryClient.prefetchQuery(homeQueryOptions())`로 문서 전체(셸 포함)를 막는다. document TTFB 1.5s → observed FCP 1.87s로 Header·제목·설명까지 데이터 뒤에야 그려진다.
+
+**변경**: 제목·설명 셸을 `await` 밖에서 즉시 렌더하고, 프리패치+`HomeView`를 async `HomeContent`로 옮겨 `<Suspense fallback={<HomeSkeleton />}>`로 스트리밍한다. Suspense fallback이 실제로 보이게 되므로 스켈레톤 Hero 높이를 실제와 같은 aspect-ratio(16/9·모바일 4/5)로 맞춰 교체 시 CLS를 막는다.
+
+**h1 선택 근거**: 홈엔 h1이 없었고 배너 제목은 slow 데이터라, 데이터와 무관한 정적 h1(`지금 인기 있는 상품과 신상품`)·설명을 둔다. 정적이라 즉시 렌더되고(셸 안 막힘), 빠른 초기 HTML에 담겨 크롤러가 일찍 읽으며, 실제 섹션(인기·신상품)을 설명해 SEO에 이롭다. 동적 배너 제목은 hero의 h2로 유지한다.
+
+| 증거 (홈 slow) | Before  | After   | 변화                               |
+| -------------- | ------- | ------- | ---------------------------------- |
+| document TTFB  | 1,625ms | 169ms   | 셸 즉시 스트림                     |
+| observed FCP   | 1,874ms | 463ms   | −75%                               |
+| CLS            | —       | 0.0001  | 스켈레톤 정합, 무이동              |
+| 최종 LCP       | 1,894ms | 2,099ms | 변화 없음(Hero가 아직 데이터-결합) |
+
+Before 값은 CLI observed다(실브라우저 Before-①은 ①a 적용 전 상태라 별도로 잡지 않음). After는 실측이라 절대값 잣대가 다르지만, 방식과 무관한 document TTFB가 1.5s→0.17s로 떨어져 셸이 데이터 대기에서 분리됐음을 확정한다. 셸이 15~169ms에 스트림돼 제목·설명이 먼저 paint되고 느린 본문은 스켈레톤 뒤 채워진다. 정상 데이터에서도 셸이 500ms 데이터 대기를 하지 않아 FCP가 개선된다.
+
+### 제외 — Hero 이미지 hoist
+
+최종 LCP는 여전히 Hero 이미지이고 홈 slow에서 2.1s다. 이미지 URL은 정적이라 셸로 올려 데이터와 무관하게 일찍 그리면 slow LCP를 낮출 수 있으나, 아래 이유로 제외한다.
+
+- **prod 이득 없음**: 정상 데이터에서 Hero 발견은 이미 이르고(531ms) LCP는 이미지 최적화로 ~1.1s다. hoist가 개선하는 건 slow(측정용 렌즈)뿐이다.
+- **비용이 과도**: 이미지만 셸로 올리려면 Hero의 이미지와 오버레이(copy)를 쪼개고 copy 데이터 흐름을 다시 짜야 한다(이중 fetch·HydrationBoundary 상향 등) — "Route Handler·FSD 재설계 금지"와 충돌하고 데이터 소유권을 흔든다.
+- **요구는 확인·판단**: line 82는 발견 시점을 확인하고 우선순위를 높일 이유가 있는지 판단하라는 것이지 hoist를 강제하지 않는다. 발견이 prod에서 이미 최적이므로 개입하지 않는다.
+- **UX상 우위도 아님**: prod(데이터 ~500ms)에선 hoist 유무 차이가 미미하다. slow에서 hoist는 이미지를 일찍 보여주지만 텍스트 없는 빈 오버레이를 노출하고, 제외 쪽은 일관된 전체 스켈레톤을 보인다 — 어느 쪽도 명확한 UX 우위가 없다. 전제는 prod 홈 데이터가 계속 빠르다는 것이고, 느려지면 재검토한다.
