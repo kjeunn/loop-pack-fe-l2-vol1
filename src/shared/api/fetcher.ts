@@ -1,14 +1,14 @@
 import { ApiError } from "@/shared/api/apiError";
 import type { ApiErrorResponse } from "@/shared/api/types";
+import { APP_ORIGIN } from "@/shared/config/appOrigin";
 
 // 브라우저는 상대경로로 fetch할 수 있지만, 서버 프리패치는 절대 URL이 필요하다.
-// 프로덕션은 NEXT_PUBLIC_BASE_URL을 두고, 없으면 로컬 개발 기본값을 쓴다.
+// 서버 self-fetch base는 metadataBase와 같은 APP_ORIGIN을 써서 origin을 하나로 맞춘다.
 function resolveUrl(path: string): string {
   if (typeof window !== "undefined") {
     return path;
   }
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-  return `${baseUrl}${path}`;
+  return `${APP_ORIGIN}${path}`;
 }
 
 // 클라이언트 조회 계층. 실패를 ApiError(kind·status)로 바꿔 TanStack Query로 흘려보낸다.
