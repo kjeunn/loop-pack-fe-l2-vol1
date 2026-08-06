@@ -183,3 +183,64 @@ Before 값은 CLI observed다(실브라우저 Before-①은 ①a 적용 전 상�
 - **isPending / isFetching / isPlaceholderData 분담**: `isPending`(데이터 없음)은 최초 진입 스켈레톤을 맡는다 — 단 하드로드는 서버 prefetch로 hydrate돼 route `loading.tsx`가 대신 담당한다. `isPlaceholderData`(이전 데이터 유지)는 갱신 중 표시(aria-busy 펄스 딤)를, `isFetching`은 배경 재조회 표시(재시도 버튼 비활성)를 맡는다.
 - **서버 응답을 store에 복사하지 않는다**: 목록은 TanStack Query 캐시에서만 읽는다. products의 `useState`는 검색 인풋 리마운트 key·필터 리셋 key(UI 상태)뿐이고, 서버 응답을 Zustand·로컬 상태로 옮기지 않는다.
 - **URL active query ↔ 화면 일치**: 조건을 연속으로 바꿔도 활성 query key의 결과만 화면에 반영되므로, 앞선 요청이 늦게 끝나도 현재 화면을 덮지 않는다(0단계 취소·뒤로가기 실측 — AbortSignal 없이도 성립). AbortSignal은 그 요청을 아예 취소해 낭비를 줄일 뿐이며, 취소는 `AbortError`를 그대로 던져(네트워크 오류로 오변환하지 않음) 오류 UI로 노출되지 않는다.
+
+## 3단계 — 동적 metadata와 Open Graph의 비용
+
+### 변경 개요
+
+- 루트 `layout.tsx`: `title` template `%s | Loopers`·공통 `openGraph`(siteName·locale·type·fallback image)·`metadataBase`.
+- 홈·목록 `generateMetadata`: 본문 prefetch와 같은 query factory로 조회한 응답으로 동적 title·description·image.
+- `buildPageMetadata`(shared/config): title·description을 top-level과 openGraph에 함께 넣고 공통 OG를 spread해 조립. og:url·canonical(정규화 URL)도 여기서 붙인다. 조회·문구 구성은 각 페이지가, 공통 조립은 이 헬퍼가 맡는다.
+- origin 통일: 서버 self-fetch base와 metadataBase가 같은 `APP_ORIGIN`(`appOrigin.ts`, 미설정 시 기존 base·로컬 폴백)을 쓰게 fetcher를 정렬한다. 이래야 미도달 origin으로 query failure를 재현할 수 있다.
+
+### 합성·shallow merge `[실측]`
+
+페이지 `openGraph`는 루트 `openGraph`를 통째로 덮으므로, `buildPageMetadata`가 매 페이지에서 공통 OG를 spread해 siteName·locale·type·fallback image를 유지한다. JS 없는 curl(초기 HTML)로 확인: og:site_name `Loopers`·og:locale `ko_KR`·og:type `website`가 모든 페이지에 남고, title은 template로 `제목 | Loopers`로 합성된다.
+
+### metadata 규칙 검증 `[실측]`
+
+- 홈: 배너 응답의 title·description·image(og:image = 배너 이미지).
+- 목록 `?q=니트`: title `"니트" 검색 결과`(검색어 우선), description `전체 상품 · 최신순`(category·sort).
+- 목록 `?category=fashion&sort=price-asc`: title `패션`, description `패션 · 낮은 가격순`.
+- 목록 `?page=2`: title `전체 상품 — 2페이지`(2페이지 이상 page 번호).
+- 정상 empty: title `"…" 검색 결과 없음`, description `… 조건에 맞는 상품이 없습니다(0개)`, og:image는 공통 fallback 유지.
+
+### metadata 비용 — UA별 응답 시점 `[실측]`
+
+같은 URL에 일반 UA와 `facebookexternalhit`를 보내 TTFB를 비교:
+
+| 홈 `/`             | 일반 UA TTFB | facebookexternalhit TTFB | total  |
+| ------------------ | ------------ | ------------------------ | ------ |
+| normal(배너 ~0.5s) | 0.010s       | 0.518s                   | ~0.52s |
+| slow(배너 1.5s)    | 0.020s       | 1.536s                   | ~1.53s |
+
+Next 15는 일반 UA엔 metadata를 스트리밍해 셸이 먼저 나가고(TTFB≈0.01~0.02s), 봇엔 완성 metadata를 초기 바이트에 담으려 데이터를 기다린다(TTFB=배너 시간). **동적 metadata의 대기 비용은 크롤러 응답에만 실리고 사용자 FCP는 안 해친다** — 1단계에서 셸을 await 밖으로 뺀 개선이 그대로 유지된다. 봇은 그 대가로 배너 title·description·image가 담긴 완성 문서를 받는다.
+
+### 서버 호출 계수 — request memoization `[실측]`
+
+metadata는 호출마다 새 QueryClient(`makeQueryClient`), 본문은 요청당 하나(`getServerQueryClient`)로 **캐시를 공유하지 않는다**. 둘이 같은 GET URL·options를 만들어 request 범위 native fetch memoization이 묶으므로, `/` 1회 요청당 `/api/home` Route Handler 호출은 **1회**(handler 계수 로그로 확인, 일반 UA·봇 동일). QueryClient를 singleton·영속으로 공유하지 않고 fetch 계층에서 중복을 제거했다.
+
+### query failure — root 상속 `[실측]`
+
+`APP_ORIGIN`을 미도달 origin으로 두면(build·runtime 동일 값) metadata 조회가 실패한다. 이때 `generateMetadata`는 페이지별 빈 값이 아니라 root 공통 metadata를 상속한다(try/catch → 빈 객체):
+
+- 홈·목록 모두 title `Loopers — 인기 상품과 신상품`(root default), og:image는 fallback(`p1.jpg`), og:url은 metadataBase로 절대화.
+- 정상 empty(페이지별 "결과 없음/0개")와 **다른 fallback** — empty는 조건을 설명하고, query failure는 공통 metadata로 물러선다.
+
+### 필터 변경과 metadata — shallow 라우팅 판단
+
+목록의 검색·카테고리·정렬·페이지는 2단계 요구(active query key·`isPending`/`isFetching` 분담·"이전 요청이 늦게 끝나도 현재 화면을 덮지 않음")를 따라 **클라 TanStack Query + nuqs `shallow`**로 처리한다. shallow는 history API로 URL만 바꾸고 서버 왕복을 건너뛰어, 필터를 바꾸면 목록·URL은 갱신돼도 `generateMetadata`가 다시 돌지 않아 **탭 title은 마지막 서버 렌더 값에 머문다**(새로고침·이동 시 갱신). "화면은 바뀌는데 title은 안 바뀌는" 비대칭이지만 개입하지 않는 근거는:
+
+- **metadata의 소비 지점은 URL별 document 요청이다.** 크롤러·소셜봇·직접 진입은 각 URL로 새 document를 요청하고 그 시점 `generateMetadata`가 조건에 맞는 title·OG를 준다(`/products?category=fashion`→"패션" 등 실측). 클라 필터 중 OG가 실시간 갱신되는 건 크롤러엔 의미가 없다.
+- **미갱신 항목은 탭 title 하나뿐이다.** 목록·URL·공유 링크는 모두 올바르다.
+- **고치는 비용이 더 크다.** `shallow: false`면 필터마다 서버 RSC 왕복이 생기고 `generateMetadata`가 slow API(1.5s)를 기다려 인터랙션마다 대기가 붙는다 — 3단계가 판단하라는 "metadata가 기다리는 비용"에서 나쁜 트레이드. 클라 `document.title` 동기화는 title 규칙을 서버·클라에 복제하는 이중 소스라 "가장 작은 변경"에 어긋난다.
+- **실무 결과도 같다.** 커머스 목록은 대개 정렬·세부 필터를 탭 title에 실시간 반영하지 않고 색인 단위(카테고리·검색어)로 title을 관리한다. 우리 규칙(검색어·카테고리·페이지→title, 정렬→description)도 이 결에 있다.
+
+결론: shallow 유지. metadata는 소비 지점(URL별 document)에서 정확하고, 실시간 title 하나를 위해 인터랙션당 서버 왕복·slow 대기를 얹지 않는다.
+
+### 완료조건 확인
+
+- 모든 페이지 기본 색인 가능(`robots` noindex 미설정).
+- localhost·미도달 origin의 OG URL은 배포 증거가 아니라 응답 시점·구조 측정용이다.
+- 초기 HTML에 하나의 `h1`(홈은 배너와 무관한 정적 문구, 1단계)·페이지 설명·주요 링크가 metadata와 함께 남는다.
+- 접근성: 탐색 `<nav>`·콘텐츠 `<main>`·상품 `<article>` 역할이 마크업에 드러나고, 카테고리 이동은 `href` 링크, ProductCard는 상품명 alt, Hero는 이미지 내용을 설명하는 alt(오버레이 제목 중복 회피)를 둔다.
