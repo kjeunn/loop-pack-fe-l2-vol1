@@ -43,11 +43,11 @@ export default function Home() {
 
   return (
     <>
-      {/* h1은 느린 배너 데이터가 아니라 정적 문구로 둔다. 데이터와 무관해 즉시 렌더되고,
-          빠른 초기 HTML에 담겨 크롤러가 일찍 읽으며, 실제 섹션(인기·신상품)을 설명해 SEO에 이롭다.
-          동적 배너 제목은 hero의 h2로 남긴다. */}
-      <section className="week05-section">
-        <h1>지금 인기 있는 상품과 신상품</h1>
+      {/* 정적 h1·설명이라 느린 배너 데이터와 무관하게 즉시 렌더돼 초기 HTML에 담긴다(크롤러·SEO·스크린리더).
+          다만 히어로의 배너 title·description과 시각적으로 겹쳐, sr-only로 시각만 숨기고 DOM엔 남긴다.
+          최상단 비주얼은 히어로가 맡고, 동적 배너 제목은 hero의 h2로 남긴다. */}
+      <section className="sr-only">
+        <h1>Loopers 커머스 인기 상품과 신상품</h1>
         <p>카테고리별 추천과 새로 들어온 상품을 한눈에 확인하세요.</p>
       </section>
       <Suspense fallback={<HomeSkeleton />}>
