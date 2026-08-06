@@ -9,7 +9,7 @@
 SHA를 제외한 아래 조건은 Before·After에서 동일하게 둔다.
 
 - **Before SHA**: `213d205`
-- **After SHA**: (4단계에서 기록)
+- **After SHA**: `e7d0c2b`
 - **URL·행동**: 홈 `/` cold load
 - **측정 방식 (Before·After 공통)**: Lighthouse Navigation · Device Desktop(viewport 1350×940) · Categories Performance만 · **Simulated throttling**(RTT 40ms · 10.24Mbps · CPU 1x).
 - **Simulated를 쓰는 이유**: Before↔After를 같은 잣대로 비교하려면 run 간 편차가 작아야 한다. Simulated는 빠르게 한 번 잰 뒤 목표 조건을 계산해 편차가 작아 5회 median이 안정적이다. 실제로 느리게 받는 DevTools throttling은 체감엔 정확하나 편차가 커 비교엔 불리하므로, 실제 전송 지연은 아래 실측 waterfall로 따로 관찰한다.
@@ -119,7 +119,7 @@ Before·After 모두 제목(텍스트) 먼저 → Hero 이미지 나중 순서�
 
 **변경**: 제목·설명 셸을 `await` 밖에서 즉시 렌더하고, 프리패치+`HomeView`를 async `HomeContent`로 옮겨 `<Suspense fallback={<HomeSkeleton />}>`로 스트리밍한다. Suspense fallback이 실제로 보이게 되므로 스켈레톤 Hero 높이를 실제와 같은 aspect-ratio(16/9·모바일 4/5)로 맞춰 교체 시 CLS를 막는다.
 
-**h1 선택 근거**: 홈엔 h1이 없었고 배너 제목은 slow 데이터라, 데이터와 무관한 정적 h1(`지금 인기 있는 상품과 신상품`)·설명을 둔다. 정적이라 즉시 렌더되고(셸 안 막힘), 빠른 초기 HTML에 담겨 크롤러가 일찍 읽으며, 실제 섹션(인기·신상품)을 설명해 SEO에 이롭다. 동적 배너 제목은 hero의 h2로 유지한다.
+**h1 선택 근거**: 홈엔 h1이 없었고 배너 제목은 slow 데이터라, 데이터와 무관한 정적 h1·설명을 둔다(최종 문구·sr-only 처리는 4단계). 정적이라 즉시 렌더되고(셸 안 막힘), 빠른 초기 HTML에 담겨 크롤러가 일찍 읽으며, 실제 섹션(인기·신상품)을 설명해 SEO에 이롭다. 동적 배너 제목은 hero의 h2로 유지한다.
 
 | 증거 (홈 slow) | Before  | After   | 변화                               |
 | -------------- | ------- | ------- | ---------------------------------- |
@@ -218,7 +218,7 @@ Next 15는 일반 UA엔 metadata를 스트리밍해 셸이 먼저 나가고(TTFB
 
 ### 서버 호출 계수 — request memoization `[실측]`
 
-metadata는 호출마다 새 QueryClient(`makeQueryClient`), 본문은 요청당 하나(`getServerQueryClient`)로 **캐시를 공유하지 않는다**. 둘이 같은 GET URL·options를 만들어 request 범위 native fetch memoization이 묶으므로, `/` 1회 요청당 `/api/home` Route Handler 호출은 **1회**(handler 계수 로그로 확인, 일반 UA·봇 동일). QueryClient를 singleton·영속으로 공유하지 않고 fetch 계층에서 중복을 제거했다.
+metadata는 호출마다 새 QueryClient(`makeQueryClient`), 본문은 요청당 하나(`getServerQueryClient`)로 **캐시를 공유하지 않는다**. 둘이 같은 GET URL·options를 만들어 request 범위 native fetch memoization이 묶으므로, `/` 1회 요청당 `/api/home` Route Handler 호출은 **1회**(임시 handler 계수 로그로 세어 확인하고 관찰 뒤 제거, 일반 UA·봇 동일). QueryClient를 singleton·영속으로 공유하지 않고 fetch 계층에서 중복을 제거했다.
 
 ### query failure — root 상속 `[실측]`
 
@@ -244,3 +244,85 @@ metadata는 호출마다 새 QueryClient(`makeQueryClient`), 본문은 요청당
 - localhost·미도달 origin의 OG URL은 배포 증거가 아니라 응답 시점·구조 측정용이다.
 - 초기 HTML에 하나의 `h1`(홈은 배너와 무관한 정적 문구, 1단계)·페이지 설명·주요 링크가 metadata와 함께 남는다.
 - 접근성: 탐색 `<nav>`·콘텐츠 `<main>`·상품 `<article>` 역할이 마크업에 드러나고, 카테고리 이동은 `href` 링크, ProductCard는 상품명 alt, Hero는 이미지 내용을 설명하는 alt(오버레이 제목 중복 회피)를 둔다.
+
+## 4단계 — After와 회귀
+
+### Before·After SHA와 조건
+
+- **Before SHA** `213d205` · **After SHA** `e7d0c2b`(4단계 최종 커밋 — Hero preload·error 경계·retry·페이지네이션·h1 sr-only 모두 포함). 측정 조건은 0단계와 동일(홈 `/` cold load · normal build · Lighthouse Desktop 1350×940 · Performance만 · Simulated). SHA 외 조건은 동일.
+
+### Before ↔ After 종합 `[실측]`
+
+0단계 Before → 최종 After(after_4), 같은 조건의 median:
+
+| 지표    | Before (0단계) | After (4단계) | 변화             |
+| ------- | -------------- | ------------- | ---------------- |
+| FCP (s) | 0.58           | 0.6           | 불변             |
+| LCP (s) | 8.10           | 1.2           | −85% (poor→good) |
+| CLS     | 0              | 0             | 불변             |
+
+LCP 급감은 1단계 Hero 전송 최적화(7,368.7KB→170.7KB · 전송 8,155→510ms)가 주효했다. 3단계에서 스트리밍 metadata가 Hero를 데이터 뒤로 미뤄 1.5s로 후퇴했고, 4단계에서 셸 preload로 1.2s로 회복했다(아래 상세). FCP·CLS는 전 구간 불변.
+
+### 3단계가 홈 LCP를 악화 — 재측정에서 발견하고 수정 `[실측]`
+
+4단계 재측정에서 **3단계가 홈 LCP를 1.2s→1.5s로 악화**시킨 것을 발견했다(5회씩 안정적, 변동 아님). 실브라우저 Lighthouse 13.3.0:
+
+| 측정       | FCP  | LCP      | CLS |
+| ---------- | ---- | -------- | --- |
+| 3단계 직전 | 0.6s | **1.2s** | 0   |
+| 3단계 후   | 0.6s | **1.5s** | 0   |
+
+**원인** — LCP breakdown 비교:
+
+| Subpart                | 3단계 직전 | 3단계 후  |
+| ---------------------- | ---------- | --------- |
+| Time to first byte     | 530ms      | 40ms      |
+| Resource load delay    | 40ms       | **650ms** |
+| Resource load duration | 510ms      | 540ms     |
+| Element render delay   | 80ms       | 120ms     |
+
+3단계의 동적 metadata(스트리밍)가 **TTFB는 개선(530→40ms)**했지만, 셸이 먼저 나가는 대신 **Hero(LCP element)를 데이터 뒤로 미뤘다**(load delay 40→650ms). Hero는 배너 title·description이 필요한 `HeroSection`이 `HomeContent`(Suspense) 안에 있어, 이미지 자체는 데이터가 필요 없는데도 배너를 기다린다. (헤드리스 Lighthouse는 localhost·throttle 없음이라 이 load delay가 안 드러나 0.72s로 같게 나온다 — 회귀를 못 잡으니 실브라우저 simulated로만 확인된다.)
+
+**수정** — 셸에서 Hero 이미지를 미리 preload한다:
+
+- `page.tsx` 셸(즉시 렌더)에서 `next/image`의 `getImageProps`로 `<Image fill sizes>`와 같은 srcset을 만들고, `react-dom`의 `preload(src, { as:"image", imageSrcSet, imageSizes, fetchPriority:"high" })`로 **초기 head에 preload**를 넣는다.
+- 브라우저가 배너를 기다리는 동안 ~40ms부터 Hero를 받아, HeroSection이 렌더될 때 이미 준비됨 → load delay 제거.
+- src·sizes·alt는 `HERO_IMAGE`(HeroSection이 export)로 한 곳에서 공유해, preload와 실제 `<Image>`가 같은 URL로 dedup되게 한다(드리프트 시 이중 로드).
+- 초기 HTML head에 `<link rel="preload" as="image" fetchpriority="high" imagesrcset=…2048w>` 들어감 확인. 1단계의 Hero 전송 최적화(7,368.7KB→170.7KB)는 그대로 유지된다.
+
+### After 5회 — 홈 FCP·LCP·CLS (수정 후) `[실측]`
+
+실브라우저 Lighthouse 13.3.0(위 After SHA):
+
+| 지표    | 1   | 2   | 3   | 4   | 5   | median | min | max |
+| ------- | --- | --- | --- | --- | --- | ------ | --- | --- |
+| FCP (s) | 0.6 | 0.6 | 0.6 | 0.6 | 0.6 | 0.6    | 0.6 | 0.6 |
+| LCP (s) | 1.2 | 1.3 | 1.2 | 1.3 | 1.2 | 1.2    | 1.2 | 1.3 |
+| CLS     | 0   | 0   | 0   | 0   | 0   | 0      | 0   | 0   |
+
+**LCP 1.5s(after_3) → 1.2s로 회복** — 3단계 직전(after_2)의 1.2s와 같아 3단계 회귀가 완전히 복구됐다. breakdown(after_4-1): TTFB 30ms · **load delay 650→180ms**(preload 효과) · load duration 700ms · render delay 80ms. Hero가 일찍 그려지며 **LCP element가 Hero → 상품 이미지(`img.week05-image`)로 이동** — Hero는 더 이상 병목이 아니고 상품 이미지가 새 LCP(1.2s)다. 상품 이미지 최적화는 3단계 회귀 복구 범위 밖으로, pre-3단계 baseline 1.2s 도달로 4단계 목표를 채웠다.
+
+### h1 sr-only — 시각 정리, 의미 유지
+
+셸의 정적 h1·설명이 히어로의 배너 title·description과 시각적으로 중복돼, `sr-only`(Tailwind, `clip-path:inset(50%)`)로 **시각만 숨기고 DOM엔 유지**한다. 1단계 요구(h1이 홈 데이터에 안 막힘·초기 응답에 존재)·SEO·스크린리더는 그대로 만족하고, 최상단 비주얼은 히어로가 맡는다. 문구는 페이지 정체성을 담아 "Loopers 커머스 인기 상품과 신상품"으로 둔다.
+
+### 에러 경로 정합 — error boundary 위치·재시도 fail-fast `[실측]`
+
+에러 재녹화에서 두 가지를 고쳤다:
+
+- **error boundary `app/error.tsx` → `app/(commerce)/error.tsx` 이동.** `ea941da`에서 Header를 `(commerce)/layout`으로 옮겼는데 error.tsx는 root에 남아, root 경계가 Header layout **위**라 에러 시 Header까지 교체됐다. commerce 그룹으로 옮겨 **에러가 나도 Header·nav는 유지되고 본문 자리에만 에러**를 보인다(2단계 "목록 대신 실패 이유"에 부합, SSR HTML에 Header 유지 확인). layout이 `<main>`을 감싸므로 error.tsx는 `<section>`으로 둔다.
+- **query 재시도 fail-fast.** 홈은 `prefetchQuery`+클라 `useQuery`라 5xx가 기본 3회 재시도(backoff ~7s) 뒤에야 표면화돼, 에러 시 스켈레톤이 오래 떠 "무한 로딩"처럼 보였다(HAR: `/api/home` 3회). `makeQueryClient`에서 **HTTP·business 오류는 재시도 안 함**(같은 응답이라 낭비), 네트워크만 1회로 바꿔 **에러가 즉시** 뜬다(HAR 재측정: `/api/home` 1회, 목록 에러 응답 0.5s). 목록·홈 공통 적용. Header 유지 변경이 products→home 이동을 열어 이 지연을 드러냈다.
+
+### 회귀 확인
+
+- **272 URL 복원**: 검색·카테고리·정렬·페이지가 URL(searchParams)·query key에 실리고, popstate(뒤로/앞으로)에서 화면이 복원된다(0단계 실측 뒤로가기 + `ProductSearchInput`·`ProductListView` 테스트). debounce는 popstate 시 즉시 취소·리마운트해 옛 검색어를 밀지 않는다. slow 재녹화(`after_slow`)에서 갱신·복원과 함께 **취소된 요청**(연속 변경 시 이전 `/api/products`가 `net::ERR_ABORTED`, 활성 요청만 반영)을 확인했다.
+- **273 상태·개수**: 빈 결과("조건에 맞는 상품이 없습니다" — 페이지네이션은 `totalCount 0`이라 숨겨 "1/1"이 결과 있는 듯 보이지 않게 한다)·최초 실패(인라인)·갱신 실패(목록 유지+배너)·재시도, 장바구니·위시리스트·Header 개수 파생이 테스트로 유지된다(88개 통과). 4단계 재녹화 확인: slow에서 최초 진입 스켈레톤·갱신(목록 유지), normal(`after_normal`)에서 cart·wishlist·Header 개수(클라 전용, HAR에 cart/wishlist API 호출 없음), error에서 목록 error.tsx·홈 인라인 alert.
+- **274 FSD**: shared·entities·features·widgets가 상위를 import하지 않는다(감사 통과). products는 의도적 무배럴(세그먼트 직접 import) 규약대로다.
+- **289**: `pnpm test` 88개 통과, `pnpm check`(test·lint·typecheck·build) 통과.
+
+### 효과 없거나 악화 — 숨기지 않은 결과
+
+- **metadata의 slow 대기 비용**(3단계): 동적 metadata는 크롤러(`facebookexternalhit`)에 배너 데이터를 기다리게 해 slow에서 TTFB가 1.5s가 된다. 사용자 FCP는 스트리밍으로 무해하나 크롤러 응답엔 비용이 실린다. URL별 정확한 공유·SEO metadata 이점이 커 유지한다.
+- **필터 시 metadata 미갱신**(3단계 shallow 판단): 2단계 클라 필터링의 결과로 온페이지 필터에선 탭 title이 새로고침 전까지 갱신되지 않는다. 크롤러·공유는 URL별 서버 렌더로 정확해 개입하지 않는다.
+- **3단계의 홈 LCP 악화와 그 수정**(위 절): 동적 metadata 스트리밍이 Hero를 데이터 뒤로 미뤄 LCP 1.2→1.5s. metadata 자체는 요구라 되돌리지 않고, Hero 이미지를 셸에서 preload해 발견만 분리해 회복했다. 헤드리스가 throttle 없음이라 이 회귀를 못 잡은 점도 함께 기록한다.
+- 그 외 이미지 품질·FCP·CLS·기존 기능 회귀는 없다(1단계 FCP·CLS 불변, 육안 품질 유지, 88 테스트 통과).
