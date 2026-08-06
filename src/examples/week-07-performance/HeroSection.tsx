@@ -6,6 +6,14 @@ import type { HomeResponse } from "@/_pages/home/api/queries";
 
 import styles from "./HeroSection.module.css";
 
+// Hero 이미지 설정. 셸의 preload(page.tsx)와 이 컴포넌트가 같은 src·sizes를 써야
+// preload와 실제 <Image>가 같은 URL로 dedup된다. 한 곳에 두어 어긋나지 않게 한다.
+export const HERO_IMAGE = {
+  src: "/images/week-07/hero-original.jpg",
+  sizes: "(min-width: 1232px) 1200px, 100vw",
+  alt: "이번 주 추천 니트·가방·스니커즈를 베이지 톤으로 연출한 상품 컷",
+} as const;
+
 type HeroSectionProps = Pick<HomeResponse["banner"], "title" | "description">;
 
 export function HeroSection({ title, description }: HeroSectionProps) {
@@ -19,10 +27,10 @@ export function HeroSection({ title, description }: HeroSectionProps) {
       {/* alt은 오버레이 h2 제목을 복붙하지 않고 이미지 내용을 설명한다(스크린리더가 제목을 두 번 읽지 않게). */}
       <Image
         className={styles.image}
-        src="/images/week-07/hero-original.jpg"
-        alt="이번 주 추천 니트·가방·스니커즈를 베이지 톤으로 연출한 상품 컷"
+        src={HERO_IMAGE.src}
+        alt={HERO_IMAGE.alt}
         fill
-        sizes="(min-width: 1232px) 1200px, 100vw"
+        sizes={HERO_IMAGE.sizes}
         priority
       />
       <div className={styles.copy}>

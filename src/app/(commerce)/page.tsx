@@ -1,11 +1,14 @@
 import { Suspense } from "react";
+import { preload } from "react-dom";
 
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import type { Metadata } from "next";
+import { getImageProps } from "next/image";
 
 import { homeQueryOptions } from "@/_pages/home/api/queries";
 import { HomeSkeleton } from "@/_pages/home/ui/HomeSkeleton";
 import { HomeView } from "@/_pages/home/ui/HomeView";
+import { HERO_IMAGE } from "@/examples/week-07-performance/HeroSection";
 import { getServerQueryClient } from "@/shared/api/getServerQueryClient";
 import { makeQueryClient } from "@/shared/api/queryClient";
 import { buildPageMetadata } from "@/shared/config/siteMetadata";
@@ -27,6 +30,17 @@ export async function generateMetadata(): Promise<Metadata> {
 // 제목·설명 셸은 홈 데이터와 무관하므로 await 밖에서 즉시 렌더해 데이터 대기가 셸을 막지 않게 한다.
 // 느린 데이터에 의존하는 본문만 Suspense로 감싸 스트리밍한다(fallback은 실제 높이의 스켈레톤).
 export default function Home() {
+  // Hero(홈 LCP)는 배너 데이터에 gate된 HomeContent 안에서 늦게 발견된다. 이미지는 데이터와
+  // 무관하므로 셸에서 미리 preload해, 배너를 기다리는 동안 받아둔다(load delay 제거).
+  // getImageProps로 <Image fill sizes>와 같은 srcset을 만들어 실제 이미지와 같은 URL로 dedup된다.
+  const { props: hero } = getImageProps({ ...HERO_IMAGE, fill: true });
+  preload(hero.src, {
+    as: "image",
+    imageSrcSet: hero.srcSet,
+    imageSizes: hero.sizes,
+    fetchPriority: "high",
+  });
+
   return (
     <>
       {/* h1은 느린 배너 데이터가 아니라 정적 문구로 둔다. 데이터와 무관해 즉시 렌더되고,
