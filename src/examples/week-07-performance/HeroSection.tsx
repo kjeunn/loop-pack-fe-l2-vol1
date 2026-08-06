@@ -16,10 +16,11 @@ export function HeroSection({ title, description }: HeroSectionProps) {
           유지한다(미지정 시 next/image가 lazy로 내려 LCP 요소를 지연시킴).
           sizes의 1232 = 컨테이너 상한 1200 + 좌우 패딩 32. 컨테이너가
           width:min(100% - 32px, 1200px)라 뷰포트가 1232 이상일 때부터 1200px에 고정된다. */}
+      {/* alt은 오버레이 h2 제목을 복붙하지 않고 이미지 내용을 설명한다(스크린리더가 제목을 두 번 읽지 않게). */}
       <Image
         className={styles.image}
         src="/images/week-07/hero-original.jpg"
-        alt=""
+        alt="이번 주 추천 니트·가방·스니커즈를 베이지 톤으로 연출한 상품 컷"
         fill
         sizes="(min-width: 1232px) 1200px, 100vw"
         priority
