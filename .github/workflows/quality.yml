@@ -35,3 +35,6 @@ jobs:
           fi
       - name: Run quality checks
         run: pnpm check
+        # appOrigin은 미설정 시 throw한다. CI build는 배포가 아니므로 로컬 origin을 준다.
+        env:
+          APP_ORIGIN: http://localhost:3000

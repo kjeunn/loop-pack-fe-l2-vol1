@@ -15,6 +15,8 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // appOrigin은 미설정 시 throw하므로 테스트 환경에 origin을 준다(비배포 컨텍스트).
+    env: { APP_ORIGIN: "http://localhost:3000" },
     // e2e(Playwright)는 별도 러너라 vitest 대상에서 제외한다.
     exclude: ["e2e/**", "node_modules/**", ".claude/**"],
   },
