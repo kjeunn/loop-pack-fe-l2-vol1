@@ -326,3 +326,44 @@ LCP 급감은 1단계 Hero 전송 최적화(7,368.7KB→170.7KB · 전송 8,155�
 - **필터 시 metadata 미갱신**(3단계 shallow 판단): 2단계 클라 필터링의 결과로 온페이지 필터에선 탭 title이 새로고침 전까지 갱신되지 않는다. 크롤러·공유는 URL별 서버 렌더로 정확해 개입하지 않는다.
 - **3단계의 홈 LCP 악화와 그 수정**(위 절): 동적 metadata 스트리밍이 Hero를 데이터 뒤로 미뤄 LCP 1.2→1.5s. metadata 자체는 요구라 되돌리지 않고, Hero 이미지를 셸에서 preload해 발견만 분리해 회복했다. 헤드리스가 throttle 없음이라 이 회귀를 못 잡은 점도 함께 기록한다.
 - 그 외 이미지 품질·FCP·CLS·기존 기능 회귀는 없다(1단계 FCP·CLS 불변, 육안 품질 유지, 88 테스트 통과).
+
+## Advanced A — 관계없는 카드 렌더 줄이기
+
+### 측정 조건
+
+- 화면 `/performance-lab/inp?pageSize=24`, 찜 미선택에서 같은 상품 1클릭.
+- Before `bb70022`(Basic 완료 tip) · After `7b6c79f`. CPU 4x. Performance 3회(일반 production build) · Profiler 1회(`next build --profile`). 렌더 범위는 결정적이라 Profiler는 1회로 충분.
+
+### 도구 선택 근거 — 왜 Performance·Profiler만
+
+이 병목은 로드가 끝난 뒤 클릭 한 번이 유발하고, 원인은 메인스레드에서 도는 React 리렌더다. 네트워크도 로드 타이밍도 개입하지 않으므로, 네 도구 중 둘만 쓸모가 있다.
+
+- **Performance (사용)**: 클릭의 INP(input·processing·presentation)와 메인스레드 blocking을 시간축으로 본다 — "얼마나 오래 막혔나".
+- **Profiler (사용)**: 어느 컴포넌트가·왜 렌더됐는지 본다 — "무관한 카드 24개가 hook 때문에 렌더". Performance는 "119ms 막혔다"까지만 알 뿐 그 안이 24개 카드 렌더임은 못 짚는다. 둘이 상보적이다.
+- **Network (제외)**: 찜 토글은 로컬 zustand store 갱신이라 요청이 없다 — waterfall에 아무것도 안 남는다.
+- **Lighthouse (제외)**: 로드 지표(LCP·TBT)라 로드 이후의 클릭 INP를 재지 못한다. TBT를 클릭 INP로 대신 쓰지 않는다.
+
+### 원인 (Before) `[실측]`
+
+`PerformanceProductCard`가 `wishlistIds` 배열 전체를 구독해, 토글 시 새 배열이 24개 구독자 모두에 통지된다.
+
+- Profiler: 클릭 1커밋에 카드 **24/24 렌더**, 전부 `didHooksChange=true·props 변화 없음`(prop 아닌 스토어 구독 hook 원인).
+- Performance: click 렌더 processing median **119ms**(메인스레드 Scripting 블록 지배).
+
+### 변경 (안 A)
+
+카드가 배열 대신 자기 찜 여부(boolean)만 구독(`wishlistIds.includes(product.id)`). Object.is 비교로 자기 값이 바뀐 카드만 리렌더된다. `React.memo`는 리렌더가 props 아닌 store 구독에서 와 무효(Profiler의 props-불변이 근거). pageSize 24·`calculateCardPresentation`·즉각 피드백 유지, setTimeout 지연 없음.
+
+### Before ↔ After `[실측]`
+
+| 렌즈                   | Before  | After          | 변화           |
+| ---------------------- | ------- | -------------- | -------------- |
+| Profiler 렌더 카드     | 24개    | 1개(클릭 카드) | 무관 23개 제거 |
+| 렌더 processing median | 119.1ms | 25.5ms         | −79%           |
+| INP 최장 이벤트 median | 165.7ms | 62.9ms         | −62%           |
+
+processing 3회: Before 122.0·113.8·119.1 / After 23.6·25.5·29.4(범위 분리). After의 렌더 1개도 자기 boolean만 바뀐 클릭 카드이고 나머지 23개는 회색(미렌더).
+
+### 완료조건
+
+카드 1개만 렌더, 필수 계산·즉각 피드백·24 fixture 유지. Performance는 클릭 구간, Profiler는 렌더 범위·원인에 각각 사용.
