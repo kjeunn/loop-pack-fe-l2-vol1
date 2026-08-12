@@ -285,7 +285,8 @@ LCP 급감은 1단계 Hero 전송 최적화(7,368.7KB→170.7KB · 전송 8,155�
 
 **수정** — 셸에서 Hero 이미지를 미리 preload한다:
 
-- `page.tsx` 셸(즉시 렌더)에서 `next/image`의 `getImageProps`로 `<Image fill sizes>`와 같은 srcset을 만들고, `react-dom`의 `preload(src, { as:"image", imageSrcSet, imageSizes, fetchPriority:"high" })`로 **초기 head에 preload**를 넣는다.
+- 셸에서 `'use client'` `PreloadHero`를 렌더한다. 이 컴포넌트가 `next/image`의 `getImageProps`로 `<Image fill sizes>`와 같은 srcSet을 만들고, `react-dom`의 `preload(src, { as:"image", imageSrcSet, imageSizes, fetchPriority:"high" })`로 **초기 head에 preload**를 넣는다.
+- ReactDOM resource hint(`preload`)는 **Next 문서가 Client Component 패턴으로 안내**한다(예시가 `'use client'`이고 "currently only supported in Client Components"라 명시). React 문서는 Server Component 호출도 지원한다 하지만, Next이 문서화·지원하는 client 쪽에 맞춰 `PreloadHero`로 분리했다. Client Component도 초기엔 SSR돼 link가 초기 HTML head에 담기므로 방출 결과는 동일하다.
 - 브라우저가 배너를 기다리는 동안 ~40ms부터 Hero를 받아, HeroSection이 렌더될 때 이미 준비됨 → load delay 제거.
 - src·sizes·alt는 `HERO_IMAGE`(HeroSection이 export)로 한 곳에서 공유해, preload와 실제 `<Image>`가 같은 URL로 dedup되게 한다(드리프트 시 이중 로드).
 - 초기 HTML head에 `<link rel="preload" as="image" fetchpriority="high" imagesrcset=…2048w>` 들어감 확인. 1단계의 Hero 전송 최적화(7,368.7KB→170.7KB)는 그대로 유지된다.
