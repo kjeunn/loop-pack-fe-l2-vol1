@@ -76,6 +76,18 @@ Next.js(App Router)로 커머스 베이스를 세우고, UI 라이브러리 없�
 - **변경 반경 실증(Advanced B)** — 검색·필터·정렬 전체 초기화, 장바구니 전체 비우기를 **실제 구현**해 예측↔실제 대조. 독립 2 store 격리(cart만 비우고 wishlist 무관)를 테스트로 실증
 - **리뷰 반영** — 껍데기 관찰자를 `useShellProductList`로 명명, pages-first는 근거 존중해 반려, `throwOnError` data 가드는 TanStack 공식 패턴으로 정정 ([커밋 기록](../../commits/feat/week-06))
 
+### [7주차 — 프론트엔드 성능 최적화](../../tree/feat/week-07)
+
+빠른 숫자를 만들려 느린 API를 지우는 대신, 같은 경로를 production build에서 반복 측정하고 **가장 긴 구간에만 최소 개입**했습니다. 판단마다 실측 근거를 남겼습니다. → [측정·판단 기록](../../blob/feat/week-07/docs/rfc/week07-performance.md)
+
+- **Hero LCP** — LCP를 서버응답·발견·전송·렌더로 분해해 전송(8,155ms)이 지배 구간임을 특정, 표시폭 리사이즈+webp만 적용(전송 **−97.7%**, LCP median **8.10→1.2s**, FCP·CLS 불변)
+- **렌더링 경계** — 정적 셸(h1·설명)을 `await` 밖에서 즉시 렌더하고 데이터 의존 본문만 Suspense 스트리밍(document TTFB 1,625→169ms)
+- **목록 상태·CLS** — 최초 진입·갱신·0건·실패·취소 여섯 상태를 나눠 다루고(`loading.tsx`·펄스 딤·AbortSignal), 전환 CLS **0.13→0.000**. active query key로 늦은 요청이 현재 화면을 덮지 않음
+- **동적 metadata** — 본문과 같은 query factory로 조회, request 범위 fetch memoization으로 Route Handler **1회**(서버 계수 확인), shallow merge로 공통 OG 유지, 스트리밍 metadata의 UA별 대기 비용 판단
+- **회귀 확인(4단계)** — 3단계 metadata가 Hero를 데이터 뒤로 밀어 LCP를 악화시킨 걸 재측정에서 발견(**헤드리스 Lighthouse는 못 잡고 실브라우저 simulated로만**), 셸 preload로 복구
+- **Advanced A** — 찜 1클릭에 관계없는 카드 24개가 리렌더되던 걸 zustand 셀렉터를 boolean 구독으로 좁혀 **1개로**(Performance=클릭 구간, Profiler=렌더 범위·원인)
+- **리뷰 반영** — deprecated `priority`→`preload`(재발은 lint 룰로), `appOrigin` 미설정 시 throw(배포 오설정 fail-fast), preload를 Next 문서대로 Client Component로 분리, root 에러 경계(`global-error`) 복구 ([커밋 기록](../../commits/feat/week-07))
+
 ## AI 협업 방식
 
 AI가 생성한 코드도 머지하는 순간 내 코드라는 원칙으로 작업합니다.
