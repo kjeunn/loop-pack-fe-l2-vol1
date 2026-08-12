@@ -75,7 +75,7 @@ Before 사실로 걸러 채택한 변경은 하나뿐이다.
 - **채택 — 표시폭 리사이즈 + webp + viewport 후보(srcset/sizes)**: 3840×2160·7,368.7KB가 표시폭(<=1200px)보다 과대해 전송이 8.16s를 차지. `next/image fill`+`sizes`로 표시폭 후보를 받게 한다. `fill`은 img의 명시 `width/height`(3840×2160) 대신 `.hero`의 기존 `aspect-ratio`로 공간을 잡으므로, 공간 예약 방식은 그대로여서 CLS가 유지된다.
 - **제외 — 요청 순서 분리**: 상품 이미지(webp 3~70KB, 총 ~200KB)는 Hero보다 늦게 시작해 ~1s 내 끝나고 대역 경합이 ≈2%라 Hero를 막지 않는다.
 - **제외 — lazy loading**: Hero는 above-fold LCP 요소라 지연하면 LCP가 악화된다(상품 이미지만 lazy).
-- **제외 — 우선순위 상향**: 발견이 672ms로 이미 이르다. `next/image`가 무지정 시 lazy로 내리므로 `priority`로 기존 preload·eager를 **유지**만 하고 더 높이지 않는다.
+- **제외 — 우선순위 상향**: 발견이 672ms로 이미 이르다. `next/image`가 무지정 시 lazy로 내리므로 `preload` prop으로 기존 preload·eager를 **유지**만 하고 더 높이지 않는다(피드백 전엔 `priority`, Next 16 deprecated로 교체 — 아래 "멘토 피드백 반영").
 
 ### Before ↔ After 비교 `[실측]`
 
@@ -107,7 +107,7 @@ Before·After 모두 제목(텍스트) 먼저 → Hero 이미지 나중 순서�
 ### 검증
 
 - 육안 품질: 원본 대비 열화 없음(작성자 확인).
-- 회귀: 테스트 88개·lint·typecheck·build 통과. LCP element·비율·문구 유지, CLS 무이동.
+- 회귀: 테스트 89개·lint·typecheck·build 통과. LCP element·비율·문구 유지, CLS 무이동.
 
 ### 렌더링 경계 — 셸을 await 밖으로 (FCP) `[실측]`
 
@@ -191,7 +191,7 @@ Before 값은 CLI observed다(실브라우저 Before-①은 ①a 적용 전 상�
 - 루트 `layout.tsx`: `title` template `%s | Loopers`·공통 `openGraph`(siteName·locale·type·fallback image)·`metadataBase`.
 - 홈·목록 `generateMetadata`: 본문 prefetch와 같은 query factory로 조회한 응답으로 동적 title·description·image.
 - `buildPageMetadata`(shared/config): title·description을 top-level과 openGraph에 함께 넣고 공통 OG를 spread해 조립. og:url·canonical(정규화 URL)도 여기서 붙인다. 조회·문구 구성은 각 페이지가, 공통 조립은 이 헬퍼가 맡는다.
-- origin 통일: 서버 self-fetch base와 metadataBase가 같은 `APP_ORIGIN`(`appOrigin.ts`, 미설정 시 기존 base·로컬 폴백)을 쓰게 fetcher를 정렬한다. 이래야 미도달 origin으로 query failure를 재현할 수 있다.
+- origin 통일: 서버 self-fetch base와 metadataBase가 같은 `APP_ORIGIN`(`appOrigin.ts`, 미설정 시 throw — 아래 "멘토 피드백 반영")을 쓰게 fetcher를 정렬한다. 이래야 미도달 origin으로 query failure를 재현할 수 있다(throw는 미설정만 잡는다. 미도달 origin은 값이 설정돼 있어 throw를 통과하고, fetch가 그 origin에 못 닿아 실패한다 — 층이 다르다).
 
 ### 합성·shallow merge `[실측]`
 
@@ -317,16 +317,16 @@ LCP 급감은 1단계 Hero 전송 최적화(7,368.7KB→170.7KB · 전송 8,155�
 ### 회귀 확인
 
 - **272 URL 복원**: 검색·카테고리·정렬·페이지가 URL(searchParams)·query key에 실리고, popstate(뒤로/앞으로)에서 화면이 복원된다(0단계 실측 뒤로가기 + `ProductSearchInput`·`ProductListView` 테스트). debounce는 popstate 시 즉시 취소·리마운트해 옛 검색어를 밀지 않는다. slow 재녹화(`after_slow`)에서 갱신·복원과 함께 **취소된 요청**(연속 변경 시 이전 `/api/products`가 `net::ERR_ABORTED`, 활성 요청만 반영)을 확인했다.
-- **273 상태·개수**: 빈 결과("조건에 맞는 상품이 없습니다" — 페이지네이션은 `totalCount 0`이라 숨겨 "1/1"이 결과 있는 듯 보이지 않게 한다)·최초 실패(인라인)·갱신 실패(목록 유지+배너)·재시도, 장바구니·위시리스트·Header 개수 파생이 테스트로 유지된다(88개 통과). 4단계 재녹화 확인: slow에서 최초 진입 스켈레톤·갱신(목록 유지), normal(`after_normal`)에서 cart·wishlist·Header 개수(클라 전용, HAR에 cart/wishlist API 호출 없음), error에서 목록 error.tsx·홈 인라인 alert.
+- **273 상태·개수**: 빈 결과("조건에 맞는 상품이 없습니다" — 페이지네이션은 `totalCount 0`이라 숨겨 "1/1"이 결과 있는 듯 보이지 않게 한다)·최초 실패(인라인)·갱신 실패(목록 유지+배너)·재시도, 장바구니·위시리스트·Header 개수 파생이 테스트로 유지된다(89개 통과). 4단계 재녹화 확인: slow에서 최초 진입 스켈레톤·갱신(목록 유지), normal(`after_normal`)에서 cart·wishlist·Header 개수(클라 전용, HAR에 cart/wishlist API 호출 없음), error에서 목록 error.tsx·홈 인라인 alert.
 - **274 FSD**: shared·entities·features·widgets가 상위를 import하지 않는다(감사 통과). products는 의도적 무배럴(세그먼트 직접 import) 규약대로다.
-- **289**: `pnpm test` 88개 통과, `pnpm check`(test·lint·typecheck·build) 통과.
+- **289**: `pnpm test` 89개 통과, `pnpm check`(test·lint·typecheck·build) 통과.
 
 ### 효과 없거나 악화 — 숨기지 않은 결과
 
 - **metadata의 slow 대기 비용**(3단계): 동적 metadata는 크롤러(`facebookexternalhit`)에 배너 데이터를 기다리게 해 slow에서 TTFB가 1.5s가 된다. 사용자 FCP는 스트리밍으로 무해하나 크롤러 응답엔 비용이 실린다. URL별 정확한 공유·SEO metadata 이점이 커 유지한다.
 - **필터 시 metadata 미갱신**(3단계 shallow 판단): 2단계 클라 필터링의 결과로 온페이지 필터에선 탭 title이 새로고침 전까지 갱신되지 않는다. 크롤러·공유는 URL별 서버 렌더로 정확해 개입하지 않는다.
 - **3단계의 홈 LCP 악화와 그 수정**(위 절): 동적 metadata 스트리밍이 Hero를 데이터 뒤로 미뤄 LCP 1.2→1.5s. metadata 자체는 요구라 되돌리지 않고, Hero 이미지를 셸에서 preload해 발견만 분리해 회복했다. 헤드리스가 throttle 없음이라 이 회귀를 못 잡은 점도 함께 기록한다.
-- 그 외 이미지 품질·FCP·CLS·기존 기능 회귀는 없다(1단계 FCP·CLS 불변, 육안 품질 유지, 88 테스트 통과).
+- 그 외 이미지 품질·FCP·CLS·기존 기능 회귀는 없다(1단계 FCP·CLS 불변, 육안 품질 유지, 89 테스트 통과).
 
 ## Advanced A — 관계없는 카드 렌더 줄이기
 
@@ -368,3 +368,13 @@ processing 3회: Before 122.0·113.8·119.1 / After 23.6·25.5·29.4(범위 분�
 ### 완료조건
 
 카드 1개만 렌더, 필수 계산·즉각 피드백·24 fixture 유지. Performance는 클릭 구간, Profiler는 렌더 범위·원인에 각각 사용.
+
+## 멘토 피드백 반영
+
+제출 후 받은 피드백을 반영한다. 각 항목은 "동작한다"에서 멈추지 않고 문서·배포·재발 방지 관점에서 다시 봤다.
+
+- **`next/image` `priority` deprecated → `preload`**: Next 16에서 `priority`는 `@deprecated`(→`preload`)다(`get-img-props.d.ts` 확인). `preload` prop으로 교체하고 재발은 lint로 막는다 — 타입 기반 `@typescript-eslint/no-deprecated`를 켜되, Next이 Image 컴포넌트 타입에서 prop 단위 `@deprecated`를 떼어내 이 룰이 못 잡는 `priority`·`onLoadingComplete`는 `no-restricted-syntax`로 보완한다(한계: 태그명 literal `Image`·수동 목록이라 자동 확장은 안 됨).
+- **`appOrigin` 기본값 제거 → 미설정 시 throw**: localhost 기본값은 배포에서 `APP_ORIGIN` 누락 시 조용히 localhost로 self-fetch·OG URL을 내보내 오설정을 숨긴다. 없으면 throw해 build·runtime에서 드러낸다(fail-fast). 비배포 환경은 각자 공급한다 — 로컬 `.env.local`(gitignore), CI 워크플로 env, vitest `test.env`. 미설정·빈 문자열 모두 throw, 정상 값 통과 확인.
+- **preload 호출 위치 — Server vs Client Component**: (4단계 preload 절 참고) React 문서는 Server Component 호출도 지원하나 Next 문서는 `'use client'` 예시로 "currently only supported in Client Components"라 명시한다. 문서가 지원하는 쪽에 맞춰 `PreloadHero`(client)로 분리했다. 둘 다 초기엔 SSR돼 head의 preload link는 동일(curl 확인)하고, client 쪽은 하이드레이션 시 한 번 더 실행되나 멱등이다.
+- **root 에러 경계 복구**: 에러 경계를 `(commerce)`로 옮기며 root 커버리지가 사라졌다. `global-error.tsx`가 root layout 자체 에러를, root `error.tsx`가 그룹 밖 라우트(`/demo`·`/performance-lab`) 에러를 잡는다. `(commerce)/error.tsx`의 Header 유지는 그대로다.
+- **metadata·본문 GET URL 동일성 테스트**: 두 경로가 공유하는 `loadProductListSearchParams`→`productListQueryOptions`가 같은 입력에서 하나의 GET URL로 고정되는지 테스트로 잠근다(필터가 하나 늘어도 조용히 갈라지지 않게). 테스트 88→89.
