@@ -44,6 +44,25 @@ const eslintConfig = defineConfig([
       "no-empty": "error", // 빈 블록 금지 (에러 명시적 처리)
       "no-console": ["error", { allow: ["warn", "error"] }], // console.log 커밋 금지
 
+      // ── next/image의 deprecated prop ──
+      // Next는 Image의 prop 단위 @deprecated JSDoc을 컴포넌트 타입에서 떼어내 재선언한다
+      // (get-img-props의 ImageProps엔 있지만 client/image-component의 Image 타입엔 없음).
+      // 그래서 타입 기반 @typescript-eslint/no-deprecated가 이 prop들을 못 잡아, 구문으로 직접 막는다.
+      // 한계: 아래에 이름을 적은 prop만, JSX 태그명이 literal `Image`일 때만 걸린다
+      // (alias import·다른 컴포넌트는 빠짐). 자동 발견이 아니라 알려진 케이스의 수동 목록이다.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "JSXOpeningElement[name.name='Image'] JSXAttribute[name.name='priority']",
+          message: "next/image의 priority는 deprecated입니다. preload prop을 쓰세요.",
+        },
+        {
+          selector:
+            "JSXOpeningElement[name.name='Image'] JSXAttribute[name.name='onLoadingComplete']",
+          message: "next/image의 onLoadingComplete는 deprecated입니다. onLoad prop을 쓰세요.",
+        },
+      ],
+
       // ── React ──
       "react/jsx-key": "error", // 리스트 key 누락 방지
 
@@ -124,6 +143,31 @@ const eslintConfig = defineConfig([
           ],
         },
       ],
+    },
+  },
+
+  // 7주차 과제 픽스처는 "일부러 최적화 안 한 LCP <img>"를 Before 기준으로 두고
+  // 인라인 eslint-disable로 no-img-element를 끈다. 우리 하네스는 noInlineConfig라
+  // 그 disable이 무효가 되어 커밋이 막히므로, 제공 픽스처를 고치지 않고
+  // 이 측정용 폴더에서만 인라인 설정을 허용한다. 과제도 next/image를 완료 기준으로 두지 않는다.
+  {
+    files: ["src/examples/week-07-performance/**/*.{ts,tsx}"],
+    linterOptions: { noInlineConfig: false },
+  },
+
+  // ── deprecated API 사용 차단 (도구로 강제) ──
+  // `next/image`의 priority처럼 @deprecated로 표시된 API를 lint 에러로 잡는다.
+  // 타입 정보가 필요한 룰이라 이 블록에서만 type-aware linting(projectService)을 켠다.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-deprecated": "error",
     },
   },
 

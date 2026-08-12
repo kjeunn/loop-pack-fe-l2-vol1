@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { productListQueryOptions } from "@/features/products/api/queries";
+import { loadProductListSearchParams } from "@/features/products/model/searchParams";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -47,5 +48,24 @@ describe("productListQueryOptions", () => {
     expect(requestedUrl).toContain("category=fashion");
     expect(requestedUrl).toContain("sort=price-asc");
     expect(requestedUrl).toContain("page=2");
+  });
+
+  // generateMetadata와 page는 둘 다 loadProductListSearchParams로 조건을 읽어
+  // productListQueryOptions에 넘긴다. 이 공유 경로가 만드는 GET URL을 고정해,
+  // 한쪽 필터만 늘어 두 경로가 조용히 갈라지는 걸 막는다.
+  it("metadata·본문이 공유하는 파서→팩토리 경로가 하나의 GET URL로 고정된다", async () => {
+    const query = await loadProductListSearchParams({ q: "니트", category: "fashion" });
+
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const options = productListQueryOptions(query);
+    await options.queryFn!({ queryKey: options.queryKey } as never);
+
+    // 클라 환경(jsdom)에선 상대 URL이라 base를 붙여 파싱한다.
+    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]), "http://localhost");
+    expect(decodeURIComponent(requestedUrl.search)).toBe(
+      "?q=니트&category=fashion&sort=latest&page=1&pageSize=10",
+    );
   });
 });

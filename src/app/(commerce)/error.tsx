@@ -1,8 +1,8 @@
 "use client";
 
-// (commerce) 밖 라우트(/demo·/performance-lab)의 에러를 root layout 안에서 잡는다.
-// 커머스 본류는 (commerce)/error.tsx가 Header를 유지한 채 잡고, root layout 자체 에러는
-// global-error.tsx가 잡는다. root layout엔 <main>이 없으므로 여기서 <main>으로 감싼다.
+// (commerce) 그룹의 error boundary. Header layout 안쪽이라 에러가 나도 Header·nav는 유지되고
+// 본문(목록·홈) 자리에만 에러를 보인다(2단계 "목록 대신 실패 이유"). reset()으로 세그먼트를 재렌더해 재시도한다.
+// layout이 이미 `<main>`을 감싸므로 여기선 `<section>`으로 둔다(main 중첩 방지).
 interface AppErrorProps {
   error: Error;
   reset: () => void;
@@ -10,7 +10,7 @@ interface AppErrorProps {
 
 export default function AppError({ reset }: AppErrorProps) {
   return (
-    <main className="mx-auto max-w-[560px] px-6 py-16 text-center">
+    <section className="mx-auto max-w-[560px] px-6 py-16 text-center">
       <p className="mb-4 text-gray-700">문제가 발생했어요. 잠시 후 다시 시도해 주세요.</p>
       <button
         type="button"
@@ -19,6 +19,6 @@ export default function AppError({ reset }: AppErrorProps) {
       >
         다시 시도
       </button>
-    </main>
+    </section>
   );
 }
