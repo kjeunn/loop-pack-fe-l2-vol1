@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { makeQueryClient } from "@/shared/api/queryClient";
+import { makeProductListResponse } from "@/test/handlers";
+import { server } from "@/test/server";
 
 import { ProductListView } from "./ProductListView";
 
@@ -23,14 +26,14 @@ function renderView(searchParams?: Record<string, string>) {
 }
 
 describe("ProductListView 부분 실패 — 결과 영역만 경계로", () => {
-  afterEach(() => vi.restoreAllMocks());
-
   it("목록 조회가 5xx로 실패하면 결과+페이지네이션은 fallback으로 바뀌고 필터는 살아남는다", async () => {
     // 5xx → fetchJson이 ApiError("http", 500)로 던지고, throwOnError 정책이 결과 경계로 전파한다.
     // 필터를 보는 관찰자는 throwOnError:false라 던지지 않는다.
     // (헤더는 (commerce) layout이 렌더하므로 ProductListView 단독 렌더엔 없다 — 헤더 생존은 layout의 책임.)
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ message: "서버 오류" }), { status: 500 }),
+    server.use(
+      http.get("*/api/products", () =>
+        HttpResponse.json({ message: "서버 오류" }, { status: 500 }),
+      ),
     );
 
     renderView();
@@ -47,13 +50,10 @@ describe("ProductListView 부분 실패 — 결과 영역만 경계로", () => {
 });
 
 describe("ProductListView 필터 초기화 (Advanced B-1)", () => {
-  afterEach(() => vi.restoreAllMocks());
-
   it("초기화를 누르면 필터가 기본값으로 돌아간다", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({ products: [], categories: [], totalCount: 0, page: 1, pageSize: 10 }),
-        { status: 200 },
+    server.use(
+      http.get("*/api/products", () =>
+        HttpResponse.json(makeProductListResponse({ products: [], totalCount: 0 })),
       ),
     );
 
