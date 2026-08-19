@@ -32,4 +32,19 @@ describe("헤더 개수 파생", () => {
     expect(screen.getByText("장바구니 2")).toBeInTheDocument();
     expect(screen.getByText("위시리스트 1")).toBeInTheDocument();
   });
+
+  it("담았다 다시 빼면 헤더 개수가 줄어든다", () => {
+    render(<Header />);
+
+    act(() => {
+      useCartStore.getState().addToCart("p1");
+      useCartStore.getState().addToCart("p2");
+    });
+    expect(screen.getByText("장바구니 2")).toBeInTheDocument();
+
+    act(() => {
+      useCartStore.getState().removeFromCart("p1");
+    });
+    expect(screen.getByText("장바구니 1")).toBeInTheDocument();
+  });
 });
