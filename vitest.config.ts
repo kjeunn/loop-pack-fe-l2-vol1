@@ -12,7 +12,10 @@ export default defineConfig({
   // 이걸 비우지 않으면 CSS 모듈을 렌더하는 컴포넌트 테스트가 PostCSS 로드에서 실패한다.
   css: { postcss: { plugins: [] } },
   test: {
-    environment: "jsdom",
+    // 기본은 node. DOM이 필요한 테스트만 파일 상단에 `// @vitest-environment jsdom`으로 선언한다.
+    // 전부 jsdom으로 돌리면 DOM이 필요 없는 테스트까지 매번 브라우저 흉내 환경을 세워,
+    // 테스트가 늘수록 비용이 쌓이기 때문이다.
+    environment: "node",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     // appOrigin은 미설정 시 throw하므로 테스트 환경에 origin을 준다(비배포 컨텍스트).

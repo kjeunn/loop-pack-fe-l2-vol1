@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// persist 저장값 복구(migrate·merge·sanitize)를 검증하므로 localStorage가 필요하다.
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { useCartStore } from "@/entities/cart/model/cartStore";
