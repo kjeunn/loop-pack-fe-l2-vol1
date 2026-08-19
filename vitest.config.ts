@@ -2,7 +2,7 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-// jsdom 환경에서 컴포넌트/훅을 렌더해 테스트한다. @/ 별칭은 tsconfig와 맞춘다.
+// @/ 별칭은 tsconfig와 맞춘다. 환경은 기본 node이고, DOM이 필요한 테스트만 jsdom으로 선언한다(아래).
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -15,6 +15,7 @@ export default defineConfig({
     // 기본은 node. DOM이 필요한 테스트만 파일 상단에 `// @vitest-environment jsdom`으로 선언한다.
     // 전부 jsdom으로 돌리면 DOM이 필요 없는 테스트까지 매번 브라우저 흉내 환경을 세워,
     // 테스트가 늘수록 비용이 쌓이기 때문이다.
+    // (측정: 분리 시 환경 셋업 ~21s vs 전부 jsdom ~31s — `vitest run` 출력의 environment 항목.)
     environment: "node",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
