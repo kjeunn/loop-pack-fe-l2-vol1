@@ -8,8 +8,8 @@ export default defineConfig({
   testDir: "./e2e",
   use: { baseURL: "http://localhost:3000" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  // 프로덕션 빌드 위에서 돌린다. 개발 서버로만 통과하는 E2E는 인정하지 않으므로(번들·라우팅·실 CSS가
-  // 개발 서버와 달라질 수 있다) build 후 start로 실제 배포와 같은 서버를 띄운다.
+  // 프로덕션 빌드 위에서 돌린다. 개발 서버로만 통과하는 E2E는 인정하지 않는다.
+  // 번들·라우팅·실 CSS가 개발 서버와 달라질 수 있으므로, build 후 start로 실제 배포와 같은 서버를 띄운다.
   webServer: {
     command: "pnpm build && pnpm start",
     url: "http://localhost:3000",

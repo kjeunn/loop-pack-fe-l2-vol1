@@ -2,7 +2,10 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { productListQueryOptions } from "@/features/products/api/queries";
-import { loadProductListSearchParams } from "@/features/products/model/searchParams";
+import {
+  loadProductListSearchParams,
+  serializeProductListSearchParams,
+} from "@/features/products/model/searchParams";
 import { makeProductListResponse } from "@/test/handlers";
 import { server } from "@/test/server";
 
@@ -34,6 +37,25 @@ describe("productListQueryOptions", () => {
     });
 
     expect(omitted.queryKey).toEqual(explicit.queryKey);
+  });
+
+  it("다른 조건은 다른 키가 되어 캐시가 갈린다", () => {
+    const fashion = productListQueryOptions({ category: "fashion" }).queryKey;
+    const home = productListQueryOptions({ category: "home" }).queryKey;
+    expect(fashion).not.toEqual(home);
+  });
+
+  it("검색어의 한글·이모지가 필터↔쿼리스트링 왕복에 원형 그대로 유지된다", async () => {
+    // URL 일치는 요청을 보내지 않고, 직렬화했다가 다시 파싱하는 왕복으로 확인한다.
+    const querystring = serializeProductListSearchParams({ q: "니트🧥" });
+    const restored = await loadProductListSearchParams(new URLSearchParams(querystring));
+    expect(restored.q).toBe("니트🧥");
+  });
+
+  it("검색어의 URL 특수문자(&, =)도 왕복에 원형 그대로 유지된다", async () => {
+    const querystring = serializeProductListSearchParams({ q: "a&b=c" });
+    const restored = await loadProductListSearchParams(new URLSearchParams(querystring));
+    expect(restored.q).toBe("a&b=c");
   });
 
   it("API 요청 URL이 query key와 같은 조건을 담는다", async () => {
