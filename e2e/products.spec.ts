@@ -85,6 +85,19 @@ test("URL로 직접 진입하면 조건이 복원된다", async ({ page }) => {
   await expect(page.getByLabel("정렬")).toHaveValue("price-asc");
 });
 
+test("새로고침해도 URL 필터가 유지된다", async ({ page }) => {
+  await page.goto("/products?category=fashion&sort=price-asc");
+  await expect(page.getByLabel("카테고리")).toHaveValue("fashion");
+
+  await page.reload();
+
+  // 필터는 URL에 있어 전체 새로고침 뒤에도 복원된다(장바구니 localStorage 복원과는 다른 경로다).
+  await expect(page).toHaveURL(/category=fashion/);
+  await expect(page).toHaveURL(/sort=price-asc/);
+  await expect(page.getByLabel("카테고리")).toHaveValue("fashion");
+  await expect(page.getByLabel("정렬")).toHaveValue("price-asc");
+});
+
 test("검색어를 바꾸면 결과가 필터되고, 없으면 빈 상태를 보여준다", async ({ page }) => {
   await page.goto("/products");
   await expect(page.getByText(/총 \d+개/)).toBeVisible();
