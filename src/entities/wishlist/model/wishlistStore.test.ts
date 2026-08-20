@@ -28,10 +28,10 @@ describe("위시리스트 개수 파생", () => {
     expect(useWishlistStore.getState().wishlistIds.length).toBe(0);
   });
 
-  it("여러 개를 켠 뒤 하나만 끄면 그것만 빠지고 나머지는 남는다", () => {
+  it("두 상품을 찜한 뒤 하나만 다시 누르면 그 상품만 빠지고 다른 상품은 남는다", () => {
     useWishlistStore.getState().toggleWishlist("p1");
     useWishlistStore.getState().toggleWishlist("p2");
-    useWishlistStore.getState().toggleWishlist("p1"); // p1만 끈다
+    useWishlistStore.getState().toggleWishlist("p1"); // p1만 다시 눌러 해제
     expect(useWishlistStore.getState().wishlistIds).toEqual(["p2"]);
   });
 });
