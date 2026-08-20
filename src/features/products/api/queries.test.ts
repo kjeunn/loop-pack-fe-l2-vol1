@@ -39,6 +39,14 @@ describe("productListQueryOptions", () => {
     expect(omitted.queryKey).toEqual(explicit.queryKey);
   });
 
+  it("아무 조건도 없으면 카테고리 기본값 all이 채워진다", () => {
+    const key = productListQueryOptions({}).queryKey;
+    expect(key).toEqual([
+      "products",
+      { q: "", category: "all", sort: "latest", page: 1, pageSize: 10 },
+    ]);
+  });
+
   it("다른 조건은 다른 키가 되어 캐시가 갈린다", () => {
     const fashion = productListQueryOptions({ category: "fashion" }).queryKey;
     const home = productListQueryOptions({ category: "home" }).queryKey;

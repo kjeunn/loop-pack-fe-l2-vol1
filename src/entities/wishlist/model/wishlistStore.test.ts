@@ -27,4 +27,11 @@ describe("위시리스트 개수 파생", () => {
     useWishlistStore.getState().toggleWishlist("p1");
     expect(useWishlistStore.getState().wishlistIds.length).toBe(0);
   });
+
+  it("여러 개를 켠 뒤 하나만 끄면 그것만 빠지고 나머지는 남는다", () => {
+    useWishlistStore.getState().toggleWishlist("p1");
+    useWishlistStore.getState().toggleWishlist("p2");
+    useWishlistStore.getState().toggleWishlist("p1"); // p1만 끈다
+    expect(useWishlistStore.getState().wishlistIds).toEqual(["p2"]);
+  });
 });
