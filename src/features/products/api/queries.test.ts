@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { productListQueryOptions } from "@/features/products/api/queries";
 import {
@@ -51,6 +51,20 @@ describe("productListQueryOptions", () => {
     const fashion = productListQueryOptions({ category: "fashion" }).queryKey;
     const home = productListQueryOptions({ category: "home" }).queryKey;
     expect(fashion).not.toEqual(home);
+  });
+
+  it("측정 시나리오가 켜지면 key에 시나리오가 덧붙어 정상 응답과 캐시가 갈린다", () => {
+    // scenario는 URL 조건이 아니라 측정용 env 플래그다. 켜졌을 때만 key 3번째 요소로 붙어
+    // slow·empty 응답을 정상 캐시와 분리한다.
+    const normalKey = productListQueryOptions({ category: "fashion" }).queryKey;
+    vi.stubEnv("NEXT_PUBLIC_MOCK_SCENARIO", "slow");
+    try {
+      const scopedKey = productListQueryOptions({ category: "fashion" }).queryKey;
+      expect(normalKey).toHaveLength(2);
+      expect(scopedKey).toEqual([...normalKey, "slow"]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("검색어의 한글·이모지가 필터↔쿼리스트링 왕복에 원형 그대로 유지된다", async () => {
