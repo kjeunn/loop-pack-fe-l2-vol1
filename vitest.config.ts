@@ -15,7 +15,8 @@ export default defineConfig({
     // 기본은 node. DOM이 필요한 테스트만 파일 상단에 `// @vitest-environment jsdom`으로 선언한다.
     // 전부 jsdom으로 돌리면 DOM이 필요 없는 테스트까지 매번 브라우저 흉내 환경을 세워,
     // 테스트가 늘수록 비용이 쌓이기 때문이다.
-    // (측정: 분리 시 환경 셋업 ~21s vs 전부 jsdom ~31s — `vitest run` 출력의 environment 항목.)
+    // (측정: `vitest run`의 environment 항목, 3회 median.
+    //  분리 ~27s(24–31s) vs 전부 jsdom ~76s(69–82s).)
     environment: "node",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
