@@ -1,3 +1,4 @@
+import { keepPreviousData } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 
@@ -24,6 +25,12 @@ describe("productListQueryOptions", () => {
       "products",
       { q: "니트", category: "fashion", sort: "price-asc", page: 2, pageSize: 15 },
     ]);
+  });
+
+  // item 4의 keepPreviousData에서 우리 책임은 "켰나"뿐이다 — 전이 동작 자체는 React Query 몫이라 믿고 넘긴다.
+  // 누가 실수로 keepPreviousData를 지우면 여기서 바로 빨간불이 된다.
+  it("재조회 중 이전 목록 유지를 위해 placeholderData에 keepPreviousData를 설정한다", () => {
+    expect(productListQueryOptions({ category: "fashion" }).placeholderData).toBe(keepPreviousData);
   });
 
   it("생략한 조건은 기본값으로 채워져, 명시했을 때와 같은 key가 된다", () => {
