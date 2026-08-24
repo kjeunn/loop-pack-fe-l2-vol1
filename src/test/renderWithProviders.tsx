@@ -7,7 +7,9 @@ import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { makeQueryClient } from "@/shared/api/queryClient";
 
 // 실제 throwOnError·retry 정책은 makeQueryClient에 있으므로 그대로 쓰고,
-// 테스트에선 재시도 지연만 없애 결과를 일정하게 만든다.
+// 테스트에선 재시도 지연만 없애 결과를 일정하게 만든다(재시도 규칙 자체는 queryClient.test가 단위로 검증).
+// retry를 실제 정책(네트워크 1회)으로 되돌린다면, 파일이 끝난 뒤 도착하는 재시도 때문에
+// 테스트는 다 통과했는데 파일만 실패로 잡힐 수 있다. 그땐 afterEach에서 cancelQueries()로 예약된 조회를 취소한다.
 export function makeTestQueryClient() {
   const client = makeQueryClient();
   const defaults = client.getDefaultOptions();
