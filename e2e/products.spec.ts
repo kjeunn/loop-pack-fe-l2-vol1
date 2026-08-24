@@ -136,6 +136,28 @@ test("카테고리를 바꾸면 결과가 갱신되고 page가 1로 돌아간다
   await expect(page).not.toHaveURL(/page=2/);
 });
 
+test("카테고리를 바꾸면 재조회 동안 이전 목록이 남고 스켈레톤이 다시 뜨지 않는다", async ({
+  page,
+}) => {
+  await page.goto("/products");
+  const results = page.getByRole("region", { name: "상품 검색 결과" });
+  const firstAddButton = () => results.getByRole("button", { name: /장바구니$/ }).first();
+
+  // 첫 목록 로드 완료.
+  await expect(firstAddButton()).toBeVisible();
+  await expect(results).toHaveAttribute("aria-busy", "false");
+
+  // 카테고리 변경 → keepPreviousData: 재조회 동안 이전 목록을 유지한다(aria-busy로 드러남).
+  await page.getByLabel("카테고리").selectOption("fashion");
+
+  // 재조회 중엔 aria-busy가 켜지고 이전 목록이 그대로 보인다 — 스켈레톤으로 비워지지 않는다.
+  await expect(results).toHaveAttribute("aria-busy", "true");
+  await expect(firstAddButton()).toBeVisible();
+
+  // 재조회가 끝나면 aria-busy가 꺼지고 새 결과로 정착한다.
+  await expect(results).toHaveAttribute("aria-busy", "false");
+});
+
 test("페이지네이션으로 다음·이전을 오간다", async ({ page }) => {
   await page.goto("/products");
 
