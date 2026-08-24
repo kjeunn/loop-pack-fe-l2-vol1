@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 describe("HeroSection", () => {
-  it("optimizes the hero image while keeping the banner contract", async () => {
+  it("renders the existing banner contract as a stable hero", async () => {
     const { HeroSection } = await import("./HeroSection");
 
     const markup = renderToStaticMarkup(
