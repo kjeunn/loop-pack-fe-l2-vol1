@@ -190,7 +190,7 @@
 
 3단계에서는 손으로 세 곳만 깨봤다. Advanced에서는 같은 일을 Stryker에 맡겨 단위 로직 전체에 자동으로 돌렸다. Stryker는 코드에 작은 변형(mutant)을 하나씩 심고 테스트를 돌린다 — 테스트가 실패하면 그 변형을 "잡았다(killed)", 그대로 통과하면 "살아남았다(survived)"로 센다. 살아남은 변형이 곧 테스트가 못 보는 사각이다.
 
-**범위를 단위 로직으로 좁혔다.** 변형 대상은 1단계에서 단위로 분류한 순수 로직 여섯 파일뿐이다 — `parseAsPage`, 조회 키, 장바구니·위시리스트 리듀서, `retry`·`throwOnError`, `isServerError`(`stryker.config.mjs`). 통합·E2E가 걸리는 컴포넌트까지 넣으면 변형 하나마다 렌더와 MSW를 다시 돌려야 해 끝나지 않는다. `coverageAnalysis: "perTest"`로 변형마다 그 코드를 덮는 테스트만(평균 3.86개) 돌려 약 3분 30초에 마쳤다. pnpm에서는 러너를 자동으로 못 찾아 `plugins: ["@stryker-mutator/vitest-runner"]`를 직접 지정해야 했다.
+**범위를 단위 로직으로 좁혔다.** 변형 대상은 1단계에서 단위로 분류한 순수 로직 여섯 파일뿐이다 — `parseAsPage`, 조회 키, 장바구니·위시리스트 리듀서, `retry`·`throwOnError`, `isServerError`(`stryker.config.mjs`). 통합·E2E가 걸리는 컴포넌트까지 넣으면 변형 하나마다 렌더와 MSW를 다시 돌려야 해 끝나지 않는다. `coverageAnalysis: "perTest"`로 변형마다 그 코드를 덮는 테스트만(평균 약 3.6개) 돌려 약 3분 30초에 마쳤다. pnpm에서는 러너를 자동으로 못 찾아 `plugins: ["@stryker-mutator/vitest-runner"]`를 직접 지정해야 했다.
 
 **손 실험이 놓친 사각을 도구가 찾아줬다.** 살아남은 변형 중 의미 있는 셋을 골라 테스트를 보강했다.
 
@@ -201,7 +201,7 @@
 | `category ?? "all"` → `?? ""` (미커버)                        | 조건을 아예 비웠을 때 카테고리가 `all`이 되는지 안 봤다                                                   | 빈 조건 → 기본값 `all` 키                                              |
 | `q`·`category` 파서 기본값 `withDefault("")`·`("all")`        | 빈 URL의 파서 기본값을 단위로 안 봤다(조회 키 normalize 기본값만 봤다)                                    | `loadProductListSearchParams`(빈 URL) → 기본값 단언                    |
 
-이 변형들은 보강한 테스트가 이제 모두 잡는다(apiError 71 → 93%, queries 83 → 89%, searchParams 83 → 100%, 미커버 0).
+이 변형들은 보강한 테스트가 이제 모두 잡는다(apiError 71 → 93%, queries 83 → 89%, searchParams 83 → 100%, 위 `category` 미커버 변형도 이제 덮인다).
 
 **어떤 테스트로도 잡을 수 없는 변형은 그대로 뒀다.** 남은 생존자는 정확성과 무관한 것들이라, 잡으려 해도 잡히지 않고 잡을 필요도 없다.
 
@@ -209,6 +209,6 @@
 - **신뢰 경계 밖 → 변형 제외** — zustand persist 배선(`migrate`·`merge`·`skipHydration`·`partialize`)은 라이브러리 지속 메커니즘이라 `// Stryker disable`로 변형 대상에서 뺐다. 우리 몫인 `sanitize`(읽기 복구)만 sync 단위로 짚는다.
 - **성능·SSR 설정** — `staleTime`·`shouldDehydrateQuery`는 캐싱·스트리밍을 조율할 뿐 정확성을 바꾸지 않는다.
 
-**총점을 재현 가능하게 만들었다.** 처음엔 실행마다 78~85%를 오갔다 — 비동기 persist 테스트의 변형이 hang→타임아웃으로 걸리고, 타임아웃 분류가 머신 부하에 흔들려서다. 원인은 persist **배선**(migrate·merge·skipHydration) 변형이었는데, 그건 zustand 몫이라 애초에 검증 대상이 아니다. 그래서 (1) 우리 로직 `sanitize`를 sync 단위(`*.sanitize.test`)로 빼 빠르게 죽이고 (2) persist 배선은 `// Stryker disable`로 변형에서 뺐다. 결과 총점이 연속 실행에 동일해져(재현 가능) 파일별·총점 모두 신호로 쓸 수 있다.
+**총점 흔들림을 좁혔다.** 처음엔 실행마다 78~85%(≈7pt)를 오갔다 — 비동기 persist 테스트의 변형이 hang→타임아웃으로 걸리고, 타임아웃 분류가 머신 부하에 흔들려서다. 원인은 persist **배선**(migrate·merge·skipHydration) 변형이었는데, 그건 zustand 몫이라 애초에 검증 대상이 아니다. 그래서 (1) 우리 로직 `sanitize`를 sync 단위(`*.sanitize.test`)로 빼 빠르게 죽이고 (2) persist 배선은 `// Stryker disable`로 변형에서 뺐다. 결과 폭이 87.8~89.6%(≈1.8pt)로 좁혀졌다 — 완전히 고정되진 않았다. 남은 흔들림은 아직 hang→timeout으로 걸리는 변형(실행마다 0~13개)에서 오는데, **타임아웃은 killed로 집계돼 머신이 바쁠수록 총점이 되레 높게(89.6%) 나온다.** 그래서 아무것도 타임아웃 안 된 실행의 바닥값 **87.83%**가 가장 믿을 만한 수치다. 폭이 7pt에서 2pt 아래로 좁아져 파일별·총점 모두 신호로 쓸 수 있다.
 
 **Stryker는 매 커밋마다 돌리지 않기로 했다.** 한 번에 3분이 넘어 커밋마다 CI에서 자동으로 돌리기엔 무겁다. 대신 순수 로직을 크게 손볼 때나 PR 전에 이따금 돌려 사각을 훑는 쪽이 맞다. 이번에도 손 실험이 놓친 자리(kind 절, 토글 대상)를 실제로 찾아줬다.
