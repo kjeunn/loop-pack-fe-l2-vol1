@@ -199,15 +199,16 @@
 | `isServerError`의 `kind === "http"` → `true`                  | network·business 오류가 status 5xx여도 서버 오류로 오판하는지 안 봤다(network를 status `null`로만 테스트) | `apiError.test.ts` 신규 — 종류별·500 경계(499)·비-ApiError를 직접 검증 |
 | 위시리스트 `filter(id !== productId)` → `filter(() => false)` | 토글-오프 테스트가 아이템 1개뿐이라 "그것만 제거"와 "전부 제거"가 구분되지 않았다                         | 두 상품을 찜한 뒤 하나만 다시 눌러 그것만 빠지는지                     |
 | `category ?? "all"` → `?? ""` (미커버)                        | 조건을 아예 비웠을 때 카테고리가 `all`이 되는지 안 봤다                                                   | 빈 조건 → 기본값 `all` 키                                              |
+| `q`·`category` 파서 기본값 `withDefault("")`·`("all")`        | 빈 URL의 파서 기본값을 단위로 안 봤다(조회 키 normalize 기본값만 봤다)                                    | `loadProductListSearchParams`(빈 URL) → 기본값 단언                    |
 
-이 세 변형은 보강한 테스트가 이제 모두 잡는다(apiError 71 → 93%, queries 83 → 89%, 미커버 0).
+이 변형들은 보강한 테스트가 이제 모두 잡는다(apiError 71 → 93%, queries 83 → 89%, searchParams 83 → 100%, 미커버 0).
 
 **어떤 테스트로도 잡을 수 없는 변형은 그대로 뒀다.** 남은 생존자는 정확성과 무관한 것들이라, 잡으려 해도 잡히지 않고 잡을 필요도 없다.
 
 - **equivalent mutant** — devtools 라벨(`{ name: "CartStore" }`)이나 에러 이름(`this.name = "ApiError"`)은 바꿔도 동작이 그대로라 어떤 테스트로도 죽일 수 없다.
-- **신뢰 경계 밖** — zustand persist 설정(`partialize`·`skipHydration`·바깥 `.catch`)은 지속 메커니즘이라 라이브러리를 믿고 넘긴다. 우리는 sanitize의 읽기 로직만 짚는다.
+- **신뢰 경계 밖 → 변형 제외** — zustand persist 배선(`migrate`·`merge`·`skipHydration`·`partialize`)은 라이브러리 지속 메커니즘이라 `// Stryker disable`로 변형 대상에서 뺐다. 우리 몫인 `sanitize`(읽기 복구)만 sync 단위로 짚는다.
 - **성능·SSR 설정** — `staleTime`·`shouldDehydrateQuery`는 캐싱·스트리밍을 조율할 뿐 정확성을 바꾸지 않는다.
 
-**총점은 참고만 한다.** 실행마다 85%와 78% 사이를 오간다. 비동기 persist 테스트가 일부 변형에서 타임아웃으로 걸리는데, 타임아웃은 "잡음(detected)"으로 세어져 그날 머신 부하에 따라 killed와 survived 사이를 오가기 때문이다. 그래서 총점보다 파일별·변형별로 무엇이 살아남았는지가 진짜 신호다.
+**총점을 재현 가능하게 만들었다.** 처음엔 실행마다 78~85%를 오갔다 — 비동기 persist 테스트의 변형이 hang→타임아웃으로 걸리고, 타임아웃 분류가 머신 부하에 흔들려서다. 원인은 persist **배선**(migrate·merge·skipHydration) 변형이었는데, 그건 zustand 몫이라 애초에 검증 대상이 아니다. 그래서 (1) 우리 로직 `sanitize`를 sync 단위(`*.sanitize.test`)로 빼 빠르게 죽이고 (2) persist 배선은 `// Stryker disable`로 변형에서 뺐다. 결과 총점이 연속 실행에 동일해져(재현 가능) 파일별·총점 모두 신호로 쓸 수 있다.
 
-**Stryker는 매 커밋마다 돌리지 않기로 했다.** 한 번에 3분이 넘고 비동기 타임아웃 잡음까지 있어, 커밋마다 CI에서 자동으로 돌리기엔 무겁다. 대신 순수 로직을 크게 손볼 때나 PR 전에 이따금 돌려 사각을 훑는 쪽이 맞다. 이번에도 손 실험이 놓친 자리(kind 절, 토글 대상)를 실제로 찾아줬다.
+**Stryker는 매 커밋마다 돌리지 않기로 했다.** 한 번에 3분이 넘어 커밋마다 CI에서 자동으로 돌리기엔 무겁다. 대신 순수 로직을 크게 손볼 때나 PR 전에 이따금 돌려 사각을 훑는 쪽이 맞다. 이번에도 손 실험이 놓친 자리(kind 절, 토글 대상)를 실제로 찾아줬다.
