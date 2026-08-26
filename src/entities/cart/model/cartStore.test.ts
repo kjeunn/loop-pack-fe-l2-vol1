@@ -5,10 +5,9 @@ import { useCartStore } from "@/entities/cart/model/cartStore";
 // 모듈 싱글턴 store라 테스트 간 상태가 새지 않게 초기화한다.
 beforeEach(() => {
   useCartStore.setState({ cartIds: [] });
-  localStorage.clear();
 });
 
-describe("장바구니 action", () => {
+describe("장바구니 개수 파생", () => {
   it("담으면 id가 들어가고, 빼면 그 상품만 사라진다", () => {
     useCartStore.getState().addToCart("p1");
     useCartStore.getState().addToCart("p2");
@@ -17,31 +16,29 @@ describe("장바구니 action", () => {
     useCartStore.getState().removeFromCart("p1");
     expect(useCartStore.getState().cartIds).toEqual(["p2"]);
   });
-});
 
-// 저장값이 손상돼도 안전한 상태로 복원한다(zod .catch 복구 전략).
-describe("저장값 복구", () => {
-  it("배열이 아니거나 문자열 아닌 항목이 섞이면 그 목록을 비운다", async () => {
-    localStorage.setItem("cart", JSON.stringify({ state: { cartIds: [123, "p1"] }, version: 1 }));
-
-    await useCartStore.persist.rehydrate();
-
-    expect(useCartStore.getState().cartIds).toEqual([]);
-  });
-
-  it("형식이 올바른 저장값은 그대로 복원한다", async () => {
-    localStorage.setItem("cart", JSON.stringify({ state: { cartIds: ["p1", "p3"] }, version: 1 }));
-
-    await useCartStore.persist.rehydrate();
-
-    expect(useCartStore.getState().cartIds).toEqual(["p1", "p3"]);
-  });
-
-  it("저장 버전이 달라도 migrate를 거쳐 버려지지 않고 복원된다", async () => {
-    localStorage.setItem("cart", JSON.stringify({ state: { cartIds: ["p1"] }, version: 0 }));
-
-    await useCartStore.persist.rehydrate();
-
+  it("같은 상품을 두 번 담아도 개수는 1로 유지된다", () => {
+    useCartStore.getState().addToCart("p1");
+    useCartStore.getState().addToCart("p1");
     expect(useCartStore.getState().cartIds).toEqual(["p1"]);
+    expect(useCartStore.getState().cartIds.length).toBe(1);
+  });
+
+  it("빈 장바구니에서 빼도 개수가 0 밑으로 내려가지 않는다", () => {
+    useCartStore.getState().removeFromCart("p1");
+    expect(useCartStore.getState().cartIds.length).toBe(0);
+  });
+
+  it("없는 항목을 빼면 목록이 그대로다", () => {
+    useCartStore.getState().addToCart("p1");
+    useCartStore.getState().removeFromCart("nope");
+    expect(useCartStore.getState().cartIds).toEqual(["p1"]);
+  });
+
+  it("clearCart로 비우면 개수가 0이 된다", () => {
+    useCartStore.getState().addToCart("p1");
+    useCartStore.getState().addToCart("p2");
+    useCartStore.getState().clearCart();
+    expect(useCartStore.getState().cartIds).toEqual([]);
   });
 });

@@ -1,0 +1,7 @@
+{
+  "threshold": 4,
+  "minTokens": 50,
+  "path": ["src"],
+  "reporters": ["console"],
+  "gitignore": true
+}
