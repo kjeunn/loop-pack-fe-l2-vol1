@@ -1,11 +1,14 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { keepPreviousData } from "@tanstack/react-query";
+import { http, HttpResponse } from "msw";
+import { describe, expect, it, vi } from "vitest";
 
 import { productListQueryOptions } from "@/features/products/api/queries";
-import { loadProductListSearchParams } from "@/features/products/model/searchParams";
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
+import {
+  loadProductListSearchParams,
+  serializeProductListSearchParams,
+} from "@/features/products/model/searchParams";
+import { makeProductListResponse } from "@/test/handlers";
+import { server } from "@/test/server";
 
 // URL에서 읽은 조회 조건이 query key와 API 요청 양쪽에 같은 값으로 반영되는지 본다.
 describe("productListQueryOptions", () => {
@@ -24,6 +27,12 @@ describe("productListQueryOptions", () => {
     ]);
   });
 
+  // item 4의 keepPreviousData에서 우리 책임은 "켰나"뿐이다 — 전이 동작 자체는 React Query 몫이라 믿고 넘긴다.
+  // 누가 실수로 keepPreviousData를 지우면 여기서 바로 빨간불이 된다.
+  it("재조회 중 이전 목록 유지를 위해 placeholderData에 keepPreviousData를 설정한다", () => {
+    expect(productListQueryOptions({ category: "fashion" }).placeholderData).toBe(keepPreviousData);
+  });
+
   it("생략한 조건은 기본값으로 채워져, 명시했을 때와 같은 key가 된다", () => {
     const omitted = productListQueryOptions({ category: "home" });
     const explicit = productListQueryOptions({
@@ -37,14 +46,60 @@ describe("productListQueryOptions", () => {
     expect(omitted.queryKey).toEqual(explicit.queryKey);
   });
 
+  it("아무 조건도 없으면 카테고리 기본값 all이 채워진다", () => {
+    const key = productListQueryOptions({}).queryKey;
+    expect(key).toEqual([
+      "products",
+      { q: "", category: "all", sort: "latest", page: 1, pageSize: 10 },
+    ]);
+  });
+
+  it("다른 조건은 다른 키가 되어 캐시가 갈린다", () => {
+    const fashion = productListQueryOptions({ category: "fashion" }).queryKey;
+    const home = productListQueryOptions({ category: "home" }).queryKey;
+    expect(fashion).not.toEqual(home);
+  });
+
+  it("측정 시나리오가 켜지면 key에 시나리오가 덧붙어 정상 응답과 캐시가 갈린다", () => {
+    // scenario는 URL 조건이 아니라 측정용 env 플래그다. 켜졌을 때만 key 3번째 요소로 붙어
+    // slow·empty 응답을 정상 캐시와 분리한다.
+    const normalKey = productListQueryOptions({ category: "fashion" }).queryKey;
+    vi.stubEnv("NEXT_PUBLIC_MOCK_SCENARIO", "slow");
+    try {
+      const scopedKey = productListQueryOptions({ category: "fashion" }).queryKey;
+      expect(normalKey).toHaveLength(2);
+      expect(scopedKey).toEqual([...normalKey, "slow"]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("검색어의 한글·이모지가 필터↔쿼리스트링 왕복에 원형 그대로 유지된다", async () => {
+    // URL 일치는 요청을 보내지 않고, 직렬화했다가 다시 파싱하는 왕복으로 확인한다.
+    const querystring = serializeProductListSearchParams({ q: "니트🧥" });
+    const restored = await loadProductListSearchParams(new URLSearchParams(querystring));
+    expect(restored.q).toBe("니트🧥");
+  });
+
+  it("검색어의 URL 특수문자(&, =)도 왕복에 원형 그대로 유지된다", async () => {
+    const querystring = serializeProductListSearchParams({ q: "a&b=c" });
+    const restored = await loadProductListSearchParams(new URLSearchParams(querystring));
+    expect(restored.q).toBe("a&b=c");
+  });
+
   it("API 요청 URL이 query key와 같은 조건을 담는다", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-    vi.stubGlobal("fetch", fetchMock);
+    // fetch를 직접 바꿔치기하지 않고, MSW가 실제로 나간 요청 URL을 가로채 확인한다.
+    let requestedUrl: string | undefined;
+    server.use(
+      http.get("*/api/products", ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json(makeProductListResponse());
+      }),
+    );
 
     const options = productListQueryOptions({ category: "fashion", sort: "price-asc", page: 2 });
     await options.queryFn!({ queryKey: options.queryKey } as never);
 
-    const requestedUrl = String(fetchMock.mock.calls[0][0]);
     expect(requestedUrl).toContain("category=fashion");
     expect(requestedUrl).toContain("sort=price-asc");
     expect(requestedUrl).toContain("page=2");
@@ -54,17 +109,20 @@ describe("productListQueryOptions", () => {
   // productListQueryOptions에 넘긴다. 이 공유 경로가 만드는 GET URL을 고정해,
   // 한쪽 필터만 늘어 두 경로가 조용히 갈라지는 걸 막는다.
   it("metadata·본문이 공유하는 파서→팩토리 경로가 하나의 GET URL로 고정된다", async () => {
+    let requestedUrl: string | undefined;
+    server.use(
+      http.get("*/api/products", ({ request }) => {
+        requestedUrl = request.url;
+        return HttpResponse.json(makeProductListResponse());
+      }),
+    );
+
     const query = await loadProductListSearchParams({ q: "니트", category: "fashion" });
-
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-    vi.stubGlobal("fetch", fetchMock);
-
     const options = productListQueryOptions(query);
     await options.queryFn!({ queryKey: options.queryKey } as never);
 
-    // 클라 환경(jsdom)에선 상대 URL이라 base를 붙여 파싱한다.
-    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]), "http://localhost");
-    expect(decodeURIComponent(requestedUrl.search)).toBe(
+    const url = new URL(requestedUrl!);
+    expect(decodeURIComponent(url.search)).toBe(
       "?q=니트&category=fashion&sort=latest&page=1&pageSize=10",
     );
   });

@@ -2,7 +2,7 @@ import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-// jsdom 환경에서 컴포넌트/훅을 렌더해 테스트한다. @/ 별칭은 tsconfig와 맞춘다.
+// @/ 별칭은 tsconfig와 맞춘다. 환경은 기본 node이고, DOM이 필요한 테스트만 jsdom으로 선언한다(아래).
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -12,12 +12,18 @@ export default defineConfig({
   // 이걸 비우지 않으면 CSS 모듈을 렌더하는 컴포넌트 테스트가 PostCSS 로드에서 실패한다.
   css: { postcss: { plugins: [] } },
   test: {
-    environment: "jsdom",
+    // 기본은 node. DOM이 필요한 테스트만 파일 상단에 `// @vitest-environment jsdom`으로 선언한다.
+    // 전부 jsdom으로 돌리면 DOM이 필요 없는 테스트까지 매번 브라우저 흉내 환경을 세워,
+    // 테스트가 늘수록 비용이 쌓이기 때문이다.
+    // (측정: `vitest run`의 environment 항목, 3회 median.
+    //  분리 ~27s(24–31s) vs 전부 jsdom ~76s(69–82s).)
+    environment: "node",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     // appOrigin은 미설정 시 throw하므로 테스트 환경에 origin을 준다(비배포 컨텍스트).
     env: { APP_ORIGIN: "http://localhost:3000" },
-    // e2e(Playwright)는 별도 러너라 vitest 대상에서 제외한다.
-    exclude: ["e2e/**", "node_modules/**", ".claude/**"],
+    // e2e(Playwright)는 별도 러너라 제외한다. .stryker-tmp는 프로젝트 사본이 든 뮤테이션
+    // 샌드박스라, 제외하지 않으면 그 안의 (node_modules 포함) 테스트까지 주워 돈다.
+    exclude: ["e2e/**", "**/node_modules/**", ".claude/**", ".stryker-tmp/**"],
   },
 });

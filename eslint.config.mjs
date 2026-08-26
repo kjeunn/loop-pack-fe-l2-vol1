@@ -4,6 +4,7 @@ import nextTs from "eslint-config-next/typescript";
 import eslintConfigPrettier from "eslint-config-prettier";
 import boundaries from "eslint-plugin-boundaries";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
+import sonarjs from "eslint-plugin-sonarjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -13,7 +14,7 @@ const eslintConfig = defineConfig([
   // react/react-hooks/@typescript-eslint 플러그인은 eslint-config-next가 이미 등록했으므로
   // 여기선 룰만 강화하고, 새 플러그인(simple-import-sort)만 추가로 등록한다.
   {
-    plugins: { "simple-import-sort": simpleImportSort },
+    plugins: { "simple-import-sort": simpleImportSort, sonarjs },
     // eslint-disable 인라인 우회 금지 (하네스 규칙)
     linterOptions: { noInlineConfig: true },
     rules: {
@@ -31,6 +32,11 @@ const eslintConfig = defineConfig([
         },
       ],
       "simple-import-sort/exports": "error",
+
+      // ── 중복 코드: 도구로 강제 ──
+      // 같은 본문의 함수가 두 번 이상 나타나면(공통 로직 복붙) 막는다 — 단일 책임 단위로 추출하게.
+      // 3줄 이상 함수만 비교한다(sonarjs 기본 threshold).
+      "sonarjs/no-identical-functions": "error",
 
       // ── TypeScript ──
       "@typescript-eslint/no-explicit-any": "error", // any = 타입 안전성 포기

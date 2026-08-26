@@ -32,7 +32,8 @@ export const SORT_VALUES = [
 // API는 1 미만이거나 정수가 아닌 page를 400으로 막는다.
 // 주소창에 직접 친 값도 여기서 걸러 잘못된 요청 자체를 만들지 않는다.
 // null을 반환하면 nuqs가 withDefault 값으로 되돌린다.
-const parseAsPage = createParser({
+// parse()의 거르기(0·음수·소수·문자→null)를 단위 테스트에서 격리해 확인하려고 export한다.
+export const parseAsPage = createParser({
   parse: (value) => {
     const page = Number(value);
     return Number.isInteger(page) && page >= 1 ? page : null;

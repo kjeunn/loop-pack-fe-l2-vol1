@@ -1,21 +1,48 @@
+// @vitest-environment jsdom
 import { act, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCartStore } from "@/entities/cart/model/cartStore";
 import { useWishlistStore } from "@/entities/wishlist/model/wishlistStore";
 import { Header } from "@/widgets/header/ui/Header";
 
-beforeEach(async () => {
+beforeEach(() => {
   localStorage.clear();
-  // 헤더는 복원 완료 후에만 개수를 보여준다. 복원을 먼저 끝내 그 이후 상태를 검증한다.
-  await useCartStore.persist.rehydrate();
-  await useWishlistStore.persist.rehydrate();
   useCartStore.setState({ cartIds: [] });
   useWishlistStore.setState({ wishlistIds: [] });
 });
 
+// hasHydrated spy가 다음 테스트로 새지 않게 되돌린다.
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 // 헤더 개수는 별도 저장이 아니라 store id 목록에서 파생된다.
+describe("헤더 하이드레이션 게이트", () => {
+  it("복원 전에는 개수 대신 로딩(Skeleton)을 보인다", () => {
+    // hasHydrated는 모듈 싱글턴이라 한 번 true가 되면 되돌릴 수 없다.
+    // 다른 테스트가 먼저 복원하면(무작위 순서 실행) "복원 전" 전제가 깨지므로,
+    // false로 고정해 순서와 무관하게 이 분기를 검증한다.
+    vi.spyOn(useCartStore.persist, "hasHydrated").mockReturnValue(false);
+    vi.spyOn(useWishlistStore.persist, "hasHydrated").mockReturnValue(false);
+
+    render(<Header />);
+
+    // skipHydration이라 복원 전엔 잘못된 0 대신 Skeleton — 개수 span이 없다.
+    expect(screen.queryByText(/장바구니 \d/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/위시리스트 \d/)).not.toBeInTheDocument();
+  });
+});
+
+// 복원이 끝난 상태를 전제한다. 복원 후 개수가 나타나는 것도 여기서 함께 확인된다.
 describe("헤더 개수 파생", () => {
+  beforeEach(async () => {
+    await useCartStore.persist.rehydrate();
+    await useWishlistStore.persist.rehydrate();
+    useCartStore.setState({ cartIds: [] });
+    useWishlistStore.setState({ wishlistIds: [] });
+  });
+
   it("담고 찜하면 헤더 개수가 따라 바뀐다", () => {
     render(<Header />);
 
@@ -30,5 +57,20 @@ describe("헤더 개수 파생", () => {
 
     expect(screen.getByText("장바구니 2")).toBeInTheDocument();
     expect(screen.getByText("위시리스트 1")).toBeInTheDocument();
+  });
+
+  it("담았다 다시 빼면 헤더 개수가 줄어든다", () => {
+    render(<Header />);
+
+    act(() => {
+      useCartStore.getState().addToCart("p1");
+      useCartStore.getState().addToCart("p2");
+    });
+    expect(screen.getByText("장바구니 2")).toBeInTheDocument();
+
+    act(() => {
+      useCartStore.getState().removeFromCart("p1");
+    });
+    expect(screen.getByText("장바구니 1")).toBeInTheDocument();
   });
 });
