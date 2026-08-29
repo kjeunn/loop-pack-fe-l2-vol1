@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 
 import { categories } from "@/app/api/_data/commerce";
 import type { Product } from "@/entities/product/model/types";
+import type { SessionUser } from "@/entities/session/model/types";
 import type { ProductListResponse } from "@/features/products/api/queries";
 
 // 픽스처는 여기 한 곳에서만 만든다. 테스트마다 객체 리터럴을 새로 쓰지 않고 이 팩토리를 쓰면,
@@ -38,8 +39,15 @@ export function makeProductListResponse(
   };
 }
 
+// 로그인 응답의 user. 실제 응답 타입(SessionUser)을 붙여 스키마가 어긋나면 타입 에러로 먼저 걸린다.
+export function makeSessionUser(overrides: Partial<SessionUser> = {}): SessionUser {
+  return { id: "u1", name: "루퍼1", email: "looper1@loopers.dev", ...overrides };
+}
+
 // 기본 핸들러에는 성공 경로만 둔다.
 // 실패·지연·빈 결과는 각 테스트에서 server.use()로 덮는다.
 export const handlers = [
   http.get("*/api/products", () => HttpResponse.json(makeProductListResponse())),
+  http.post("*/api/auth/login", () => HttpResponse.json({ user: makeSessionUser() })),
+  http.post("*/api/auth/logout", () => new HttpResponse(null, { status: 204 })),
 ];
