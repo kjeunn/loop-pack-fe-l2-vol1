@@ -3,7 +3,9 @@
 import Link from "next/link";
 
 import { useCartCount, useCartHydrated } from "@/entities/cart";
+import { useSession } from "@/entities/session/ui/SessionProvider";
 import { useWishlistCount, useWishlistHydrated } from "@/entities/wishlist";
+import { LogoutButton } from "@/features/auth/ui/LogoutButton";
 import { ClearCartButton } from "@/features/clear-cart/ui/ClearCartButton";
 import { Skeleton } from "@/shared/ui/loading/Skeleton";
 
@@ -14,6 +16,7 @@ export function Header() {
   const wishlistHydrated = useWishlistHydrated();
   const wishlistCount = useWishlistCount();
   const cartCount = useCartCount();
+  const { user, isLoggedIn } = useSession();
 
   return (
     <header className="week05-header">
@@ -33,6 +36,15 @@ export function Header() {
         )}
         {/* 정식 위치는 장바구니 페이지지만, 이 프로젝트엔 그 페이지가 없어 개수를 보여주는 헤더에 둔다(데모 타협). */}
         <ClearCartButton />
+        {/* 로그인 상태는 서버가 SessionProvider로 내린 값이라 하이드레이션 없이 바로 렌더된다(스켈레톤 불필요). */}
+        {isLoggedIn ? (
+          <>
+            <span>{user?.name}</span>
+            <LogoutButton />
+          </>
+        ) : (
+          <Link href="/login">로그인</Link>
+        )}
       </nav>
     </header>
   );
