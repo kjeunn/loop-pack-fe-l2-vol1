@@ -19,5 +19,5 @@ export function proxy(request: NextRequest) {
 
 // 보호 경로만 매칭한다 — 주문서·주문내역. 공개 경로(홈·상품·장바구니·로그인)는 여기 없다.
 export const config = {
-  matcher: ["/checkout", "/orders"],
+  matcher: ["/order-form", "/orders"],
 };

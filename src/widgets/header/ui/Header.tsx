@@ -30,7 +30,7 @@ export function Header() {
           <Skeleton className="inline-block h-5 w-20 rounded align-middle" />
         )}
         {cartHydrated ? (
-          <span>장바구니 {cartCount}</span>
+          <Link href="/cart">장바구니 {cartCount}</Link>
         ) : (
           <Skeleton className="inline-block h-5 w-20 rounded align-middle" />
         )}
@@ -39,6 +39,7 @@ export function Header() {
         {/* 로그인 상태는 서버가 SessionProvider로 내린 값이라 하이드레이션 없이 바로 렌더된다(스켈레톤 불필요). */}
         {isLoggedIn ? (
           <>
+            <Link href="/orders">주문 내역</Link>
             <span>{user?.name}</span>
             <LogoutButton />
           </>
