@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,8 +12,12 @@ import { server } from "@/test/server";
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
+const trackEvent = vi.hoisted(() => vi.fn());
+vi.mock("@/analytics/schema", () => ({ trackEvent }));
+
 beforeEach(async () => {
   router.push.mockClear();
+  trackEvent.mockClear();
   // 하이드레이션을 끝내 "복원 중" 분기를 지나게 하고, cart를 원하는 상태로 세운다.
   await useCartStore.persist.rehydrate();
   useCartStore.setState({ cartIds: [] });
@@ -51,5 +55,54 @@ describe("OrderForm", () => {
     });
     // 성공 뒤 장바구니가 비워진다.
     expect(useCartStore.getState().cartIds).toEqual([]);
+  });
+});
+
+describe("OrderForm 계측 — order_start 발화 조건", () => {
+  it("담은 상품이 있으면 진입 시 order_start를 담긴 productIds와 함께 1회 찍는다", () => {
+    useCartStore.setState({ cartIds: ["p1", "p2"] });
+    renderWithProviders(<OrderForm />);
+
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("order_start", {
+      productIds: ["p1", "p2"],
+    });
+  });
+
+  it("빈 장바구니로 진입하면 order_start를 찍지 않는다", () => {
+    // cart가 비어 있으면 주문 시작이 아니므로 찍지 않는다(빈 productIds가 새어 나가지 않게).
+    renderWithProviders(<OrderForm />);
+
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
+
+  it("장바구니가 바뀌어 리렌더돼도 order_start를 중복해서 찍지 않는다", () => {
+    useCartStore.setState({ cartIds: ["p1"] });
+    renderWithProviders(<OrderForm />);
+    expect(trackEvent).toHaveBeenCalledOnce();
+
+    // cart 상태 변화로 컴포넌트가 다시 렌더돼도, 이미 찍은 order_start는 다시 나가지 않는다.
+    act(() => useCartStore.setState({ cartIds: ["p1", "p2"] }));
+
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("order_start", { productIds: ["p1"] });
+  });
+
+  it("주문에 성공하면 order_complete를 담겼던 productIds와 함께 찍는다", async () => {
+    server.use(
+      http.post("*/api/orders", () =>
+        HttpResponse.json(
+          { order: { id: "o1", createdAt: "2026-01-01T00:00:00.000Z", items: [] } },
+          { status: 201 },
+        ),
+      ),
+    );
+    useCartStore.setState({ cartIds: ["p1", "p2"] });
+    const user = userEvent.setup();
+    renderWithProviders(<OrderForm />);
+
+    await user.click(screen.getByRole("button", { name: "주문하기" }));
+
+    await vi.waitFor(() =>
+      expect(trackEvent).toHaveBeenCalledWith("order_complete", { productIds: ["p1", "p2"] }),
+    );
   });
 });

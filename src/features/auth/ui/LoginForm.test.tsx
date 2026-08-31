@@ -12,9 +12,13 @@ import { server } from "@/test/server";
 const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
+const trackEvent = vi.hoisted(() => vi.fn());
+vi.mock("@/analytics/schema", () => ({ trackEvent }));
+
 beforeEach(() => {
   router.replace.mockClear();
   router.refresh.mockClear();
+  trackEvent.mockClear();
 });
 
 describe("LoginForm", () => {
@@ -47,5 +51,53 @@ describe("LoginForm", () => {
       "이메일 또는 비밀번호를 확인해주세요.",
     );
     expect(router.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("LoginForm 계측", () => {
+  it("보호 경로에서 왔으면 login_start의 from에 그 경로를 싣는다", () => {
+    renderWithProviders(<LoginForm redirect="/order-form" />);
+
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("login_start", { from: "/order-form" });
+  });
+
+  it("직접 진입이면 login_start의 from은 direct다", () => {
+    renderWithProviders(<LoginForm redirect={null} />);
+
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("login_start", { from: "direct" });
+  });
+
+  it("로그인에 성공하면 login_success를 from과 함께 찍는다", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<LoginForm redirect="/orders" />);
+
+    await user.type(screen.getByLabelText("이메일"), "looper1@loopers.dev");
+    await user.type(screen.getByLabelText("비밀번호"), "looper1234");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    await vi.waitFor(() =>
+      expect(trackEvent).toHaveBeenCalledWith("login_success", { from: "/orders" }),
+    );
+  });
+
+  it("자격 증명이 틀리면 login_fail을 사유와 함께 찍고 login_success는 찍지 않는다", async () => {
+    server.use(
+      http.post("*/api/auth/login", () =>
+        HttpResponse.json({ message: "이메일 또는 비밀번호를 확인해주세요." }, { status: 401 }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<LoginForm redirect={null} />);
+
+    await user.type(screen.getByLabelText("이메일"), "looper1@loopers.dev");
+    await user.type(screen.getByLabelText("비밀번호"), "wrong");
+    await user.click(screen.getByRole("button", { name: "로그인" }));
+
+    await vi.waitFor(() =>
+      expect(trackEvent).toHaveBeenCalledWith("login_fail", {
+        reason: "이메일 또는 비밀번호를 확인해주세요.",
+      }),
+    );
+    expect(trackEvent).not.toHaveBeenCalledWith("login_success", expect.anything());
   });
 });
