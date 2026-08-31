@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { readSessionToken } from "@/app/api/_data/auth";
 import { SESSION_COOKIE } from "@/app/api/_data/auth-cookies";
 import { SessionProvider } from "@/entities/session/ui/SessionProvider";
+import { AnalyticsSessionSync } from "@/features/analytics/ui/AnalyticsSessionSync";
 import { Header } from "@/widgets/header/ui/Header";
 
 import "@/shared/ui/week-05-layout.css";
@@ -21,6 +22,8 @@ export default async function CommerceLayout({ children }: { children: React.Rea
   return (
     <main className="week05-page">
       <SessionProvider user={user}>
+        {/* 로그인 상태를 계측에 잇는다(userId identify/reset). SessionProvider 안이라 useSession을 읽는다. */}
+        <AnalyticsSessionSync />
         <Header />
         {children}
       </SessionProvider>
