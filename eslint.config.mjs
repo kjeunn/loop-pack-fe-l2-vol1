@@ -183,7 +183,11 @@ const eslintConfig = defineConfig([
     "src/app/api/auth/**",
     "src/app/api/orders/**",
     "src/app/api/_data/auth*",
-    "src/analytics/**",
+    // 스타터가 준 이벤트 로거 파일만 제외한다. 그 위에 우리가 얹는 스키마·셋업은 lint를 받는다.
+    "src/analytics/logger.ts",
+    "src/analytics/logger.test.ts",
+    "src/analytics/provider.ts",
+    "src/analytics/consoleProvider.ts",
   ]),
 
   // Override default ignores of eslint-config-next.
