@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { useCartHydrated, useCartIds, useRemoveFromCart } from "@/entities/cart";
 
-// 공개 장바구니 뷰. 익명으로 담은 것을 로그인 없이 확인·수정하고, 주문은 체크아웃에서 로그인 게이트를 지난다.
+// 공개 장바구니 뷰. 익명으로 담은 것을 로그인 없이 확인·수정하고, 주문은 주문서에서 로그인 게이트를 지난다.
 export function CartList() {
   const cartHydrated = useCartHydrated();
   const cartIds = useCartIds();

@@ -6,7 +6,7 @@ export function useCartCount() {
   return useCartStore((state) => state.cartIds.length);
 }
 
-// 주문서가 담은 상품 id 목록을 읽는다. 배열이라 store가 바뀌면 리렌더된다(체크아웃은 라이브 cart를 보여준다).
+// 주문서가 담은 상품 id 목록을 읽는다. 배열이라 store가 바뀌면 리렌더된다(주문서는 라이브 cart를 보여준다).
 export function useCartIds() {
   return useCartStore((state) => state.cartIds);
 }
