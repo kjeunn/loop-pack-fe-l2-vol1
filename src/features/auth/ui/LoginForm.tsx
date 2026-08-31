@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useRouter } from "next/navigation";
 
+import { trackEvent } from "@/analytics/schema";
 import { useLogin } from "@/features/auth/api/mutations";
 import { safeRedirect } from "@/shared/lib/safeRedirect";
 
@@ -18,15 +19,24 @@ export function LoginForm({ redirect }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // 로그인 화면 진입을 1회 기록한다. from은 어디서 왔는지 — 보호 경로 리다이렉트면 그 경로, 아니면 direct.
+  useEffect(() => {
+    trackEvent("login_start", { from: redirect ?? "direct" });
+  }, [redirect]);
+
   const submit = () => {
     login.mutate(
       { email, password },
       {
         onSuccess: () => {
+          trackEvent("login_success", { from: redirect ?? "direct" });
           // 서버 파생 상태(헤더 로그인 등)를 갱신하고 원래 경로로 돌린다.
           // redirect는 신뢰할 수 없으므로 여기서 다시 검증한다(오픈 리다이렉트 방어).
           router.replace(safeRedirect(redirect));
           router.refresh();
+        },
+        onError: (error) => {
+          trackEvent("login_fail", { reason: error.message });
         },
       },
     );

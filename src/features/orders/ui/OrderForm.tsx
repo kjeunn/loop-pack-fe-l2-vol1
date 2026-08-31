@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
+import { trackEvent } from "@/analytics/schema";
 import { useCartHydrated, useCartIds, useClearCart } from "@/entities/cart";
 import { useCreateOrder } from "@/features/orders/api/mutations";
 import { ordersQueryOptions } from "@/features/orders/api/queries";
@@ -15,12 +18,25 @@ export function OrderForm() {
   const clearCart = useClearCart();
   const createOrder = useCreateOrder();
 
+  // 주문서 진입을 1회 기록한다. 하이드레이션 전엔 cart가 비어 있어 복원이 끝나고 담긴 게 있을 때 찍는다.
+  const orderStartTracked = useRef(false);
+  useEffect(() => {
+    if (orderStartTracked.current || !cartHydrated || cartIds.length === 0) {
+      return;
+    }
+    orderStartTracked.current = true;
+    trackEvent("order_start", { productIds: cartIds });
+  }, [cartHydrated, cartIds]);
+
   const submit = () => {
+    // clearCart가 cartIds를 비우기 전에 주문 상품을 캡처해 order_complete에 싣는다.
+    const orderedIds = cartIds;
     // cart는 수량 개념이 없어(5주차 결정) 담긴 각 상품을 수량 1로 주문한다.
     createOrder.mutate(
-      { items: cartIds.map((productId) => ({ productId, quantity: 1 })) },
+      { items: orderedIds.map((productId) => ({ productId, quantity: 1 })) },
       {
         onSuccess: () => {
+          trackEvent("order_complete", { productIds: orderedIds });
           clearCart();
           // 새 주문이 내역에 바로 보이도록 무효화하고 주문내역으로 이동한다.
           void queryClient.invalidateQueries({ queryKey: ordersQueryOptions().queryKey });
