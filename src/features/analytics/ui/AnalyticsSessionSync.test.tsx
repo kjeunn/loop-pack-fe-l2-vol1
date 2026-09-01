@@ -3,8 +3,8 @@ import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionUser } from "@/entities/session/model/types";
-import { SessionProvider } from "@/entities/session/ui/SessionProvider";
 import { AnalyticsSessionSync } from "@/features/analytics/ui/AnalyticsSessionSync";
+import { looperUser, withSession } from "@/test/session";
 
 // 로거의 identify/reset과 공통 프로퍼티의 setAnalyticsUser를 감시한다.
 const identify = vi.hoisted(() => vi.fn());
@@ -13,16 +13,12 @@ const setAnalyticsUser = vi.hoisted(() => vi.fn());
 vi.mock("@/analytics/logger", () => ({ identify, reset }));
 vi.mock("@/analytics/session", () => ({ setAnalyticsUser }));
 
-const USER: SessionUser = { id: "u1", name: "루퍼1", email: "looper1@loopers.dev" };
+const USER = looperUser(1);
 
-const USER2: SessionUser = { id: "u2", name: "루퍼2", email: "looper2@loopers.dev" };
+const USER2 = looperUser(2);
 
 function tree(user: SessionUser | null) {
-  return (
-    <SessionProvider user={user}>
-      <AnalyticsSessionSync />
-    </SessionProvider>
-  );
+  return withSession(user, <AnalyticsSessionSync />);
 }
 
 // 세션 상태를 바꿔 다시 렌더한다(로그인↔로그아웃 전환 재현).

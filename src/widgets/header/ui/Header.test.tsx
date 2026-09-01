@@ -3,9 +3,9 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCartStore } from "@/entities/cart/model/cartStore";
-import { SessionProvider } from "@/entities/session/ui/SessionProvider";
 import { useWishlistStore } from "@/entities/wishlist/model/wishlistStore";
 import { renderWithProviders } from "@/test/renderWithProviders";
+import { looperUser, withSession } from "@/test/session";
 import { Header } from "@/widgets/header/ui/Header";
 
 // 로그인 상태 테스트의 LogoutButton이 useRouter를 쓴다. 비로그인 테스트에선 렌더되지 않아 무해하다.
@@ -91,11 +91,7 @@ describe("헤더 로그인 상태", () => {
   });
 
   it("로그인 상태면 이름과 로그아웃을 보이고 로그인 링크는 없다", () => {
-    renderWithProviders(
-      <SessionProvider user={{ id: "u1", name: "루퍼1", email: "looper1@loopers.dev" }}>
-        <Header />
-      </SessionProvider>,
-    );
+    renderWithProviders(withSession(looperUser(1), <Header />));
 
     expect(screen.getByText("루퍼1")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();

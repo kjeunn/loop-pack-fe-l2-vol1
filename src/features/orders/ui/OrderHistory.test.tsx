@@ -3,16 +3,13 @@ import { screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 
-import type { SessionUser } from "@/entities/session/model/types";
-import { SessionProvider } from "@/entities/session/ui/SessionProvider";
 import { OrderHistory } from "@/features/orders/ui/OrderHistory";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { server } from "@/test/server";
-
-const LOGGED_IN: SessionUser = { id: "u1", name: "루퍼1", email: "looper1@loopers.dev" };
+import { looperUser, withSession } from "@/test/session";
 
 function renderLoggedIn(ui: React.ReactNode) {
-  return renderWithProviders(<SessionProvider user={LOGGED_IN}>{ui}</SessionProvider>);
+  return renderWithProviders(withSession(looperUser(1), ui));
 }
 
 describe("OrderHistory", () => {
