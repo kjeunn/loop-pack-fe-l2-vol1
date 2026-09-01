@@ -4,11 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LogoutButton } from "@/features/auth/ui/LogoutButton";
+import { routerMock as router } from "@/test/navigation";
 import { renderWithProviders } from "@/test/renderWithProviders";
 
-const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
-
+// next/navigation은 setup.ts에서 전역 목킹한다. router 호출은 그 목 실체(routerMock)로 검증한다.
 beforeEach(() => {
   router.replace.mockClear();
   router.refresh.mockClear();

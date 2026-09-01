@@ -8,10 +8,7 @@ import { renderWithProviders } from "@/test/renderWithProviders";
 import { looperUser, withSession } from "@/test/session";
 import { Header } from "@/widgets/header/ui/Header";
 
-// 로그인 상태 테스트의 LogoutButton이 useRouter를 쓴다. 비로그인 테스트에선 렌더되지 않아 무해하다.
-const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
-
+// 로그인 상태 테스트의 LogoutButton이 useRouter를 쓴다. next/navigation은 setup.ts에서 전역 목킹한다.
 beforeEach(() => {
   localStorage.clear();
   useCartStore.setState({ cartIds: [] });

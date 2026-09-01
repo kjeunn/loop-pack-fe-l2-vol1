@@ -6,12 +6,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCartStore } from "@/entities/cart/model/cartStore";
 import { OrderForm } from "@/features/orders/ui/OrderForm";
+import { routerMock as router } from "@/test/navigation";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { server } from "@/test/server";
 
-const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
-
+// next/navigation은 setup.ts에서 전역 목킹한다. router 호출은 그 목 실체(routerMock)로 검증한다.
 const trackEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/analytics/schema", () => ({ trackEvent }));
 

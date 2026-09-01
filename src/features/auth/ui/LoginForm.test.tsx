@@ -5,13 +5,11 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "@/features/auth/ui/LoginForm";
+import { routerMock as router } from "@/test/navigation";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { server } from "@/test/server";
 
-// next/navigation의 useRouter를 목킹한다. hoisted로 만들어야 위로 끌어올려지는 vi.mock 팩토리에서 참조된다.
-const router = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
-
+// next/navigation은 setup.ts에서 전역 목킹한다. router 호출은 그 목 실체(routerMock)로 검증한다.
 const trackEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/analytics/schema", () => ({ trackEvent }));
 
