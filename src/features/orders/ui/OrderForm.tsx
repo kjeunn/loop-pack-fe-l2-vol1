@@ -9,6 +9,10 @@ import { trackEvent } from "@/analytics/schema";
 import { useCartHydrated, useCartIds, useClearCart } from "@/entities/cart";
 import { useCreateOrder } from "@/features/orders/api/mutations";
 import { ordersQueryOptions } from "@/features/orders/api/queries";
+import buttonStyles from "@/shared/ui/button.module.css";
+import { LoadingDots } from "@/shared/ui/loading-dots/LoadingDots";
+
+import styles from "./OrderForm.module.css";
 
 export function OrderForm() {
   const router = useRouter();
@@ -46,24 +50,40 @@ export function OrderForm() {
     );
   };
 
+  // 성공 후에도 화면 전환(주문내역으로 push)이 끝날 때까지 로딩을 유지한다.
+  const isSubmitting = createOrder.isPending || createOrder.isSuccess;
+
   // 복원 전엔 빈 목록을 잘못 보여주지 않도록 하이드레이션을 기다린다.
   if (!cartHydrated) {
-    return <p>불러오는 중…</p>;
+    return <p className={styles.message}>불러오는 중…</p>;
   }
-  if (cartIds.length === 0) {
-    return <p>담은 상품이 없습니다.</p>;
+  // 주문 성공 시 clearCart로 cart가 비지만, 전환 전까지 "담은 상품 없음"이 번쩍이지 않게 성공 중엔 유지한다.
+  if (cartIds.length === 0 && !createOrder.isSuccess) {
+    return <p className={styles.message}>담은 상품이 없습니다.</p>;
   }
 
   return (
     <>
-      <ul>
+      <ul className={styles.list}>
         {cartIds.map((id) => (
-          <li key={id}>{id}</li>
+          <li key={id} className={styles.item}>
+            {id}
+          </li>
         ))}
       </ul>
-      {createOrder.isError && <p role="alert">{createOrder.error?.message}</p>}
-      <button type="button" onClick={submit} disabled={createOrder.isPending}>
-        {createOrder.isPending ? "주문 중…" : "주문하기"}
+      {createOrder.isError && (
+        <p role="alert" className={styles.error}>
+          {createOrder.error?.message}
+        </p>
+      )}
+      <button
+        type="button"
+        className={buttonStyles.primary}
+        onClick={submit}
+        disabled={isSubmitting}
+        aria-label={isSubmitting ? "주문 중" : undefined}
+      >
+        {isSubmitting ? <LoadingDots /> : "주문하기"}
       </button>
     </>
   );

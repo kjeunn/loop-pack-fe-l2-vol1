@@ -1,4 +1,5 @@
 import { LoginForm } from "@/features/auth/ui/LoginForm";
+import styles from "@/shared/ui/focused-page.module.css";
 
 type LoginPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -11,7 +12,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const redirect = typeof params.redirect === "string" ? params.redirect : null;
 
   return (
-    <section>
+    <section className={styles.page}>
       <h1>로그인</h1>
       <LoginForm redirect={redirect} />
     </section>
