@@ -177,6 +177,14 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // e2e(Playwright)는 React가 아니다. 픽스처 제공 콜백의 관례명 `use`를
+  // react-hooks/rules-of-hooks가 React의 `use` 훅 호출로 오인해 오탐을 내므로,
+  // 이 폴더에서만 끈다. 선언형이라 앞으로 fixture를 더 만들어도 깨지지 않는다.
+  {
+    files: ["e2e/**/*.ts"],
+    rules: { "react-hooks/rules-of-hooks": "off" },
+  },
+
   // 9주차 스타터(#174 병합)가 제공한 예시 코드 — 인증 mock 백엔드와 이벤트 로거.
   // 우리가 짠 게 아니라 과제용으로 들어온 코드라, 우리 컨벤션(import 정렬·no-console 등)을 강제하지 않는다.
   globalIgnores([
