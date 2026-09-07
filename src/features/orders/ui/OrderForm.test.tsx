@@ -5,6 +5,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useCartStore } from "@/entities/cart/model/cartStore";
+import { ordersQueryOptions } from "@/features/orders/api/queries";
 import { OrderForm } from "@/features/orders/ui/OrderForm";
 import { routerMock as router } from "@/test/navigation";
 import { renderWithProviders } from "@/test/renderWithProviders";
@@ -54,6 +55,37 @@ describe("OrderForm", () => {
     });
     // 성공 뒤 장바구니가 비워진다.
     expect(useCartStore.getState().cartIds).toEqual([]);
+  });
+
+  it("요청 중 화면을 떠나도(언마운트) 성공하면 장바구니를 비우고 주문내역을 무효화한다", async () => {
+    // 서버 응답을 우리가 풀어줄 때까지 잡아 둔다 — 고정 대기 대신 "클릭 → 이탈 → 응답" 순서를 강제한다.
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post("*/api/orders", async () => {
+        await released;
+        return HttpResponse.json(
+          { order: { id: "o1", createdAt: "2026-01-01T00:00:00.000Z", items: [] } },
+          { status: 201 },
+        );
+      }),
+    );
+    useCartStore.setState({ cartIds: ["p1"] });
+    const user = userEvent.setup();
+    const { unmount, client } = renderWithProviders(<OrderForm />);
+    // 주문내역 캐시가 있어야 "무효화됐는가"를 볼 수 있다.
+    client.setQueryData(ordersQueryOptions().queryKey, { orders: [] });
+
+    await user.click(screen.getByRole("button", { name: "주문하기" }));
+    // 응답이 오기 전에 화면을 떠난다(뒤로가기·헤더 링크). 서버엔 주문이 생긴다.
+    unmount();
+    release();
+
+    // 화면이 없어도 cart가 비워지고 내역이 무효화돼야 재주문 시 중복이 안 난다.
+    await vi.waitFor(() => expect(useCartStore.getState().cartIds).toEqual([]));
+    expect(client.getQueryState(ordersQueryOptions().queryKey)?.isInvalidated).toBe(true);
   });
 });
 
