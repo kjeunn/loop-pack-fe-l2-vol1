@@ -22,6 +22,12 @@ export function safeRedirect(value: string | null | undefined, fallback = "/"): 
   }
 
   const { pathname } = url;
+  // 정규화가 `//`를 새로 만들 수 있다(`/x/..//evil.com` → `..`가 `x`를 지워 `//evil.com`).
+  // 위의 `//` 검사는 입력에만 걸리므로, 실제로 돌려줄 값을 다시 검사한다 — 반환값이
+  // protocol-relative로 해석되면 외부로 나간다.
+  if (pathname.startsWith("//")) {
+    return fallback;
+  }
   // 정규화된 경로 기준으로 검사한다 — `/foo/../login` 같은 traversal이 접두 검사를 우회하지 못하게.
   const isApiRoute = pathname === "/api" || pathname.startsWith("/api/");
   const isLoginLoop = pathname === "/login" || pathname.startsWith("/login/");
