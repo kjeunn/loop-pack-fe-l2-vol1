@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useClearCart } from "@/entities/cart";
-import { ordersQueryOptions } from "@/features/orders/api/queries";
+import { ordersQueryKeyRoot } from "@/features/orders/api/queries";
 import type { Order, OrderItem } from "@/features/orders/model/types";
 import { fetchJson } from "@/shared/api/fetcher";
 
@@ -21,7 +21,8 @@ export function useCreateOrder() {
     meta: { auth: true },
     onSuccess: () => {
       clearCart();
-      void queryClient.invalidateQueries({ queryKey: ordersQueryOptions().queryKey });
+      // 키가 사용자별이라 접두로 무효화한다. 다른 사용자 캐시가 함께 무효화돼도 무해하다.
+      void queryClient.invalidateQueries({ queryKey: ordersQueryKeyRoot });
     },
   });
 }

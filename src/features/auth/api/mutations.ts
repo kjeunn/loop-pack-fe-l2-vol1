@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type { SessionUser } from "@/entities/session/model/types";
 import { fetchJson } from "@/shared/api/fetcher";
@@ -17,7 +17,15 @@ export function useLogin() {
 }
 
 export function useLogout() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => fetchJson<void>("/api/auth/logout", { method: "POST" }),
+    // 로그아웃한 사용자의 보호 자원 캐시를 메모리에서 지운다. 키가 사용자별이라 다음 사용자에게 섞이진 않지만,
+    // 공용 PC에서 남의 데이터를 gcTime 동안 들고 있을 이유가 없다.
+    // 장바구니·위시리스트는 비회원 자산이라 건드리지 않는다.
+    // 정합성이라 mutate 레벨이 아니라 여기(언마운트돼도 돈다).
+    onSuccess: () => {
+      queryClient.removeQueries({ predicate: (query) => query.meta?.auth === true });
+    },
   });
 }

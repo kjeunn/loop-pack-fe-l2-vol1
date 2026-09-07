@@ -76,7 +76,7 @@ describe("OrderForm", () => {
     const user = userEvent.setup();
     const { unmount, client } = renderWithProviders(<OrderForm />);
     // 주문내역 캐시가 있어야 "무효화됐는가"를 볼 수 있다.
-    client.setQueryData(ordersQueryOptions().queryKey, { orders: [] });
+    client.setQueryData(ordersQueryOptions("u1").queryKey, { orders: [] });
 
     await user.click(screen.getByRole("button", { name: "주문하기" }));
     // 응답이 오기 전에 화면을 떠난다(뒤로가기·헤더 링크). 서버엔 주문이 생긴다.
@@ -85,7 +85,7 @@ describe("OrderForm", () => {
 
     // 화면이 없어도 cart가 비워지고 내역이 무효화돼야 재주문 시 중복이 안 난다.
     await vi.waitFor(() => expect(useCartStore.getState().cartIds).toEqual([]));
-    expect(client.getQueryState(ordersQueryOptions().queryKey)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(ordersQueryOptions("u1").queryKey)?.isInvalidated).toBe(true);
   });
 });
 
