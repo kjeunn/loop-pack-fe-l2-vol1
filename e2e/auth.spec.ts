@@ -33,6 +33,31 @@ test.describe("인증 플로우", () => {
     await expect(page.getByLabel("비밀번호")).toHaveCount(0);
   });
 
+  test("비로그인에 프리페치된 보호 링크를 거쳐 로그인해도 원래 경로로 복원된다", async ({
+    page,
+  }) => {
+    // 장바구니가 공개 화면이라 비로그인 사용자도 "주문서로 이동" Link를 본다.
+    // 뷰포트에 들어온 Link를 Next가 프리페치하면 proxy가 307을 돌려주고, 그 응답이 라우터 캐시에 남는다.
+    await page.goto("/");
+    await page.evaluate(() =>
+      localStorage.setItem("cart", JSON.stringify({ state: { cartIds: ["p1"] }, version: 1 })),
+    );
+    const prefetched = page.waitForResponse(
+      (response) => response.url().includes("/order-form") && response.status() === 307,
+    );
+    await page.goto("/cart");
+    await prefetched;
+
+    await page.getByRole("link", { name: "주문서로 이동" }).click();
+    await expect(page).toHaveURL(/\/login\?redirect=%2Forder-form/);
+
+    await fillLogin(page);
+
+    // 캐시된 307이 복원을 가로채면 /login에 머문다. 원래 경로에 도착해야 한다.
+    await expect(page).toHaveURL(/\/order-form/);
+    await expect(page.getByRole("button", { name: "주문하기" })).toBeVisible();
+  });
+
   test("자격 증명이 틀리면 에러를 보이고 이동하지 않는다", async ({ page, context }) => {
     // invalid 시나리오면 자격이 맞아도 항상 401이라, 틀린 비밀번호 없이 실패 경로를 결정적으로 재현한다.
     await context.addCookies([
