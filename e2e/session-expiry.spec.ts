@@ -42,5 +42,6 @@ test.describe("실제 만료 쿠키", () => {
 
     // 쿠키가 없던 미로그인과 달리 "만료·위조"라 reason이 붙는다.
     await expect(page).toHaveURL(/\/login\?redirect=%2Forders&reason=expired/);
+    await expect(page.getByRole("status")).toHaveText(/만료/);
   });
 });
