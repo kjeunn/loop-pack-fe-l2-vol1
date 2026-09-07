@@ -56,4 +56,14 @@ describe("safeRedirect", () => {
     expect(safeRedirect("/foo/../login")).toBe("/");
     expect(safeRedirect("/foo/../orders")).toBe("/orders");
   });
+
+  it("traversal이 정규화 뒤 `//`를 만들어내도 외부로 나가지 못한다", () => {
+    // `..`가 앞 세그먼트를 지우면 빈 세그먼트가 남아 pathname이 `//evil.com`이 된다.
+    // 입력만 검사하면 통과하고, 반환값이 protocol-relative로 다시 해석돼 외부로 나간다.
+    expect(safeRedirect("/x/..//evil.com")).toBe("/");
+    expect(safeRedirect("/..//evil.com")).toBe("/");
+    expect(safeRedirect("/%2e%2e//evil.com")).toBe("/");
+    // 백슬래시 두 개는 파서가 `//`로 읽는다(한 개는 `/evil.com` 내부 경로라 무해).
+    expect(safeRedirect("/x/..\\\\evil.com")).toBe("/");
+  });
 });
