@@ -2,13 +2,11 @@
 
 import { useEffect, useRef } from "react";
 
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 import { trackEvent } from "@/analytics/schema";
-import { useCartHydrated, useCartIds, useClearCart } from "@/entities/cart";
+import { useCartHydrated, useCartIds } from "@/entities/cart";
 import { useCreateOrder } from "@/features/orders/api/mutations";
-import { ordersQueryOptions } from "@/features/orders/api/queries";
 import buttonStyles from "@/shared/ui/button.module.css";
 import { LoadingDots } from "@/shared/ui/loading-dots/LoadingDots";
 
@@ -16,10 +14,8 @@ import styles from "./OrderForm.module.css";
 
 export function OrderForm() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const cartHydrated = useCartHydrated();
   const cartIds = useCartIds();
-  const clearCart = useClearCart();
   const createOrder = useCreateOrder();
 
   // 주문서 진입을 1회 기록한다. 하이드레이션 전엔 cart가 비어 있어 복원이 끝나고 담긴 게 있을 때 찍는다.
@@ -33,17 +29,15 @@ export function OrderForm() {
   }, [cartHydrated, cartIds]);
 
   const submit = () => {
-    // clearCart가 cartIds를 비우기 전에 주문 상품을 캡처해 order_complete에 싣는다.
+    // 성공 시 useCreateOrder가 cart를 비우므로, 그 전에 주문 상품을 캡처해 order_complete에 싣는다.
     const orderedIds = cartIds;
     // cart는 수량 개념이 없어(5주차 결정) 담긴 각 상품을 수량 1로 주문한다.
     createOrder.mutate(
       { items: orderedIds.map((productId) => ({ productId, quantity: 1 })) },
       {
+        // 화면의 일만 여기서 — cart 비움·내역 무효화(정합성)는 useCreateOrder가 맡는다.
         onSuccess: () => {
           trackEvent("order_complete", { productIds: orderedIds });
-          clearCart();
-          // 새 주문이 내역에 바로 보이도록 무효화하고 주문내역으로 이동한다.
-          void queryClient.invalidateQueries({ queryKey: ordersQueryOptions().queryKey });
           router.push("/orders");
         },
       },
@@ -57,7 +51,7 @@ export function OrderForm() {
   if (!cartHydrated) {
     return <p className={styles.message}>불러오는 중…</p>;
   }
-  // 주문 성공 시 clearCart로 cart가 비지만, 전환 전까지 "담은 상품 없음"이 번쩍이지 않게 성공 중엔 유지한다.
+  // 주문 성공 시 useCreateOrder가 cart를 비우지만, 전환 전까지 "담은 상품 없음"이 번쩍이지 않게 성공 중엔 유지한다.
   if (cartIds.length === 0 && !createOrder.isSuccess) {
     return <p className={styles.message}>담은 상품이 없습니다.</p>;
   }
