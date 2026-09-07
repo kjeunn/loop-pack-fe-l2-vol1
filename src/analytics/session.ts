@@ -8,16 +8,33 @@ import type { EventProperties } from "@/analytics/provider";
 
 const SESSION_ID_KEY = "analytics_session_id";
 
+// 비보안 컨텍스트(http://192.168.x.x)에는 crypto.randomUUID가 없다. 계측용 식별자라 암호학적 품질은 필요 없다.
+function createSessionId(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+  );
+}
+
+// 저장소 접근이 막힌 브라우저(사이트별 저장소 차단)용. 페이지가 살아 있는 동안만 같은 값을 준다.
+let memorySessionId: string | null = null;
+
 // 브라우저 세션당 안정적인 익명 식별자. 로그인과 무관하다(브라우저 세션 ≠ 인증 세션) —
 // 로그아웃해도 유지되고, 탭을 닫으면(sessionStorage 소멸) 새 세션이 된다.
+// 이 함수가 throw하면 그 예외가 담기·찜·주문 핸들러까지 올라가 제품을 깬다. 어떤 환경에서도 값을 돌려준다.
 function getSessionId(): string {
-  const existing = sessionStorage.getItem(SESSION_ID_KEY);
-  if (existing) {
-    return existing;
+  try {
+    const existing = sessionStorage.getItem(SESSION_ID_KEY);
+    if (existing) {
+      return existing;
+    }
+    const created = createSessionId();
+    sessionStorage.setItem(SESSION_ID_KEY, created);
+    return created;
+  } catch {
+    memorySessionId ??= createSessionId();
+    return memorySessionId;
   }
-  const created = crypto.randomUUID();
-  sessionStorage.setItem(SESSION_ID_KEY, created);
-  return created;
 }
 
 // 화면 폭으로 기기를 가른다. 시드의 mobile·tablet·desktop 구분과 같은 축이다.

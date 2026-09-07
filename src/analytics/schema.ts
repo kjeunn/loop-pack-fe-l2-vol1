@@ -34,5 +34,12 @@ export type EventMap = {
 // 뷰는 이 함수로 이름·props를 직접 호출한다(래퍼를 이벤트마다 두지 않는다 — 대부분 콜사이트가 하나뿐).
 // 이름·props가 EventMap과 어긋나면 컴파일 에러라, 오타·스키마 drift를 도구가 막는다.
 export function trackEvent<K extends keyof EventMap>(name: K, props: EventMap[K]): void {
-  track(name, props);
+  // 계측은 제품을 깨면 안 된다. 공통 프로퍼티 계산 등 어디서 throw하든 여기서 끊어,
+  // 이 함수를 부른 담기·찜·주문 핸들러가 계속 돌게 한다(이벤트 하나를 잃는 쪽을 택한다).
+  // 조용히 묻히지는 않게 warn만 남긴다.
+  try {
+    track(name, props);
+  } catch (error) {
+    console.warn(`[analytics] ${name} 이벤트를 보내지 못했다`, error);
+  }
 }
