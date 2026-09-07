@@ -12,6 +12,49 @@ function renderLoggedIn(ui: React.ReactNode) {
   return renderWithProviders(withSession(looperUser(1), ui));
 }
 
+describe("OrderHistory — 사용자 격리", () => {
+  it("같은 브라우저에서 사용자가 바뀌면 이전 사용자의 주문을 보여주지 않는다", async () => {
+    // 사용자 1이 주문 내역을 본다 → 캐시에 남는다.
+    server.use(
+      http.get("*/api/orders", () =>
+        HttpResponse.json({
+          orders: [
+            {
+              id: "o1",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              items: [{ productId: "p1", quantity: 2 }],
+            },
+          ],
+        }),
+      ),
+    );
+    const first = renderWithProviders(withSession(looperUser(1), <OrderHistory />));
+    await screen.findByText("p1 × 2");
+    first.unmount();
+
+    // 같은 탭(같은 캐시)에서 사용자 2로 바뀐다(로그아웃→다른 계정 로그인, 만료→다른 계정).
+    server.use(
+      http.get("*/api/orders", () =>
+        HttpResponse.json({
+          orders: [
+            {
+              id: "o2",
+              createdAt: "2026-01-02T00:00:00.000Z",
+              items: [{ productId: "p9", quantity: 1 }],
+            },
+          ],
+        }),
+      ),
+    );
+    renderWithProviders(withSession(looperUser(2), <OrderHistory />), { client: first.client });
+
+    // 첫 렌더부터 사용자 1의 주문이 보이면 안 된다 — 캐시가 사용자와 무관하면 여기서 즉시 내려간다.
+    expect(screen.queryByText("p1 × 2")).not.toBeInTheDocument();
+    await screen.findByText("p9 × 1");
+    expect(screen.queryByText("p1 × 2")).not.toBeInTheDocument();
+  });
+});
+
 describe("OrderHistory", () => {
   it("로그인 상태면 주문 목록을 보여준다", async () => {
     server.use(
