@@ -27,6 +27,20 @@ afterEach(() => {
   resetAnalyticsForTest();
 });
 
+// 계측은 제품을 깨면 안 된다. 공통 프로퍼티 계산이 어떤 이유로든 throw해도
+// 그 예외가 trackEvent를 부른 담기·찜·주문 핸들러로 올라가서는 안 된다(이벤트 하나를 잃는 쪽이 낫다).
+describe("trackEvent는 호출자를 깨지 않는다", () => {
+  it("공통 프로퍼티 계산이 throw해도 호출자에게 전파하지 않는다", async () => {
+    createRecorder();
+    setCommonProperties(() => {
+      throw new Error("storage blocked");
+    });
+    await initAnalytics();
+
+    expect(() => trackEvent("cart_add", { productId: "p1" })).not.toThrow();
+  });
+});
+
 // 로그인 상태에 따라 공통 프로퍼티에 userId가 붙는지를 실제 계측 경로로 검증한다.
 // 시드에서도 userId 없는 비회원 이벤트가 대다수라, 비회원 이벤트에 userId가 새어 들어가면 안 된다.
 describe("로그인 상태와 공통 프로퍼티", () => {

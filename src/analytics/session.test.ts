@@ -14,6 +14,44 @@ beforeEach(() => {
 });
 afterEach(() => setAnalyticsUser(null));
 
+const originalSessionStorage = Object.getOwnPropertyDescriptor(window, "sessionStorage");
+
+// 계측이 브라우저 저장소·API 사정으로 throw하면 그 예외가 담기·찜·주문 핸들러까지 올라가
+// 제품 동작을 깬다. 공통 프로퍼티는 어떤 환경에서도 값을 돌려줘야 한다.
+describe("공통 프로퍼티는 환경 사정으로 실패하지 않는다", () => {
+  afterEach(() => {
+    if (originalSessionStorage) {
+      Object.defineProperty(window, "sessionStorage", originalSessionStorage);
+    }
+    vi.unstubAllGlobals();
+  });
+
+  it("sessionStorage 접근이 막혀도 throw하지 않고, 페이지가 살아 있는 동안 같은 sessionId를 준다", () => {
+    Object.defineProperty(window, "sessionStorage", {
+      configurable: true,
+      get() {
+        throw new DOMException("blocked", "SecurityError");
+      },
+    });
+
+    expect(() => getCommonProperties()).not.toThrow();
+    const first = getCommonProperties().sessionId;
+    expect(typeof first).toBe("string");
+    expect(first).not.toBe("");
+    expect(getCommonProperties().sessionId).toBe(first);
+  });
+
+  it("crypto.randomUUID가 없어도(비보안 컨텍스트) sessionId를 만든다", () => {
+    // http://192.168.x.x 같은 비보안 컨텍스트에서는 randomUUID가 정의되지 않는다.
+    vi.stubGlobal("crypto", {});
+
+    expect(() => getCommonProperties()).not.toThrow();
+    const id = getCommonProperties().sessionId;
+    expect(typeof id).toBe("string");
+    expect(id).not.toBe("");
+  });
+});
+
 describe("공통 프로퍼티", () => {
   it("sessionId·device·ts를 담고, 로그인 전에는 userId가 없다", () => {
     const props = getCommonProperties();
