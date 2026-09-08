@@ -190,6 +190,8 @@ const eslintConfig = defineConfig([
   // 9주차 스타터(#174 병합)가 제공한 예시 코드 — 인증 mock 백엔드와 이벤트 로거.
   // 우리가 짠 게 아니라 과제용으로 들어온 코드라, 우리 컨벤션(import 정렬·no-console 등)을 강제하지 않는다.
   globalIgnores([
+    // 문서 증거물(Advanced B 생성 원본·RFC 수치 재현 스크립트)은 앱 코드가 아니라 lint 대상이 아니다.
+    "docs/**",
     "src/app/api/auth/**",
     "src/app/api/orders/**",
     "src/app/api/_data/auth*",
