@@ -29,12 +29,24 @@ test.describe("주문", () => {
 
     await page.getByRole("link", { name: "주문서로 이동" }).click();
     await expect(page).toHaveURL(/\/order-form/);
+    // 이번 주문의 id를 응답에서 받아 단언을 "이번 주문"에 묶는다. 서버 주문은 계정별로 실행마다 쌓이므로
+    // (로컬은 서버를 재사용), 같은 상품의 이전 주문이 화면에 있어도 그것에 속지 않아야 한다.
+    const created = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/orders") &&
+        response.request().method() === "POST" &&
+        response.ok(),
+    );
     await page.getByRole("button", { name: "주문하기" }).click();
+    const { order } = (await (await created).json()) as { order: { id: string } };
     await expect(page).toHaveURL(/\/orders/);
 
-    // 핸드오프: 담은 상품 id가 최신 주문(.last())에 "{id} × 1"로 정확히 뜬다.
-    // 워커별 계정 격리라 .last()는 이번 주문이고, 라인 전체 정확일치라 "p3"가 "p30 × 1"에 부분매치되지 않는다.
-    await expect(page.getByText(`${productId} × 1`, { exact: true }).last()).toBeVisible();
+    // 핸드오프: 이번 주문 블록(id로 집음) 안에 담은 상품이 "{id} × 1"로 정확히 뜬다.
+    // 라인 전체 정확일치라 "p3"가 "p30 × 1"에 부분매치되지 않는다.
+    const thisOrder = page
+      .getByRole("listitem")
+      .filter({ has: page.getByText(order.id, { exact: true }) });
+    await expect(thisOrder.getByText(`${productId} × 1`, { exact: true })).toBeVisible();
     // 성공 대비: 주문이 완료되면 장바구니가 비워진다(B의 "실패→유지"와 짝을 이뤄 인과를 닫는다).
     await expect(page.getByRole("link", { name: /장바구니 0/ })).toBeVisible();
   });
