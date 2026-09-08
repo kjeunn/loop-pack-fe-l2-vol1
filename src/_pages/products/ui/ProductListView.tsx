@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 
 import { QueryErrorResetBoundary, useQueryClient } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
@@ -35,13 +35,14 @@ export function ProductListView() {
   const [filterResetKey, setFilterResetKey] = useState(0);
 
   // 목록 진입을 1회 기록한다. 진입 시점의 조건을 담되, 이후 필터 변경은 각 핸들러가 별도로 찍는다.
-  // query를 deps에 넣으면 필터마다 재발화하므로 마운트 1회로 고정한다(진입 조건은 그 시점 값).
+  // 찍는 시점은 마운트가 아니라 목록이 실제로 그려졌을 때(Results의 onFirstRender) —
+  // 첫 요청이 실패한 세션을 "목록을 봤다"로 세지 않기 위해서다.
   const enteredCondition = useRef({
     category: query.category,
     sort: query.sort,
     page: query.page,
   });
-  useEffect(() => {
+  const trackListView = useCallback(() => {
     trackEvent("product_list_view", enteredCondition.current);
   }, []);
 
@@ -162,7 +163,7 @@ export function ProductListView() {
                 </p>
               )}
             >
-              <ProductListResults />
+              <ProductListResults onFirstRender={trackListView} />
               {/* 페이지네이션은 이동할 결과가 있을 때만 보인다. 0건(빈 결과)이나 데이터 없는
                   최초 로딩에선 totalCount가 0이라 숨겨, "1 / 1"이 떠 결과가 있는 듯 보이지 않게 한다.
                   갱신 중엔 이전 데이터의 totalCount가 유지돼 그대로 보인다. */}
