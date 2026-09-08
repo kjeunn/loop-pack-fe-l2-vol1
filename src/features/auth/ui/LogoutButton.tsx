@@ -27,14 +27,19 @@ export function LogoutButton({ className }: LogoutButtonProps) {
   const isLoggingOut = logout.isPending || logout.isSuccess;
 
   return (
-    <button
-      type="button"
-      className={className}
-      onClick={handleClick}
-      disabled={isLoggingOut}
-      aria-label={isLoggingOut ? "로그아웃 중" : undefined}
-    >
-      {isLoggingOut ? <LoadingDots /> : "로그아웃"}
-    </button>
+    <>
+      <button
+        type="button"
+        className={className}
+        onClick={handleClick}
+        disabled={isLoggingOut}
+        aria-label={isLoggingOut ? "로그아웃 중" : undefined}
+      >
+        {isLoggingOut ? <LoadingDots /> : "로그아웃"}
+      </button>
+      {/* 실패해도 상태는 안전하다(서버 세션이 남아 화면도 로그인 유지). 다만 조용히 되돌아오면
+          사용자가 실패를 모른 채 다시 눌러야 하므로 알린다. */}
+      {logout.isError && <span role="alert">로그아웃에 실패했습니다. 다시 시도해 주세요.</span>}
+    </>
   );
 }
