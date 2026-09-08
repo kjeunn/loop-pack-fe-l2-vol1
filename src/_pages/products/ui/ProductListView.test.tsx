@@ -32,7 +32,10 @@ describe("ProductListView 부분 실패 — 결과 영역만 경계로", () => {
     renderView();
 
     // 결과 영역: 경계 fallback("다시 시도")이 뜬다.
-    expect(await screen.findByRole("button", { name: "다시 시도" })).toBeInTheDocument();
+    // 5xx → 쿼리 에러 → 경계 렌더가 전체 스위트 병렬 부하에선 기본 대기(1초)를 넘길 때가 있어 예산을 명시한다.
+    expect(
+      await screen.findByRole("button", { name: "다시 시도" }, { timeout: 3_000 }),
+    ).toBeInTheDocument();
 
     // 필터는 살아 있다: 카테고리 select가 그대로 있다(조건을 바꿔 재시도 가능).
     expect(screen.getByRole("combobox", { name: /카테고리/ })).toBeInTheDocument();
