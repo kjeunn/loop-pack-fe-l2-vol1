@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import { accounts, createSessionToken } from "@/app/api/_data/auth";
@@ -35,6 +36,19 @@ describe("proxy 판정", () => {
     expect(location).toBe(
       "http://localhost:3000/login?redirect=%2Forders%3Fpage%3D2&reason=expired",
     );
+  });
+
+  it("서명은 맞는데 페이로드가 객체가 아니면(null) 500이 아니라 로그인으로 보낸다", () => {
+    // 시크릿을 아는 공격자가 만들 수 있는 토큰. 판독이 throw하면 proxy가 500을 내고 보호 경로 전체가 막힌다.
+    const payload = Buffer.from("null").toString("base64url");
+    const signature = createHmac(
+      "sha256",
+      process.env.AUTH_SESSION_SECRET ?? "loopers-week09-secret",
+    )
+      .update(payload)
+      .digest("base64url");
+    const location = proxy(request(`${payload}.${signature}`)).headers.get("location");
+    expect(location).toContain("/login?");
   });
 
   it("쿠키가 있는데 서명이 틀리면(위조) 만료와 같이 취급한다", () => {
