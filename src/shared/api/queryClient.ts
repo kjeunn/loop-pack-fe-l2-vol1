@@ -23,7 +23,8 @@ function redirectToLoginOnExpiry(error: unknown, isAuthResource: boolean) {
     return;
   }
   const current = window.location.pathname + window.location.search;
-  window.location.assign(`/login?redirect=${encodeURIComponent(current)}`);
+  // 진입 시 만료(proxy)와 같은 안내가 뜨도록 reason을 싣는다 — 여기 도달한 401은 정의상 만료다.
+  window.location.assign(`/login?redirect=${encodeURIComponent(current)}&reason=expired`);
 }
 
 // 서버 프리패치와 클라이언트 Provider가 같은 기본값으로 QueryClient를 만든다.

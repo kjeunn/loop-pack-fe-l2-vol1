@@ -17,8 +17,9 @@ test("세션이 만료되면 보호 경로에서 원래 경로를 싣고 로그�
   await page.goto("/orders");
 
   // 보호 쿼리(meta.auth) 401 → 전역 핸들러가 location.assign으로 원래 경로를 싣고 로그인으로 이동한다.
-  // 이 redirect 값이 복원 테스트가 되돌릴 바로 그 기준값이다.
-  await expect(page).toHaveURL(/\/login\?redirect=%2Forders/);
+  // 이 redirect 값이 복원 테스트가 되돌릴 바로 그 기준값이다. 진입 시 만료(proxy)와 같은 reason이 붙는다.
+  await expect(page).toHaveURL(/\/login\?redirect=%2Forders&reason=expired/);
+  await expect(page.getByRole("status")).toHaveText(/만료/);
 });
 
 // scenario=expired는 쿠키가 유효한 채 API만 401이라 "진행 중 만료"만 본다.

@@ -52,7 +52,7 @@ describe("세션 만료 리다이렉트(ㄴ)", () => {
 
     await vi.waitFor(() =>
       expect(location.assign).toHaveBeenCalledWith(
-        `/login?redirect=${encodeURIComponent("/orders")}`,
+        `/login?redirect=${encodeURIComponent("/orders")}&reason=expired`,
       ),
     );
   });
