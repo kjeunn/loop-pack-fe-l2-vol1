@@ -112,11 +112,9 @@ test.describe("인증 플로우", () => {
     await expect(page.getByRole("button", { name: "주문하기" })).toBeVisible();
   });
 
-  test("자격 증명이 틀리면 에러를 보이고 이동하지 않는다", async ({ page, context }) => {
+  test("자격 증명이 틀리면 에러를 보이고 이동하지 않는다", async ({ page, context, baseURL }) => {
     // invalid 시나리오면 자격이 맞아도 항상 401이라, 틀린 비밀번호 없이 실패 경로를 결정적으로 재현한다.
-    await context.addCookies([
-      { name: "scenario", value: "invalid", url: "http://localhost:3000" },
-    ]);
+    await context.addCookies([{ name: "scenario", value: "invalid", url: baseURL }]);
 
     await page.goto("/login");
     await fillLogin(page);

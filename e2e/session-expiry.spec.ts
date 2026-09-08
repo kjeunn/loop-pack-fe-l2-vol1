@@ -9,10 +9,10 @@ import { expect, test } from "./auth-fixtures";
 test("세션이 만료되면 보호 경로에서 원래 경로를 싣고 로그인으로 유도된다", async ({
   page,
   context,
+  baseURL,
 }) => {
-  await context.addCookies([
-    { name: "scenario", value: "expired", domain: "localhost", path: "/" },
-  ]);
+  // 쿠키 도메인은 baseURL에서 얻는다 — E2E_BASE_URL로 다른 호스트를 가리켜도 쿠키가 따라간다.
+  await context.addCookies([{ name: "scenario", value: "expired", url: baseURL }]);
 
   await page.goto("/orders");
 
@@ -31,13 +31,12 @@ test.describe("실제 만료 쿠키", () => {
   test("만료된 쿠키로 보호 경로에 들어가면 원래 경로를 싣고 로그인으로 유도된다", async ({
     page,
     context,
+    baseURL,
   }) => {
     // 서명이 유효한 만료 토큰은 구현 없이 만들 수 없어 이 한 곳만 구현을 import한다.
     // (URL·파라미터 같은 사용자 계약은 e2e가 리터럴로 둔다 — 이 원칙의 예외다.)
     const expiredToken = createSessionToken("u1", Date.now() - (SESSION_TTL_SECONDS + 60) * 1_000);
-    await context.addCookies([
-      { name: "session", value: expiredToken, domain: "localhost", path: "/" },
-    ]);
+    await context.addCookies([{ name: "session", value: expiredToken, url: baseURL }]);
 
     await page.goto("/orders");
 

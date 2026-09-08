@@ -51,13 +51,11 @@ test.describe("주문", () => {
     await expect(page.getByRole("link", { name: /장바구니 0/ })).toBeVisible();
   });
 
-  test("주문이 실패하면 장바구니를 비우지 않는다", async ({ page, context }) => {
+  test("주문이 실패하면 장바구니를 비우지 않는다", async ({ page, context, baseURL }) => {
     const productId = await addFirstProductAndOpenCart(page);
 
     // error 시나리오로 주문 POST만 500이 나게 한다(cart는 onSuccess에만 비워지므로 실패 땐 유지된다).
-    await context.addCookies([
-      { name: "scenario", value: "error", domain: "localhost", path: "/" },
-    ]);
+    await context.addCookies([{ name: "scenario", value: "error", url: baseURL }]);
 
     await page.getByRole("link", { name: "주문서로 이동" }).click();
     await expect(page).toHaveURL(/\/order-form/);
