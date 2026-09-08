@@ -27,7 +27,7 @@ export function LoginForm({ redirect }: LoginFormProps) {
     trackEvent("login_start", { from: redirect ?? "direct" });
   }, [redirect]);
 
-  // 성공 후에도 화면 전환(soft navigation)이 끝날 때까지 로딩을 유지한다.
+  // 성공 후에도 전체 페이지 이동이 끝날 때까지 로딩을 유지한다.
   // isPending만 쓰면 성공 직후 전환 전에 버튼이 잠깐 "로그인"으로 되돌아가 번쩍인다.
   const isLoading = login.isPending || login.isSuccess;
 

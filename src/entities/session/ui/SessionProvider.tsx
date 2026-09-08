@@ -18,7 +18,7 @@ export function SessionProvider({ user, children }: SessionProviderProps) {
   return <SessionContext.Provider value={user}>{children}</SessionContext.Provider>;
 }
 
-// 로그인 여부의 단일 진실을 읽는다. 만료 감지는 이 값이 아니라 보호 쿼리의 401로 트리거한다.
+// 로그인 여부의 단일 진실을 읽는다. 만료 감지는 이 값이 아니라 진입 시엔 proxy의 쿠키 검증, 진행 중엔 보호 쿼리의 401로 한다.
 export function useSession() {
   const user = useContext(SessionContext);
   return { user, isLoggedIn: user !== null };

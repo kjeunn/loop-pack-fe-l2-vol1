@@ -26,7 +26,7 @@ test.describe("인증 플로우", () => {
 
     await fillLogin(page);
 
-    // 복원은 앱이 스스로 한다(LoginForm onSuccess의 router.replace(safeRedirect)) — 수동 goto 없이 URL이 돌아온다.
+    // 복원은 앱이 스스로 한다(LoginForm onSuccess의 location.assign(safeRedirect)) — 수동 goto 없이 URL이 돌아온다.
     await expect(page).toHaveURL(/\/orders/);
     // 게이트가 실제로 열렸다: 로그인 상태가 헤더에 반영되고, 로그인 폼으로 다시 튕기지 않았다.
     await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();

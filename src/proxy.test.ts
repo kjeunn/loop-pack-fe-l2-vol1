@@ -7,7 +7,7 @@ import { SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/app/api/_data/auth-cookie
 import { proxy } from "@/proxy";
 
 // 함수를 직접 부르므로 matcher(어느 경로에 걸리나)는 여기서 검증되지 않는다 — 그건 실제 라우팅을 타는
-// E2E만 본다. 여기는 걸린 요청에 대한 판정 세 갈래(유효·없음·무효)만 고정한다.
+// E2E만 본다. 여기는 걸린 요청에 대한 판정(유효·없음·만료·위조·비객체 페이로드)만 고정한다.
 const request = (cookie?: string) => {
   const req = new NextRequest("http://localhost:3000/orders?page=2");
   if (cookie !== undefined) {

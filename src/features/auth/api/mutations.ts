@@ -8,7 +8,7 @@ export type LoginInput = { email: string; password: string };
 type LoginResult = { user: SessionUser };
 
 // 로그인·로그아웃은 각자 POST 한 번뿐이라 한 파일에 둔다(queries.ts와 같은 결).
-// 성공 뒤 처리(router.refresh·이동)는 router가 필요해 호출 컴포넌트가 맡는다.
+// 성공 뒤 화면 전환은 호출 컴포넌트가 맡는다(로그인은 hard navigation, 로그아웃은 router).
 export function useLogin() {
   return useMutation({
     mutationFn: (input: LoginInput) =>

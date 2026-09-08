@@ -1,4 +1,4 @@
-// 로그인 후 돌아갈 경로를 검증한다. proxy(edge)·RSC·클라가 같은 함수를 써 검증이 갈라지지 않게 한다.
+// 로그인 후 돌아갈 경로를 검증한다. proxy·RSC·클라가 같은 함수를 써 검증이 갈라지지 않게 한다.
 // crypto가 없어 전 런타임에서 돈다.
 //
 // 입력은 이미 URLSearchParams(서버 `nextUrl.searchParams`·클라 `window.location`)가 한 번 디코드한 값이다.

@@ -49,7 +49,7 @@ function getDevice(): "mobile" | "tablet" | "desktop" {
 }
 
 // userId의 진실은 React state(useSession)에 있어 모듈 스코프 getter가 읽지 못한다.
-// providers의 세션 감시 effect가 로그인 상태 변화(로그인·새로고침 재수화·만료·로그아웃)마다
+// AnalyticsSessionSync((commerce) layout)가 로그인 상태 변화(로그인·새로고침 재수화·만료·로그아웃)마다
 // 이 값을 갱신해, 공통 프로퍼티가 React 밖에서 userId를 읽게 한다. 전이가 아니라 상태 관측이라
 // 이벤트를 안 거치는 경로(새로고침)에서도 값이 낡지 않는다.
 let currentUserId: string | null = null;

@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { SESSION_TTL_SECONDS } from "@/app/api/_data/auth-cookies";
 
-// 이 파일은 node:crypto 를 쓴다. Node 런타임(API 라우트)에서만 import 해야 한다.
-// Edge 런타임에서 쿠키 이름이 필요하면 auth-cookies.ts 에서 가져온다.
+// 세션 토큰의 서명·판독(node:crypto). proxy·API 라우트·layout이 쓴다(전부 Node 런타임).
+// 쿠키 이름·TTL 상수는 로직과 분리해 auth-cookies.ts 에 둔다.
 //
 // 6주차에 구조를 바꾼 뒤에도 그대로 동작해야 하므로 응답 타입, 지연,
 // 상품 id 검증을 모두 여기서 처리한다
