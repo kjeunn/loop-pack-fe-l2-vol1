@@ -31,6 +31,51 @@ test.describe("인증 플로우", () => {
     // 게이트가 실제로 열렸다: 로그인 상태가 헤더에 반영되고, 로그인 폼으로 다시 튕기지 않았다.
     await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
     await expect(page.getByLabel("비밀번호")).toHaveCount(0);
+
+    // 브라우저가 저장한 세션 쿠키의 속성. 라우트 테스트는 서버가 Set-Cookie를 "보냈다"까지만 보고,
+    // 브라우저가 그 속성을 실제로 반영했는지는 여기서만 본다. secure는 로컬 서버가 HTTP라 false여서
+    // 운영 HTTPS의 Secure를 보증하지 못하므로 단언하지 않는다.
+    const session = (await page.context().cookies()).find((cookie) => cookie.name === "session");
+    expect(session?.httpOnly).toBe(true);
+    expect(session?.sameSite).toBe("Lax");
+    expect(session?.path).toBe("/");
+    // httpOnly의 뜻: 스크립트가 못 읽는다(XSS로 세션 탈취 불가).
+    expect(await page.evaluate(() => document.cookie)).not.toContain("session=");
+  });
+
+  test("proxy는 미로그인 보호 경로 요청에 307과 로그인 Location을 직접 돌려준다", async ({
+    request,
+  }) => {
+    // 브라우저가 리다이렉트를 따라가기 전의 응답을 그대로 본다 — proxy 배선을 다른 코드를 거치지 않고 확인하는
+    // 유일한 지점이다(유닛은 함수만 불러 matcher를 못 보고, 페이지 이동 단언은 결과만 본다).
+    const response = await request.get("/orders", { maxRedirects: 0 });
+    expect(response.status()).toBe(307);
+    expect(response.headers()["location"]).toContain("/login?redirect=%2Forders");
+  });
+
+  test("초기 HTML만으로 로그인 상태가 보인다 — JavaScript 없이", async ({ page, browser }) => {
+    // 로그인 상태를 만든 뒤, JavaScript를 끈 컨텍스트로 같은 쿠키를 들고 연다.
+    // 하이드레이션 뒤 DOM이 아니라 서버가 그린 HTML에 로그인 상태가 있어야 한다(SSR 단일 소스).
+    await page.goto("/login");
+    await fillLogin(page);
+    await expect(page.getByRole("button", { name: "로그아웃" })).toBeVisible();
+    const storageState = await page.context().storageState();
+
+    const noScript = await browser.newContext({ javaScriptEnabled: false, storageState });
+    const staticPage = await noScript.newPage();
+    await staticPage.goto("/orders");
+    await expect(staticPage.getByText("루퍼1")).toBeVisible();
+    await expect(staticPage.getByRole("button", { name: "로그아웃" })).toBeVisible();
+    await expect(staticPage.getByRole("link", { name: "로그인" })).toHaveCount(0);
+    await noScript.close();
+
+    // 반대 방향: 쿠키 없는 no-JS 문서엔 로그인 링크가 있고 로그아웃은 없다.
+    const anonymous = await browser.newContext({ javaScriptEnabled: false });
+    const anonymousPage = await anonymous.newPage();
+    await anonymousPage.goto("/");
+    await expect(anonymousPage.getByRole("link", { name: "로그인" })).toBeVisible();
+    await expect(anonymousPage.getByRole("button", { name: "로그아웃" })).toHaveCount(0);
+    await anonymous.close();
   });
 
   test("비로그인의 보호 경로 링크는 프리페치되지 않고, 그 링크를 거쳐 로그인하면 원래 경로로 복원된다", async ({
