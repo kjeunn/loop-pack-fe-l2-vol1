@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 
-import { useRouter } from "next/navigation";
-
 import { trackEvent } from "@/analytics/schema";
 import { useLogin } from "@/features/auth/api/mutations";
 import { safeRedirect } from "@/shared/lib/safeRedirect";
@@ -18,7 +16,6 @@ type LoginFormProps = {
 };
 
 export function LoginForm({ redirect }: LoginFormProps) {
-  const router = useRouter();
   const login = useLogin();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -38,10 +35,11 @@ export function LoginForm({ redirect }: LoginFormProps) {
       {
         onSuccess: () => {
           trackEvent("login_success", { from: redirect ?? "direct" });
-          // 서버 파생 상태(헤더 로그인 등)를 갱신하고 원래 경로로 돌린다.
+          // 인증 경계를 넘는 이동은 hard navigation(전체 페이지 로드)으로 한다 — 세션 만료 경로와 같은 방식.
+          // soft navigation(router)은 비로그인 때 프리페치된 보호 경로의 307이 라우터 캐시에 남아 복원을 가로챈다(재현 E2E).
+          // 전체 로드는 그 캐시를 거치지 않고, 새 쿠키로 서버 상태(헤더 로그인 등)도 새로 그려 refresh가 필요 없다.
           // redirect는 신뢰할 수 없으므로 여기서 다시 검증한다(오픈 리다이렉트 방어).
-          router.replace(safeRedirect(redirect));
-          router.refresh();
+          window.location.assign(safeRedirect(redirect));
         },
         onError: (error) => {
           trackEvent("login_fail", { reason: error.message });

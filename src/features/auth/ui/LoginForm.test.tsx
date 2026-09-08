@@ -2,25 +2,26 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "@/features/auth/ui/LoginForm";
-import { routerMock as router } from "@/test/navigation";
+import { mockLocation } from "@/test/location";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { server } from "@/test/server";
 
-// next/navigation은 setup.ts에서 전역 목킹한다. router 호출은 그 목 실체(routerMock)로 검증한다.
 const trackEvent = vi.hoisted(() => vi.fn());
 vi.mock("@/analytics/schema", () => ({ trackEvent }));
 
+// 복원은 hard navigation(location.assign)이라 router가 아니라 location을 감시한다.
+let location: ReturnType<typeof mockLocation>;
 beforeEach(() => {
-  router.replace.mockClear();
-  router.refresh.mockClear();
+  location = mockLocation("/login");
   trackEvent.mockClear();
 });
+afterEach(() => location.restore());
 
 describe("LoginForm", () => {
-  it("로그인 성공하면 복원 경로로 이동하고 서버 상태를 갱신한다", async () => {
+  it("로그인 성공하면 복원 경로로 전체 페이지 이동한다", async () => {
     const user = userEvent.setup();
     renderWithProviders(<LoginForm redirect="/orders" />);
 
@@ -28,8 +29,7 @@ describe("LoginForm", () => {
     await user.type(screen.getByLabelText("비밀번호"), "looper1234");
     await user.click(screen.getByRole("button", { name: "로그인" }));
 
-    await vi.waitFor(() => expect(router.replace).toHaveBeenCalledWith("/orders"));
-    expect(router.refresh).toHaveBeenCalled();
+    await vi.waitFor(() => expect(location.assign).toHaveBeenCalledWith("/orders"));
   });
 
   it("자격 증명이 틀리면(401) 에러를 화면에 보여주고 이동하지 않는다", async () => {
@@ -48,7 +48,7 @@ describe("LoginForm", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "이메일 또는 비밀번호를 확인해주세요.",
     );
-    expect(router.replace).not.toHaveBeenCalled();
+    expect(location.assign).not.toHaveBeenCalled();
   });
 });
 

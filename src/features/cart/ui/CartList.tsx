@@ -49,7 +49,14 @@ export function CartList({ toolbar }: CartListProps) {
           </li>
         ))}
       </ul>
-      <Link href="/order-form" className={buttonStyles.primary} aria-label="주문서로 이동">
+      {/* 비로그인 사용자도 보는 링크다. 프리페치하면 proxy의 307이 라우터 캐시에 남아 뷰포트에 들어올 때마다
+          헛요청이 나가고, 복원이 soft navigation이던 시절엔 로그인 뒤 복원까지 가로챘다. 보호 경로 링크는 프리페치하지 않는다. */}
+      <Link
+        href="/order-form"
+        prefetch={false}
+        className={buttonStyles.primary}
+        aria-label="주문서로 이동"
+      >
         <OrderFormLinkLabel />
       </Link>
     </>

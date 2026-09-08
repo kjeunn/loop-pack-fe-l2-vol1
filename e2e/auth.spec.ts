@@ -33,27 +33,36 @@ test.describe("인증 플로우", () => {
     await expect(page.getByLabel("비밀번호")).toHaveCount(0);
   });
 
-  test("비로그인에 프리페치된 보호 링크를 거쳐 로그인해도 원래 경로로 복원된다", async ({
+  test("비로그인의 보호 경로 링크는 프리페치되지 않고, 그 링크를 거쳐 로그인하면 원래 경로로 복원된다", async ({
     page,
   }) => {
-    // 장바구니가 공개 화면이라 비로그인 사용자도 "주문서로 이동" Link를 본다.
-    // 뷰포트에 들어온 Link를 Next가 프리페치하면 proxy가 307을 돌려주고, 그 응답이 라우터 캐시에 남는다.
+    // 장바구니가 공개 화면이라 비로그인 사용자도 "주문서로 이동" Link를 본다. 이 링크가 프리페치되면
+    // proxy의 307이 라우터 캐시에 남아 복원을 가로챘다(재현했던 결함). 지금은 두 겹으로 막는다 —
+    // 링크는 프리페치하지 않고(캐시에 307이 생기지 않음), 복원은 hard navigation이라 라우터 캐시를 거치지 않는다.
+    // 캐시된 307은 이제 UI로 만들 수 없으므로, 여기선 "프리페치 안 됨"과 "그 경로로 복원됨"을 고정한다.
     await page.goto("/");
     await page.evaluate(() =>
       localStorage.setItem("cart", JSON.stringify({ state: { cartIds: ["p1"] }, version: 1 })),
     );
-    const prefetched = page.waitForResponse(
-      (response) => response.url().includes("/order-form") && response.status() === 307,
-    );
-    await page.goto("/cart");
-    await prefetched;
+    const orderFormRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/order-form")) {
+        orderFormRequests.push(request.url());
+      }
+    });
 
-    await page.getByRole("link", { name: "주문서로 이동" }).click();
+    await page.goto("/cart");
+    const link = page.getByRole("link", { name: "주문서로 이동" });
+    await expect(link).toBeVisible();
+    // 프리페치는 뷰포트 진입 직후 나간다. 네트워크가 잠잠해질 때까지 기다린 뒤 한 건도 없어야 한다.
+    await page.waitForLoadState("networkidle");
+    expect(orderFormRequests).toEqual([]);
+
+    await link.click();
     await expect(page).toHaveURL(/\/login\?redirect=%2Forder-form/);
 
     await fillLogin(page);
 
-    // 캐시된 307이 복원을 가로채면 /login에 머문다. 원래 경로에 도착해야 한다.
     await expect(page).toHaveURL(/\/order-form/);
     await expect(page.getByRole("button", { name: "주문하기" })).toBeVisible();
   });
