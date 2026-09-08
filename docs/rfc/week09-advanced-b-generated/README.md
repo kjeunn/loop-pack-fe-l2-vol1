@@ -6,3 +6,5 @@
 - `redirect-restore.spec.ts`·`session-expiry.spec.ts`·`invalid-credentials.spec.ts` — generator가 계획으로 생성한 테스트, 원본 그대로.
 
 `session-expiry.spec.ts`의 원본에는 위조 서명 쿠키를 다루는 `test.fixme`가 하나 더 있었으나, 과제가 비활성화 테스트를 금지해 걷어냈다(경위는 §E). 스캐폴딩(`.claude/agents/playwright-test-*`·`.mcp.json`)은 init-agents가 만든 일회성 도구라 커밋에 남기지 않는다.
+
+계획서의 "proxy가 존재 여부만 본다"는 생성 당시 기준이다. 이후 리팩토링에서 proxy가 서명·TTL을 검증하게 바뀌었다(RFC [§F](../week09-e2e-scope.md#f-리팩토링--초록불-아래에서-찾은-것)).
