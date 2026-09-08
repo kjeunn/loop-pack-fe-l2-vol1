@@ -6,29 +6,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchJson } from "@/shared/api/fetcher";
 import { makeQueryClient } from "@/shared/api/queryClient";
+import { mockLocation } from "@/test/location";
 import { server } from "@/test/server";
 
-// 만료 핸들러의 이동은 location.assign으로 한다. jsdom에서 실제 navigation을 막고 호출만 감시한다.
-// location.assign은 jsdom에서 redefine이 막혀 있어 객체 전체를 교체하되,
-// fetch의 상대경로 resolve가 base로 읽는 href/origin은 실제 값으로 채워 fetch가 깨지지 않게 한다.
-const assign = vi.fn();
-const originalLocation = window.location;
+// 만료 핸들러의 이동은 location.assign이다. 스텁 방식은 mockLocation(공유 헬퍼)에 있다.
+let location: ReturnType<typeof mockLocation>;
 beforeEach(() => {
-  assign.mockClear();
-  Object.defineProperty(window, "location", {
-    configurable: true,
-    value: {
-      href: "http://localhost:3000/orders",
-      origin: "http://localhost:3000",
-      pathname: "/orders",
-      search: "",
-      assign,
-    },
-  });
+  location = mockLocation("/orders");
 });
-afterEach(() => {
-  Object.defineProperty(window, "location", { configurable: true, value: originalLocation });
-});
+afterEach(() => location.restore());
 
 function renderWithClient(ui: React.ReactNode) {
   return render(<QueryClientProvider client={makeQueryClient()}>{ui}</QueryClientProvider>);
@@ -65,7 +51,9 @@ describe("세션 만료 리다이렉트(ㄴ)", () => {
     renderWithClient(<ProtectedQuery />);
 
     await vi.waitFor(() =>
-      expect(assign).toHaveBeenCalledWith(`/login?redirect=${encodeURIComponent("/orders")}`),
+      expect(location.assign).toHaveBeenCalledWith(
+        `/login?redirect=${encodeURIComponent("/orders")}`,
+      ),
     );
   });
 
@@ -80,6 +68,6 @@ describe("세션 만료 리다이렉트(ㄴ)", () => {
 
     // 에러가 처리될 시간을 준 뒤에도 리다이렉트가 없어야 한다.
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(assign).not.toHaveBeenCalled();
+    expect(location.assign).not.toHaveBeenCalled();
   });
 });
