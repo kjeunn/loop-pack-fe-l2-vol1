@@ -16,7 +16,8 @@ export const ordersQueryKeyRoot = ["orders"] as const;
 export function ordersQueryOptions(userId: string | null) {
   return queryOptions({
     queryKey: [...ordersQueryKeyRoot, userId] as const,
-    queryFn: () => fetchJson<OrderListResponse>("/api/orders"),
+    // TanStack이 abort한 signal(취소·언마운트)을 fetch에 넘겨 쓸모없어진 요청을 실제로 취소한다.
+    queryFn: ({ signal }) => fetchJson<OrderListResponse>("/api/orders", { signal }),
     meta: { auth: true },
   });
 }
