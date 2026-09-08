@@ -31,7 +31,8 @@ export function Providers({ children }: ProvidersProps) {
   const queryClient = getQueryClient();
   useHydrateCart();
   useHydrateWishlist();
-  // 계측을 클라 최상단에서 1회 켠다. 모든 화면 컴포넌트보다 먼저 초기화돼 첫 track이 큐를 거치지 않는다.
+  // 계측 초기화(비동기)를 클라 최상단에서 1회. 등록은 모듈 평가 시점에 이미 끝나 있고,
+  // 초기화 전 이벤트는 큐로 보존된다(setup.ts).
   useEffect(() => {
     setupAnalytics();
   }, []);
