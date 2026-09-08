@@ -161,19 +161,32 @@ describe("ProductListView URL 재진입 — 컨트롤 복원", () => {
 });
 
 describe("ProductListView 계측 발화 조건", () => {
-  it("진입 시 product_list_view를 진입 시점 조건과 함께 1회 찍는다", () => {
+  it("목록이 실제로 그려진 뒤 product_list_view를 진입 시점 조건과 함께 1회 찍는다", async () => {
     renderView({ category: "fashion", sort: "popular", page: "2" });
 
-    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("product_list_view", {
-      category: "fashion",
-      sort: "popular",
-      page: 2,
-    });
+    await vi.waitFor(() =>
+      expect(trackEvent).toHaveBeenCalledExactlyOnceWith("product_list_view", {
+        category: "fashion",
+        sort: "popular",
+        page: 2,
+      }),
+    );
   });
 
-  it("카테고리를 바꾸면 category_filter_change를 찍되 product_list_view는 다시 찍지 않는다", () => {
+  it("첫 요청이 실패해 목록이 안 그려지면 product_list_view를 찍지 않는다", async () => {
+    // 마운트에 찍으면 실패한 세션까지 "목록을 봤다"로 세어 3단계 이탈률이 낮아진다.
+    server.use(http.get("*/api/products", () => new HttpResponse(null, { status: 500 })));
     renderView();
-    trackEvent.mockClear(); // 진입 시 찍힌 product_list_view를 걷어내고 이후만 본다.
+
+    await screen.findByRole("alert");
+    expect(trackEvent).not.toHaveBeenCalledWith("product_list_view", expect.anything());
+  });
+
+  it("카테고리를 바꾸면 category_filter_change를 찍되 product_list_view는 다시 찍지 않는다", async () => {
+    renderView();
+    // product_list_view는 목록이 그려진 뒤 찍히므로, 그때까지 기다린 뒤 걷어내고 이후만 본다.
+    await screen.findByText(/총 \d+개/);
+    trackEvent.mockClear();
 
     fireEvent.change(screen.getByRole("combobox", { name: /카테고리/ }), {
       target: { value: "fashion" },
@@ -184,8 +197,9 @@ describe("ProductListView 계측 발화 조건", () => {
     });
   });
 
-  it("정렬을 바꾸면 sort_change를 찍는다", () => {
+  it("정렬을 바꾸면 sort_change를 찍는다", async () => {
     renderView();
+    await screen.findByText(/총 \d+개/);
     trackEvent.mockClear();
 
     fireEvent.change(screen.getByRole("combobox", { name: /정렬/ }), {
@@ -198,9 +212,10 @@ describe("ProductListView 계측 발화 조건", () => {
   it("다음 페이지로 이동하면 page_change를 새 page와 함께 찍는다", async () => {
     // 페이지네이션은 totalCount>0일 때만 보이므로 결과가 있는 응답으로 렌더한다.
     renderCapturingUrl({}, 30);
+    await screen.findByText(/총 \d+개/);
     trackEvent.mockClear();
 
-    fireEvent.click(await screen.findByRole("button", { name: "다음" }));
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
 
     expect(trackEvent).toHaveBeenCalledExactlyOnceWith("page_change", { page: 2 });
   });
