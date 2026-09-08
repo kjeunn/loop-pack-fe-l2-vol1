@@ -99,6 +99,8 @@ const eslintConfig = defineConfig([
         { type: "features", pattern: "src/features/*", capture: ["slice"] },
         { type: "entities", pattern: "src/entities/*", capture: ["slice"] },
         { type: "shared", pattern: "src/shared" },
+        // 계측은 어느 층이든 부르는 횡단 관심사라 shared로 본다 — analytics가 위 층을 import하면 여기서 막힌다.
+        { type: "shared", pattern: "src/analytics" },
       ],
     },
     rules: {
