@@ -99,20 +99,20 @@ describe("로그인 상태와 공통 프로퍼티", () => {
     expect(events[1]?.props).toMatchObject({ userId: "u1" });
   });
 
-  // login_success는 로그인 화면에서 성공한 순간의 이벤트라, 세션이 클라에 반영되기(AnalyticsSessionSync가
-  // userId를 세팅하기) 전에 찍힌다. 따라서 login_success에는 userId가 없고, 그 뒤 이벤트부터 붙는다.
-  // 시드의 login_success props도 { from }뿐이라 이 동작과 일치한다.
-  it("login_success에는 아직 userId가 없고, 세션 반영 뒤 이벤트부터 userId가 붙는다", async () => {
+  // login_success는 hard navigation 직전 이 문서에서 찍히므로 세션 반영(AnalyticsSessionSync)을 기다릴 수 없다.
+  // LoginForm이 응답의 user.id로 먼저 setAnalyticsUser를 부른 뒤 찍는다. 시드의 login_success는 586건 전부
+  // userId를 갖고 login_start는 0건이다 — 그 경계를 그대로 재현한다.
+  it("login_start엔 userId가 없고, 응답으로 식별한 뒤 찍는 login_success부터 userId가 붙는다", async () => {
     const events = createRecorder();
-    let userId: string | null = null; // 로그인 성공 직후엔 아직 반영 전
+    let userId: string | null = null;
     setCommonProperties(() =>
       userId === null ? { sessionId: "s_1" } : { sessionId: "s_1", userId },
     );
     await initAnalytics();
 
-    trackEvent("login_success", { from: "/orders" }); // 성공 순간 — userId 반영 전
-    userId = "u1"; // AnalyticsSessionSync가 세션을 반영
-    trackEvent("order_start", { productIds: ["p1"] }); // 그 뒤 이벤트
+    trackEvent("login_start", { from: "/orders" }); // 로그인 전
+    userId = "u1"; // LoginForm onSuccess: setAnalyticsUser(data.user.id)
+    trackEvent("login_success", { from: "/orders" }); // 식별 뒤
 
     expect(events[0]?.props).not.toHaveProperty("userId");
     expect(events[1]?.props).toMatchObject({ userId: "u1" });

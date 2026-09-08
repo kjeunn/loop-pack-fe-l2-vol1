@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getCommonProperties, setAnalyticsUser } from "@/analytics/session";
 import { LoginForm } from "@/features/auth/ui/LoginForm";
 import { mockLocation } from "@/test/location";
 import { renderWithProviders } from "@/test/renderWithProviders";
@@ -65,7 +66,20 @@ describe("LoginForm 계측", () => {
     expect(trackEvent).toHaveBeenCalledExactlyOnceWith("login_start", { from: "direct" });
   });
 
-  it("로그인에 성공하면 login_success를 from과 함께 찍는다", async () => {
+  it("로그인에 성공하면 응답의 user.id로 먼저 식별한 뒤 login_success를 from과 함께 찍는다", async () => {
+    setAnalyticsUser(null);
+    // getCommonProperties의 device 판별이 matchMedia를 쓰는데 jsdom엔 없다.
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => ({ matches: false })),
+    );
+    // 찍는 순간의 공통 프로퍼티 userId를 잡는다 — 식별이 track보다 먼저인지가 요점이다.
+    const userIdAtTrack: Array<string | undefined> = [];
+    trackEvent.mockImplementation((name: string) => {
+      if (name === "login_success") {
+        userIdAtTrack.push(getCommonProperties().userId as string | undefined);
+      }
+    });
     const user = userEvent.setup();
     renderWithProviders(<LoginForm redirect="/orders" />);
 
@@ -76,6 +90,9 @@ describe("LoginForm 계측", () => {
     await vi.waitFor(() =>
       expect(trackEvent).toHaveBeenCalledWith("login_success", { from: "/orders" }),
     );
+    expect(userIdAtTrack).toEqual(["u1"]);
+    setAnalyticsUser(null);
+    vi.unstubAllGlobals();
   });
 
   it("자격 증명이 틀리면 login_fail을 사유와 함께 찍고 login_success는 찍지 않는다", async () => {

@@ -34,7 +34,7 @@ E2E는 통합 테스트보다 비싸고 UI가 바뀔 때마다 고칠 곳이 생
 | `ts`        | 발생 시점 ISO 8601                                                                   |
 | `userId`    | 로그인 상태일 때만. `AnalyticsSessionSync`가 세션 상태를 관측해 넣는다               |
 
-시드의 공통 필드(`sessionId`·`ts`·`device` 전량, `userId`는 로그인 후)와 일치한다. 다만 `login_success`는 `AnalyticsSessionSync`의 effect보다 먼저 찍혀 userId가 아직 붙지 않는다. 시드는 이 이벤트에도 userId가 붙어 있는데, 그 점만 다르다.
+시드의 공통 필드(`sessionId`·`ts`·`device` 전량, `userId`는 로그인 후)와 일치한다. `login_success`는 세션 반영(`AnalyticsSessionSync`)보다 먼저 찍히므로 `LoginForm`이 로그인 응답의 `user.id`로 먼저 식별한 뒤 찍는다 — 시드의 `login_success`는 586건 전부 `userId`를 갖고 `login_start`는 0건인데, 그 경계와 같다.
 
 ### 시드 매핑
 

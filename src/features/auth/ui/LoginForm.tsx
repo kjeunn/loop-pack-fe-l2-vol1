@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { identify } from "@/analytics/logger";
 import { trackEvent } from "@/analytics/schema";
+import { setAnalyticsUser } from "@/analytics/session";
 import { useLogin } from "@/features/auth/api/mutations";
 import { safeRedirect } from "@/shared/lib/safeRedirect";
 import buttonStyles from "@/shared/ui/button.module.css";
@@ -33,7 +35,11 @@ export function LoginForm({ redirect }: LoginFormProps) {
     login.mutate(
       { email, password },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          // 세션 반영(AnalyticsSessionSync)은 hard navigation 뒤 다음 문서에서 일어나므로, 이 문서에서
+          // 찍는 login_success엔 응답의 user.id를 먼저 실어야 한다. 시드의 login_success는 전량 userId를 갖는다(퍼널 join 키).
+          setAnalyticsUser(data.user.id);
+          identify(data.user.id);
           trackEvent("login_success", { from: redirect ?? "direct" });
           // 인증 경계를 넘는 이동은 hard navigation(전체 페이지 로드)으로 한다 — 세션 만료 경로와 같은 방식.
           // soft navigation(router)은 비로그인 때 프리페치된 보호 경로의 307이 라우터 캐시에 남아 복원을 가로챈다(재현 E2E).
