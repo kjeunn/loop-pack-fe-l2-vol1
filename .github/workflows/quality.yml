@@ -39,13 +39,19 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install Playwright Chromium when used
-        run: |
-          if pnpm exec playwright --version >/dev/null 2>&1; then
-            pnpm exec playwright install --with-deps chromium
-          fi
-      - name: Run quality checks
-        run: pnpm check
+      # 아래 다섯 step은 package.json의 `check` 스크립트와 같은 목록이다.
+      # 한 명령으로 묶으면 Actions 로그에 step별 타임스탬프가 남지 않아
+      # 어느 검증이 느린지·어느 검증이 실패했는지 보이지 않는다. 그래서 목록을 여기 한 번 더 푼다.
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+      - name: Duplicate check
+        run: pnpm dupcheck
+      - name: Build
+        run: pnpm build
         # appOrigin은 미설정 시 throw한다. CI build는 배포가 아니므로 로컬 origin을 준다.
         env:
           APP_ORIGIN: http://localhost:3000
