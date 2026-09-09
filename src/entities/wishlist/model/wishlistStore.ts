@@ -2,6 +2,8 @@ import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
+import { createSafeStorage } from "@/shared/lib/persist/safeStorage";
+
 type ProductId = string;
 
 export type WishlistStore = {
@@ -37,6 +39,8 @@ export const useWishlistStore = create<WishlistStore>()(
       {
         name: "wishlist",
         version: 1,
+        // 기본 storage는 접근 차단·깨진 JSON에서 복원을 못 끝낸다. 실패해도 빈 값으로 넘어가는 storage를 쓴다.
+        storage: createSafeStorage(),
         skipHydration: true,
         partialize: (state) => ({ wishlistIds: state.wishlistIds }),
         migrate: (persisted) => sanitize(persisted),

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 
@@ -10,11 +12,27 @@ import { ProductCard } from "@/widgets/product-card/ui/ProductCard";
 
 // 목록의 로딩·에러·빈·성공 상태를 그린다. 실패 케이스를 먼저 걸러내고 목록을 마지막에 그린다.
 // 조회 조건도 결과도 스스로 읽는다. 부모와 같은 query key라 캐시를 공유해 요청은 한 번만 나간다.
-export function ProductListResults() {
+type ProductListResultsProps = {
+  // 목록이 처음 실제로 그려졌을 때 1회. 진입 계측은 View의 일이라 시점만 올려보낸다.
+  onFirstRender?: () => void;
+};
+
+export function ProductListResults({ onFirstRender }: ProductListResultsProps) {
   const [query] = useQueryStates(productSearchParsers);
   const { data, isPending, isError, error, isFetching, refetch } = useQuery(
     productListQueryOptions(query),
   );
+
+  // 첫 성공 데이터가 그려진 시점을 1회만 알린다. 마운트 시점이 아니라 데이터 시점이어야
+  // 첫 요청이 실패한 세션이 "목록을 봤다"로 세어지지 않는다.
+  const reportedFirstRender = useRef(false);
+  useEffect(() => {
+    if (reportedFirstRender.current || data === undefined) {
+      return;
+    }
+    reportedFirstRender.current = true;
+    onFirstRender?.();
+  }, [data, onFirstRender]);
 
   // 아직 아무 데이터도 없는 첫 로딩.
   if (isPending) {

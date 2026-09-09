@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from "react";
 
-import { QueryClientProvider } from "@tanstack/react-query";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 
@@ -23,6 +23,8 @@ type OnUrlUpdate = NonNullable<ComponentProps<typeof NuqsTestingAdapter>["onUrlU
 type RenderOptions = {
   searchParams?: Record<string, string>;
   onUrlUpdate?: OnUrlUpdate;
+  // 같은 브라우저 탭(=같은 캐시)에서 사용자만 바뀌는 상황을 재현할 때, 앞 렌더의 client를 이어 쓴다.
+  client?: QueryClient;
 };
 
 // 통합 테스트의 공통 준비를 한 곳에 모은다 — URL 상태(nuqs)와 조회 캐시(QueryClient) 프로바이더.
@@ -31,9 +33,8 @@ type RenderOptions = {
 // @testing-library/react의 `render`와 겹쳐 헷갈리는 걸 피하고, 프로바이더로 감싼다는 의도를 드러낸다.
 export function renderWithProviders(
   ui: ReactNode,
-  { searchParams, onUrlUpdate }: RenderOptions = {},
+  { searchParams, onUrlUpdate, client = makeTestQueryClient() }: RenderOptions = {},
 ) {
-  const client = makeTestQueryClient();
   const result = render(
     <NuqsTestingAdapter searchParams={searchParams} onUrlUpdate={onUrlUpdate}>
       <QueryClientProvider client={client}>{ui}</QueryClientProvider>
