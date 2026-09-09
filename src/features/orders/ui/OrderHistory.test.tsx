@@ -1,0 +1,143 @@
+// @vitest-environment jsdom
+import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { http, HttpResponse } from "msw";
+import { describe, expect, it, vi } from "vitest";
+
+import { OrderHistory } from "@/features/orders/ui/OrderHistory";
+import { renderWithProviders } from "@/test/renderWithProviders";
+import { server } from "@/test/server";
+import { looperUser, withSession } from "@/test/session";
+
+function renderLoggedIn(ui: React.ReactNode) {
+  return renderWithProviders(withSession(looperUser(1), ui));
+}
+
+describe("OrderHistory — 배경 재조회 실패", () => {
+  it("이미 보이던 목록은 재조회가 실패해도 지우지 않고, 알린 뒤 다시 시도할 수 있다", async () => {
+    server.use(
+      http.get("*/api/orders", () =>
+        HttpResponse.json({
+          orders: [
+            {
+              id: "o1",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              items: [{ productId: "p1", quantity: 2 }],
+            },
+          ],
+        }),
+      ),
+    );
+    const { client } = renderLoggedIn(<OrderHistory />);
+    await screen.findByText("p1 × 2");
+
+    // 창 포커스 복귀 등으로 재조회했는데 5xx — 멀쩡한 화면을 에러 문구로 덮지 않는다(queryClient의 의도).
+    server.use(http.get("*/api/orders", () => new HttpResponse(null, { status: 500 })));
+    await client.refetchQueries();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/불러오지 못/);
+    expect(screen.getByText("p1 × 2")).toBeInTheDocument();
+
+    // 다시 시도가 성공하면 안내가 사라지고 새 목록이 온다.
+    server.use(
+      http.get("*/api/orders", () =>
+        HttpResponse.json({
+          orders: [
+            {
+              id: "o2",
+              createdAt: "2026-01-02T00:00:00.000Z",
+              items: [{ productId: "p9", quantity: 1 }],
+            },
+          ],
+        }),
+      ),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+
+    await screen.findByText("p9 × 1");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("OrderHistory — 사용자 격리", () => {
+  it("같은 브라우저에서 사용자가 바뀌면 이전 사용자의 주문을 보여주지 않는다", async () => {
+    // 사용자 1이 주문 내역을 본다 → 캐시에 남는다.
+    server.use(
+      http.get("*/api/orders", () =>
+        HttpResponse.json({
+          orders: [
+            {
+              id: "o1",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              items: [{ productId: "p1", quantity: 2 }],
+            },
+          ],
+        }),
+      ),
+    );
+    const first = renderWithProviders(withSession(looperUser(1), <OrderHistory />));
+    await screen.findByText("p1 × 2");
+    first.unmount();
+
+    // 같은 탭(같은 캐시)에서 사용자 2로 바뀐다(로그아웃→다른 계정 로그인, 만료→다른 계정).
+    server.use(
+      http.get("*/api/orders", () =>
+        HttpResponse.json({
+          orders: [
+            {
+              id: "o2",
+              createdAt: "2026-01-02T00:00:00.000Z",
+              items: [{ productId: "p9", quantity: 1 }],
+            },
+          ],
+        }),
+      ),
+    );
+    renderWithProviders(withSession(looperUser(2), <OrderHistory />), { client: first.client });
+
+    // 첫 렌더부터 사용자 1의 주문이 보이면 안 된다 — 캐시가 사용자와 무관하면 여기서 즉시 내려간다.
+    expect(screen.queryByText("p1 × 2")).not.toBeInTheDocument();
+    await screen.findByText("p9 × 1");
+    expect(screen.queryByText("p1 × 2")).not.toBeInTheDocument();
+  });
+});
+
+describe("OrderHistory", () => {
+  it("로그인 상태면 주문 목록을 보여준다", async () => {
+    server.use(
+      http.get("*/api/orders", () =>
+        HttpResponse.json({
+          orders: [
+            {
+              id: "o1",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              items: [{ productId: "p1", quantity: 2 }],
+            },
+          ],
+        }),
+      ),
+    );
+    renderLoggedIn(<OrderHistory />);
+
+    expect(await screen.findByText("o1")).toBeInTheDocument();
+    expect(screen.getByText("p1 × 2")).toBeInTheDocument();
+  });
+
+  it("주문이 없으면 빈 안내를 보인다", async () => {
+    server.use(http.get("*/api/orders", () => HttpResponse.json({ orders: [] })));
+    renderLoggedIn(<OrderHistory />);
+
+    expect(await screen.findByText("주문 내역이 없습니다.")).toBeInTheDocument();
+  });
+
+  it("비로그인이면 조회하지 않는다(enabled 게이트) — 요청이 나가지 않는다", async () => {
+    // 로그인 상태(me 값)를 주지 않으면 useOrders의 enabled가 false라 요청 자체가 없다.
+    const orders = vi.fn(() => HttpResponse.json({ orders: [] }));
+    server.use(http.get("*/api/orders", orders));
+    renderWithProviders(<OrderHistory />);
+
+    // pending 상태로 남고, 잠시 뒤에도 요청이 나가지 않았음을 확인한다.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(orders).not.toHaveBeenCalled();
+  });
+});

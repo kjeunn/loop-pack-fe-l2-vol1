@@ -2,6 +2,8 @@ import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
+import { createSafeStorage } from "@/shared/lib/persist/safeStorage";
+
 type ProductId = string;
 
 export type CartStore = {
@@ -43,6 +45,8 @@ export const useCartStore = create<CartStore>()(
         // localStorage 키.
         name: "cart",
         version: 1,
+        // 기본 storage는 접근 차단·깨진 JSON에서 복원을 못 끝낸다. 실패해도 빈 값으로 넘어가는 storage를 쓴다.
+        storage: createSafeStorage(),
         // 서버엔 저장소가 없어 자동 복원을 두면 첫 렌더가 어긋난다. 마운트 뒤 직접 복원한다.
         skipHydration: true,
         partialize: (state) => ({ cartIds: state.cartIds }),

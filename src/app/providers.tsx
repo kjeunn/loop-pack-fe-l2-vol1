@@ -1,11 +1,12 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
+import { setupAnalytics } from "@/analytics/setup";
 import { useHydrateCart } from "@/entities/cart";
 import { useHydrateWishlist } from "@/entities/wishlist";
 import { makeQueryClient } from "@/shared/api/queryClient";
@@ -30,6 +31,11 @@ export function Providers({ children }: ProvidersProps) {
   const queryClient = getQueryClient();
   useHydrateCart();
   useHydrateWishlist();
+  // 계측 초기화(비동기)를 클라 최상단에서 1회. 등록은 모듈 평가 시점에 이미 끝나 있고,
+  // 초기화 전 이벤트는 큐로 보존된다(setup.ts).
+  useEffect(() => {
+    setupAnalytics();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -99,6 +99,8 @@ const eslintConfig = defineConfig([
         { type: "features", pattern: "src/features/*", capture: ["slice"] },
         { type: "entities", pattern: "src/entities/*", capture: ["slice"] },
         { type: "shared", pattern: "src/shared" },
+        // 계측은 어느 층이든 부르는 횡단 관심사라 shared로 본다 — analytics가 위 층을 import하면 여기서 막힌다.
+        { type: "shared", pattern: "src/analytics" },
       ],
     },
     rules: {
@@ -176,6 +178,29 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-deprecated": "error",
     },
   },
+
+  // e2e(Playwright)는 React가 아니다. 픽스처 제공 콜백의 관례명 `use`를
+  // react-hooks/rules-of-hooks가 React의 `use` 훅 호출로 오인해 오탐을 내므로,
+  // 이 폴더에서만 끈다. 선언형이라 앞으로 fixture를 더 만들어도 깨지지 않는다.
+  {
+    files: ["e2e/**/*.ts"],
+    rules: { "react-hooks/rules-of-hooks": "off" },
+  },
+
+  // 9주차 스타터(#174 병합)가 제공한 예시 코드 — 인증 mock 백엔드와 이벤트 로거.
+  // 우리가 짠 게 아니라 과제용으로 들어온 코드라, 우리 컨벤션(import 정렬·no-console 등)을 강제하지 않는다.
+  globalIgnores([
+    // 문서 증거물(Advanced B 생성 원본·RFC 수치 재현 스크립트)은 앱 코드가 아니라 lint 대상이 아니다.
+    "docs/**",
+    "src/app/api/auth/**",
+    "src/app/api/orders/**",
+    "src/app/api/_data/auth*",
+    // 스타터가 준 이벤트 로거 파일만 제외한다. 그 위에 우리가 얹는 스키마·셋업은 lint를 받는다.
+    "src/analytics/logger.ts",
+    "src/analytics/logger.test.ts",
+    "src/analytics/provider.ts",
+    "src/analytics/consoleProvider.ts",
+  ]),
 
   // Override default ignores of eslint-config-next.
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", ".claude/**"]),

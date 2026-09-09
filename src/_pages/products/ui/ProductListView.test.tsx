@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeProduct, makeProductListResponse } from "@/test/handlers";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { server } from "@/test/server";
 
 import { ProductListView } from "./ProductListView";
+
+const trackEvent = vi.hoisted(() => vi.fn());
+vi.mock("@/analytics/schema", () => ({ trackEvent }));
+
+beforeEach(() => trackEvent.mockClear());
 
 function renderView(searchParams?: Record<string, string>) {
   return renderWithProviders(<ProductListView />, { searchParams });
@@ -27,7 +32,10 @@ describe("ProductListView 부분 실패 — 결과 영역만 경계로", () => {
     renderView();
 
     // 결과 영역: 경계 fallback("다시 시도")이 뜬다.
-    expect(await screen.findByRole("button", { name: "다시 시도" })).toBeInTheDocument();
+    // 5xx → 쿼리 에러 → 경계 렌더가 전체 스위트 병렬 부하에선 기본 대기(1초)를 넘길 때가 있어 예산을 명시한다.
+    expect(
+      await screen.findByRole("button", { name: "다시 시도" }, { timeout: 3_000 }),
+    ).toBeInTheDocument();
 
     // 필터는 살아 있다: 카테고리 select가 그대로 있다(조건을 바꿔 재시도 가능).
     expect(screen.getByRole("combobox", { name: /카테고리/ })).toBeInTheDocument();
@@ -152,5 +160,66 @@ describe("ProductListView URL 재진입 — 컨트롤 복원", () => {
 
     expect(screen.getByRole("combobox", { name: /카테고리/ })).toHaveValue("fashion");
     expect(screen.getByRole("combobox", { name: /정렬/ })).toHaveValue("price-asc");
+  });
+});
+
+describe("ProductListView 계측 발화 조건", () => {
+  it("목록이 실제로 그려진 뒤 product_list_view를 진입 시점 조건과 함께 1회 찍는다", async () => {
+    renderView({ category: "fashion", sort: "popular", page: "2" });
+
+    await vi.waitFor(() =>
+      expect(trackEvent).toHaveBeenCalledExactlyOnceWith("product_list_view", {
+        category: "fashion",
+        sort: "popular",
+        page: 2,
+      }),
+    );
+  });
+
+  it("첫 요청이 실패해 목록이 안 그려지면 product_list_view를 찍지 않는다", async () => {
+    // 마운트에 찍으면 실패한 세션까지 "목록을 봤다"로 세어 3단계 이탈률이 낮아진다.
+    server.use(http.get("*/api/products", () => new HttpResponse(null, { status: 500 })));
+    renderView();
+
+    await screen.findByRole("alert");
+    expect(trackEvent).not.toHaveBeenCalledWith("product_list_view", expect.anything());
+  });
+
+  it("카테고리를 바꾸면 category_filter_change를 찍되 product_list_view는 다시 찍지 않는다", async () => {
+    renderView();
+    // product_list_view는 목록이 그려진 뒤 찍히므로, 그때까지 기다린 뒤 걷어내고 이후만 본다.
+    await screen.findByText(/총 \d+개/);
+    trackEvent.mockClear();
+
+    fireEvent.change(screen.getByRole("combobox", { name: /카테고리/ }), {
+      target: { value: "fashion" },
+    });
+
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("category_filter_change", {
+      category: "fashion",
+    });
+  });
+
+  it("정렬을 바꾸면 sort_change를 찍는다", async () => {
+    renderView();
+    await screen.findByText(/총 \d+개/);
+    trackEvent.mockClear();
+
+    fireEvent.change(screen.getByRole("combobox", { name: /정렬/ }), {
+      target: { value: "price-asc" },
+    });
+
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("sort_change", { sort: "price-asc" });
+  });
+
+  it("다음 페이지로 이동하면 page_change를 새 page와 함께 찍는다", async () => {
+    // 페이지네이션은 totalCount>0일 때만 보이므로 결과가 있는 응답으로 렌더한다.
+    renderCapturingUrl({}, 30);
+    await screen.findByText(/총 \d+개/);
+    trackEvent.mockClear();
+
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+
+    expect(trackEvent).toHaveBeenCalledExactlyOnceWith("page_change", { page: 2 });
   });
 });

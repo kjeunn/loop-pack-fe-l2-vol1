@@ -22,7 +22,8 @@ export function homeQueryOptions() {
     // 플래그가 꺼진 평소엔 key를 그대로 두어 기존 캐시 계약을 지키고,
     // slow 등 시나리오가 켜졌을 때만 scenario를 key에 더한다.
     queryKey: scenario ? (["home", scenario] as const) : (["home"] as const),
-    queryFn: () => fetchJson<HomeResponse>(withScenario("/api/home", scenario)),
+    queryFn: ({ signal }) =>
+      fetchJson<HomeResponse>(withScenario("/api/home", scenario), { signal }),
     staleTime: HOME_STALE_TIME,
   });
 }

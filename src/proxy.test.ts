@@ -1,0 +1,58 @@
+import { NextRequest } from "next/server";
+import { createHmac } from "node:crypto";
+import { describe, expect, it } from "vitest";
+
+import { accounts, createSessionToken } from "@/app/api/_data/auth";
+import { SESSION_COOKIE, SESSION_TTL_SECONDS } from "@/app/api/_data/auth-cookies";
+import { proxy } from "@/proxy";
+
+// 함수를 직접 부르므로 matcher(어느 경로에 걸리나)는 여기서 검증되지 않는다 — 그건 실제 라우팅을 타는
+// E2E만 본다. 여기는 걸린 요청에 대한 판정(유효·없음·만료·위조·비객체 페이로드)만 고정한다.
+const request = (cookie?: string) => {
+  const req = new NextRequest("http://localhost:3000/orders?page=2");
+  if (cookie !== undefined) {
+    req.cookies.set(SESSION_COOKIE, cookie);
+  }
+  return req;
+};
+
+describe("proxy 판정", () => {
+  it("유효한 세션이면 통과한다", () => {
+    const response = proxy(request(createSessionToken(accounts[0].id)));
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("쿠키가 없으면 원래 경로(쿼리 포함)를 싣고 로그인으로 보낸다 — reason 없음", () => {
+    const location = proxy(request()).headers.get("location");
+    expect(location).toBe("http://localhost:3000/login?redirect=%2Forders%3Fpage%3D2");
+  });
+
+  it("쿠키가 있는데 만료됐으면 reason=expired를 붙여 로그인으로 보낸다", () => {
+    const expired = createSessionToken(
+      accounts[0].id,
+      Date.now() - (SESSION_TTL_SECONDS + 60) * 1_000,
+    );
+    const location = proxy(request(expired)).headers.get("location");
+    expect(location).toBe(
+      "http://localhost:3000/login?redirect=%2Forders%3Fpage%3D2&reason=expired",
+    );
+  });
+
+  it("서명은 맞는데 페이로드가 객체가 아니면(null) 500이 아니라 로그인으로 보낸다", () => {
+    // 시크릿을 아는 공격자가 만들 수 있는 토큰. 판독이 throw하면 proxy가 500을 내고 보호 경로 전체가 막힌다.
+    const payload = Buffer.from("null").toString("base64url");
+    const signature = createHmac(
+      "sha256",
+      process.env.AUTH_SESSION_SECRET ?? "loopers-week09-secret",
+    )
+      .update(payload)
+      .digest("base64url");
+    const location = proxy(request(`${payload}.${signature}`)).headers.get("location");
+    expect(location).toContain("/login?");
+  });
+
+  it("쿠키가 있는데 서명이 틀리면(위조) 만료와 같이 취급한다", () => {
+    const location = proxy(request("forged.token")).headers.get("location");
+    expect(location).toContain("reason=expired");
+  });
+});
