@@ -2,9 +2,18 @@ name: Quality
 
 "on":
   push:
+    # kjeunn은 주차 브랜치가 병합되는 통합 브랜치라 병합 뒤에도 한 번 돌아야 한다(사후 방어).
+    # main은 upstream 동기화 전용이지만 그대로 둔다.
     branches:
       - main
+      - kjeunn
   pull_request:
+
+# 같은 PR에 연속 push하면 앞선 run은 취소한다. 통합 브랜치 push는 취소하지 않는다 —
+# 병합 결과의 검증이 다음 push에 밀려 사라지면 안 된다.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -12,6 +21,8 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    # 러너 stall(pnpm setup이 7분 걸린 run이 있었다)이 무한정 점유하지 않게 한다. 정상은 2분 안이다.
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
