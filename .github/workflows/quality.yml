@@ -63,6 +63,24 @@ jobs:
         run: pnpm dupcheck
       - name: Build
         run: pnpm build
+      # 라우트별 First Load JS를 커밋된 한도(.size-limit.mts)와 비교한다. 초과면 빨강이고,
+      # 통과·초과 모두 summary에 표를 남겨 PR 화면에서 "무엇이 얼마나"를 바로 보게 한다.
+      - name: Bundle budget
+        run: |
+          set +e
+          pnpm exec size-limit --json > size-limit.json
+          status=$?
+          set -e
+          {
+            echo "## 번들 예산 (gzip)"
+            echo
+            if jq -e 'type == "array"' size-limit.json >/dev/null 2>&1; then
+              jq -r '"| 진입점 | 크기 | 한도 | 결과 |\n|---|---|---|---|", (.[] | "| \(.name) | \(.size/1000*10|round/10) kB | \(.sizeLimit/1000) kB | \(if .passed then "통과" else "초과 +\((.size-.sizeLimit)/1000*10|round/10) kB" end) |")' size-limit.json
+            else
+              echo "size-limit이 결과를 내지 못했습니다(설정 오류·빌드 산출물 없음). 로그를 확인하세요."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
 
   # E2E 스킵 조건은 이 job이 정한다. 기본이 실행이고 스킵을 명시한다 —
   # 런타임에 실리지 않는 경로(문서·마크다운·AI 설정)만 바뀐 PR이면 e2e를 건너뛴다.
