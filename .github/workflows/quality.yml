@@ -23,8 +23,9 @@ permissions:
 # 둘 중 하나라도 빠지면 Validate env가 막는다. 막지 않으면 빌드는 통과하고 브라우저에서 appOrigin이 throw해
 # 클라이언트 트리가 통째로 죽는다.
 env:
-  APP_ORIGIN: http://localhost:3000
+  APP_ORIGIN: http://localhost:3000/
   NEXT_PUBLIC_BASE_URL: http://localhost:3000
+  NEXT_PUBLIC_SESSION_SECRET: not-a-real-secret
 
 jobs:
   quality:
