@@ -13,7 +13,7 @@ import { z } from "zod";
 // CI는 커밋된 숫자와 비교만 한다.
 //
 // 여유폭 10 kB의 근거: 7주차 After(e7d0c2b) → 측정 시점까지 두 주치 정상 성장이 라우트당 약 +5 kB라 그 두 배이고,
-// 무심코 들어오는 라이브러리 하나(TanStack devtools ≈ 40 kB, moment ≈ 70 kB)보다 작다.
+// 무심코 들어오는 라이브러리 하나보다 작다(실측: TanStack devtools 패널을 홈에 실으면 +15.6 kB).
 // 즉 정상 작업은 통과하고 사고는 걸린다. 수치 근거는 docs/rfc/week10-ci.md 3단계.
 const HEADROOM_KB = 10;
 
