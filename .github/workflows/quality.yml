@@ -115,7 +115,9 @@ jobs:
     # changes가 스킵된 push 이벤트에서도 평가되도록 !cancelled()를 앞에 둔다(needs가 스킵되면 기본 조건은 false).
     # job 레벨 if로 스킵해야 required check가 "skipped=통과"로 집계된다.
     # 워크플로 on.paths로 막으면 run 자체가 없어 check가 Expected에 영영 걸린다.
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.runtime == 'true') }}
+    # changes가 실패하면(API 오류 등) outputs가 비어 스킵으로 흘러가는데, 그건 "판정 불가"이지 "안 바뀜"이 아니다.
+    # 그래서 판정이 성공하지 않았으면 돌린다 — 모르면 실행이 기본이다.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.runtime == 'true') }}
     runs-on: ubuntu-latest
     # 정상은 2분 안(빌드 + 서버 기동 + 29개 스펙). 러너 stall이 무한정 점유하지 않게 끊는다.
     timeout-minutes: 15
