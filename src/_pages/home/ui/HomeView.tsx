@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools/production";
 import Link from "next/link";
 
 import { homeQueryOptions } from "@/_pages/home/api/queries";
@@ -17,7 +16,6 @@ export function HomeView() {
   return (
     <>
       {isLoading && <HomeSkeleton />}
-      <ReactQueryDevtoolsPanel />
 
       {isError && (
         <section className="week05-section">
