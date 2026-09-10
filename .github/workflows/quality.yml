@@ -66,7 +66,8 @@ jobs:
       - name: Build
         run: pnpm build
       # 라우트별 First Load JS를 커밋된 한도(.size-limit.mts)와 비교한다. 초과면 빨강이고,
-      # 통과·초과 모두 summary에 표를 남겨 PR 화면에서 "무엇이 얼마나"를 바로 보게 한다.
+      # 통과·초과 모두 표를 남겨 "무엇이 얼마나"를 바로 보게 한다 — summary(PR 화면)와 step 로그 양쪽에.
+      # 로그에만 exit code가 남으면 step을 펼쳐도 원인이 안 보인다.
       - name: Bundle budget
         run: |
           set +e
@@ -81,7 +82,7 @@ jobs:
             else
               echo "size-limit이 결과를 내지 못했습니다(설정 오류·빌드 산출물 없음). 로그를 확인하세요."
             fi
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
           exit $status
 
   # E2E 스킵 조건은 이 job이 정한다. 기본이 실행이고 스킵을 명시한다 —
