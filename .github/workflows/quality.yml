@@ -163,6 +163,10 @@ jobs:
             echo "리포트 없음(빌드·서버 기동 실패 등). 로그를 확인하세요." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          if ! jq -e '.stats.flaky | numbers' "$report" >/dev/null 2>&1; then
+            echo "리포트를 읽을 수 없습니다(형식 불일치). 로그를 확인하세요." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           flaky=$(jq -r '.stats.flaky' "$report")
           echo "## E2E: flaky ${flaky}건" >> "$GITHUB_STEP_SUMMARY"
           if [ "$flaky" != "0" ]; then
