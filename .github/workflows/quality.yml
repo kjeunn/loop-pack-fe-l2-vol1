@@ -20,7 +20,8 @@ permissions:
 
 # CI 빌드는 배포가 아니므로 로컬 origin을 준다. 둘 다 같은 값이어야 한다 —
 # APP_ORIGIN은 서버(self-fetch·metadataBase), NEXT_PUBLIC_BASE_URL은 브라우저 번들에 박히는 같은 origin이다.
-# NEXT_PUBLIC_BASE_URL이 빠지면 빌드는 통과하지만 브라우저에서 appOrigin이 throw해 클라이언트 트리가 통째로 죽는다.
+# 둘 중 하나라도 빠지면 Validate env가 막는다. 막지 않으면 빌드는 통과하고 브라우저에서 appOrigin이 throw해
+# 클라이언트 트리가 통째로 죽는다.
 env:
   APP_ORIGIN: http://localhost:3000
   NEXT_PUBLIC_BASE_URL: http://localhost:3000
@@ -50,9 +51,10 @@ jobs:
       # 여기 별도 step으로 두면 실패가 "Build"가 아니라 "Validate env"로 보이고 summary에 원인 표가 남는다.
       - name: Validate env
         run: node scripts/validate-env.mts
-      # 아래 다섯 step은 package.json의 `check` 스크립트와 같은 목록이다.
+      # Lint부터 Bundle budget까지는 package.json의 `check` 스크립트와 같은 항목이다.
       # 한 명령으로 묶으면 Actions 로그에 step별 타임스탬프가 남지 않아
-      # 어느 검증이 느린지·어느 검증이 실패했는지 보이지 않는다. 그래서 목록을 여기 한 번 더 푼다.
+      # 어느 검증이 느린지·어느 검증이 실패했는지 보이지 않는다. 그래서 항목을 여기 한 번 더 푼다.
+      # 순서만 다르다 — 여기서는 싼 검증(lint·typecheck)을 앞에 둬 실패를 빨리 본다.
       - name: Lint
         run: pnpm lint
       - name: Typecheck
