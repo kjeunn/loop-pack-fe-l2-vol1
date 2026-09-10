@@ -46,6 +46,10 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # 빌드가 쓸 env를 빌드 앞에서 거른다. next.config.ts도 같은 검사를 하지만,
+      # 여기 별도 step으로 두면 실패가 "Build"가 아니라 "Validate env"로 보이고 summary에 원인 표가 남는다.
+      - name: Validate env
+        run: node scripts/validate-env.mts
       # 아래 다섯 step은 package.json의 `check` 스크립트와 같은 목록이다.
       # 한 명령으로 묶으면 Actions 로그에 step별 타임스탬프가 남지 않아
       # 어느 검증이 느린지·어느 검증이 실패했는지 보이지 않는다. 그래서 목록을 여기 한 번 더 푼다.
@@ -95,7 +99,7 @@ jobs:
     # 워크플로 on.paths로 막으면 run 자체가 없어 check가 Expected에 영영 걸린다.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.outputs.runtime == 'true') }}
     runs-on: ubuntu-latest
-    # 빌드 + 서버 기동 + 29개 스펙이 로컬 54초. 러너 편차를 감안해도 5분이면 충분하고, stall이면 끊는다.
+    # 정상은 2분 안(빌드 + 서버 기동 + 29개 스펙). 러너 stall이 무한정 점유하지 않게 끊는다.
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -114,6 +118,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       # 브라우저 바이너리는 Playwright 버전에만 묶인다. 그 버전은 lockfile에 있으므로 lockfile 해시를 키로 쓴다.
+      # 다른 의존성이 바뀌어도 키가 갈려 한 번 더 받지만, 버전만 따로 추적하는 복잡함보다 낫다.
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
