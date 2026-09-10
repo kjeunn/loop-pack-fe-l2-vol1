@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validateEnv } from "./env-rules.mts";
+import { formatProblems, validateEnv } from "./env-rules.mts";
 
 const ORIGIN = "http://localhost:3000";
 const valid = { APP_ORIGIN: ORIGIN, NEXT_PUBLIC_BASE_URL: ORIGIN };
@@ -29,6 +29,7 @@ describe("validateEnv", () => {
     "http://localhost:3000/api",
     "http://localhost:3000?x=1",
     "http://LOCALHOST:3000",
+    "http://localhost:80",
   ])("origin이 아닌 값 %s은 실패한다", (value) => {
     expect(names({ APP_ORIGIN: value, NEXT_PUBLIC_BASE_URL: value })).toEqual([
       "APP_ORIGIN",
@@ -96,5 +97,11 @@ describe("validateEnv", () => {
       "NEXT_PUBLIC_MOCK_SCENARIO",
       "NEXT_PUBLIC_SECRET",
     ]);
+  });
+
+  it("리포트 표는 값에 든 |를 이스케이프해 열이 밀리지 않는다", () => {
+    const markdown = formatProblems([{ name: "APP_ORIGIN", problem: 'Invalid URL. 지금은 "a|b"' }]);
+    expect(markdown).toContain('| `APP_ORIGIN` | Invalid URL. 지금은 "a\\|b" |');
+    expect(markdown.split("\n").filter((line) => line.startsWith("|"))).toHaveLength(3);
   });
 });

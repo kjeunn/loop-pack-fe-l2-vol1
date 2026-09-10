@@ -16,7 +16,7 @@ const originSchema = z
   .url({ protocol: /^https?$/ })
   .refine(
     (value) => URL.canParse(value) && new URL(value).origin === value,
-    "origin 형태(스킴://호스트[:포트])여야 합니다. 경로·쿼리·끝 슬래시·대문자 호스트는 안 됩니다",
+    "origin 형태(스킴://호스트[:포트])여야 합니다. 경로·쿼리·끝 슬래시·대문자 호스트·기본 포트(:80/:443) 표기는 안 됩니다",
   );
 
 // 이름에 이 단어가 들어간 값은 비밀로 본다. NEXT_PUBLIC_이 붙으면 브라우저 번들에 그대로 박혀 누구나 읽는다.
@@ -75,6 +75,8 @@ export function validateEnv(env: EnvLike): EnvProblem[] {
   }
 
   // 미설정이면 코드의 기본값(mock용)이 세션 서명에 쓰인다. 실배포에서 그러면 누구나 세션을 위조한다.
+  // preview는 요구하지 않는다 — 이 백엔드는 mock이라 preview 세션을 위조해도 얻는 게 없고,
+  // preview마다 시크릿을 요구하면 실험 배포가 매번 막힌다. 실데이터가 붙는 순간 isDeploy로 넓혀야 한다.
   if (isProduction) {
     const secretBytes = Buffer.byteLength(env.AUTH_SESSION_SECRET ?? "");
     if (secretBytes < MIN_SESSION_SECRET_BYTES) {
@@ -109,6 +111,10 @@ function describeOriginFailure(value: string | undefined, error: z.ZodError): st
 }
 
 export function formatProblems(problems: EnvProblem[]): string {
-  const rows = problems.map(({ name, problem }) => `| \`${name}\` | ${problem} |`).join("\n");
+  // 값에 `|`가 들어오면(잘못 설정된 URL 등) 표의 열이 밀린다. 표 문법만 이스케이프한다.
+  const cell = (text: string) => text.replaceAll("|", "\\|");
+  const rows = problems
+    .map(({ name, problem }) => `| \`${cell(name)}\` | ${cell(problem)} |`)
+    .join("\n");
   return `## 환경 변수 검증 실패 (${problems.length}건)\n\n| 변수 | 문제 |\n| --- | --- |\n${rows}\n`;
 }
