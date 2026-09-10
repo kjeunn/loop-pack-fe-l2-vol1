@@ -18,6 +18,13 @@ concurrency:
 permissions:
   contents: read
 
+# CI 빌드는 배포가 아니므로 로컬 origin을 준다. 둘 다 같은 값이어야 한다 —
+# APP_ORIGIN은 서버(self-fetch·metadataBase), NEXT_PUBLIC_BASE_URL은 브라우저 번들에 박히는 같은 origin이다.
+# NEXT_PUBLIC_BASE_URL이 빠지면 빌드는 통과하지만 브라우저에서 appOrigin이 throw해 클라이언트 트리가 통째로 죽는다.
+env:
+  APP_ORIGIN: http://localhost:3000
+  NEXT_PUBLIC_BASE_URL: http://localhost:3000
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -52,9 +59,6 @@ jobs:
         run: pnpm dupcheck
       - name: Build
         run: pnpm build
-        # appOrigin은 미설정 시 throw한다. CI build는 배포가 아니므로 로컬 origin을 준다.
-        env:
-          APP_ORIGIN: http://localhost:3000
 
   # E2E 스킵 조건은 이 job이 정한다. 기본이 실행이고 스킵을 명시한다 —
   # 런타임에 실리지 않는 경로(문서·마크다운·AI 설정)만 바뀐 PR이면 e2e를 건너뛴다.
@@ -125,8 +129,6 @@ jobs:
         run: pnpm exec playwright install-deps chromium
       - name: Run E2E
         run: pnpm test:e2e
-        env:
-          APP_ORIGIN: http://localhost:3000
       # 재시도로 통과한 스펙을 PR 화면(Checks 탭 summary)에 드러낸다. 초록이어도 흔들린 건 보이게.
       - name: Report flaky specs
         if: always()
