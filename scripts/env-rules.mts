@@ -87,6 +87,20 @@ export function validateEnv(env: EnvLike): EnvProblem[] {
     }
   }
 
+  // Vercel은 production 빌드에 자기 도메인(VERCEL_PROJECT_PRODUCTION_URL)을 넣어준다.
+  // APP_ORIGIN이 그 도메인이 아니면 서버가 남의 origin으로 self-fetch하고 OG URL도 남의 사이트를 가리킨다 —
+  // 같은 이름의 vercel.app이 남의 것이었던 첫 배포에서 실제로 났던 사고다. 형태 검사(①·②)는 이걸 못 잡는다.
+  if (isProduction && isSet(env.VERCEL_PROJECT_PRODUCTION_URL) && appOrigin.success) {
+    const expectedHost = env.VERCEL_PROJECT_PRODUCTION_URL;
+    const actualHost = new URL(appOrigin.data).host;
+    if (actualHost !== expectedHost) {
+      problems.push({
+        name: "APP_ORIGIN",
+        problem: `production 도메인(${expectedHost})과 다릅니다. 지금은 ${actualHost} — 남의 origin으로 self-fetch하게 됩니다`,
+      });
+    }
+  }
+
   for (const name of Object.keys(env)) {
     if (
       name.startsWith("NEXT_PUBLIC_") &&
