@@ -72,13 +72,13 @@ run 34362069942(커밋 `18aacb88`), 같은 방식으로 attempt 6개.
 | cold | 104s (87–130)       | 70s (67–75)        | **−34s** |
 | warm | 93s (84–108)        | 68s (67–79)        | −25s     |
 
-감소가 흔들림보다 크다. After 범위 전체가 Before 최솟값(cold 87·warm 84) 아래에 있어 겹치는 구간이 없다. 감소분 34·25s는 제거한 Chromium step의 Before 시간(cold median 30·warm 23s)과 맞는다. 검증 합은 47~50s로 Before의 `Run quality checks` 33~48s와 같은 수준이라 검증을 깎은 게 아니다. 부산물로 범위 폭이 cold 43 → 8s로 좁아졌다. 검증 안 분포는 Test 20 > Build 12 > Lint 11 > Typecheck 4s이고, 다음 병목 후보는 Test다.
+감소가 흔들림보다 크다. After 범위 전체가 Before 최솟값(cold 87·warm 84) 아래에 있어 겹치는 구간이 없다. 감소분 34·25s는 제거한 Chromium step의 Before 시간(cold median 30·warm 23s)과 맞는다. 검증 합은 31~50s(cold 1만 31, 나머지 47~50)로 Before의 `Run quality checks` 33~48s와 같은 수준이라 검증을 깎은 게 아니다. 부산물로 범위 폭이 cold 43 → 8s로 좁아졌다. 검증 안 분포는 Test 20 > Build 12 > Lint 11 > Typecheck 4s이고, 다음 병목 후보는 Test다.
 
 ### 1.5 캐시 hit/miss 증명
 
 - **miss(cold 1)**: `Set up Node.js` 로그 `pnpm cache is not found`, Post step `Cache saved with the key: node-cache-Linux-x64-pnpm-4b610a8e…`. install 6s.
 - **hit(warm 1)**: `Cache hit for: node-cache-Linux-x64-pnpm-4b610a8e…`, `Cache Size: ~206 MB`, `Cache restored from key: …`. install 2~3s, 복원 9~12s.
-- **lockfile 변경으로 키가 바뀐 miss**: size-limit을 추가한 커밋 `9acb1e45`(run 34456290949)에서 키가 `4b610a8e…` → `441ceda4…`로 바뀌며 pnpm 캐시와 Playwright 브라우저 캐시 둘 다 `cache not found`. install 6s로 cold와 같고, Post step에서 새 키로 저장됐다. 이후 run 34464568933에서 새 키로 hit.
+- **lockfile 변경으로 키가 바뀐 miss**: size-limit을 추가한 커밋 `1e895267`이 든 push(run 34456290949, head `9acb1e45`)에서 키가 `4b610a8e…` → `441ceda4…`로 바뀌며 pnpm 캐시와 Playwright 브라우저 캐시 둘 다 `cache not found`. install 6s로 cold와 같고, Post step에서 새 키로 저장됐다. 이후 run 34464568933에서 새 키로 hit.
 - hit과 miss의 install 차이는 3~4s이고, 복원 비용이 그보다 크다는 것이 [1.2](#12-before)의 결론이다.
 - **Playwright 브라우저 캐시**(E2E job, `~/.cache/ms-playwright`, lockfile 해시 키)는 반대로 이득이 분명하다. miss면 Chromium 설치 25~31s, hit이면 복원 3s + OS 의존성(apt) 12s. E2E job 전체는 miss 92~96s, hit 73s(run 34464568933).
 
@@ -106,7 +106,7 @@ filters: |
 if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.runtime == 'true') }}
 ```
 
-- 워크플로 `on.paths`로 막으면 run 자체가 생기지 않아 required check가 Expected 상태로 남고 PR이 영영 머지되지 않는다. job 레벨 `if`로 스킵하면 skipped가 통과로 집계된다.
+- 워크플로 `on.paths`로 막으면 run 자체가 생기지 않아 required check가 Expected 상태로 남고 PR이 영영 머지되지 않는다. job 레벨 `if`로 스킵하면 GitHub 문서상 skipped가 통과로 집계된다. required가 걸린 `kjeunn`에서의 실증은 [2.3](#23-실행되는-pr과-스킵되는-pr)의 문서 PR에서 한다.
 - `push`(통합 브랜치)에서는 `changes`가 스킵되므로 `!cancelled()`를 앞에 둬 조건이 평가되게 하고, 필터 없이 항상 돈다.
 - `changes`가 실패하면(API 오류 등) outputs가 비어 스킵으로 흘러간다. 그건 "안 바뀜"이 아니라 "판정 불가"라, `result != 'success'`면 돌린다. 이 조건은 AI 리뷰가 찾은 결함이다([4.3](#43-잘-잡은-것-하나)).
 
@@ -118,11 +118,11 @@ if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.re
 
 ### 2.3 실행되는 PR과 스킵되는 PR
 
-| 경우                                               | run                                 | `changes`     | `e2e`                                |
-| -------------------------------------------------- | ----------------------------------- | ------------- | ------------------------------------ |
-| 워크플로·설정 변경(PR #1, 커밋 `1a1a19f7`)         | 34435712817                         | runtime=true  | 실행, 29 passed(37.5s), 전체 92s     |
-| 실험 PR의 revert 커밋(PR #2·#3·#4) — 변경 파일 0개 | 34466762242·34466762258·34466763510 | runtime=false | skipped, 세 PR 모두 `MERGEABLE`      |
-| 문서만 바꾼 PR(회고 문서, `kjeunn` 대상)           | 예정                                | runtime=false | skipped인 채 required 통과 확인 예정 |
+| 경우                                               | run                                 | `changes`     | `e2e`                                                           |
+| -------------------------------------------------- | ----------------------------------- | ------------- | --------------------------------------------------------------- |
+| 워크플로·설정 변경(PR #1, 커밋 `1a1a19f7`)         | 34435712817                         | runtime=true  | 실행, 29 passed(37.5s), 전체 92s                                |
+| 실험 PR의 revert 커밋(PR #2·#3·#4) — 변경 파일 0개 | 34466762242·34466762258·34466763510 | runtime=false | skipped. base `feat/week-10`엔 required가 없어 스킵 동작만 실증 |
+| 문서만 바꾼 PR(회고 문서, `kjeunn` 대상)           | 예정                                | runtime=false | skipped인 채 required 통과 확인 예정                            |
 
 revert 케이스는 계획한 게 아니다. 실험 커밋을 되돌리자 PR의 변경 파일이 0개가 됐고, 그대로 스킵 경로의 실증이 됐다.
 
@@ -138,7 +138,7 @@ E2E job을 붙인 첫 run(34431518663)에서 29개 중 정적 화면 3개만 통
 
 ### 3.1 번들
 
-**측정.** Next 16(Turbopack)은 build 출력에 First Load JS를 찍지 않는다. `.size-limit.mts`가 `build-manifest.json`의 `rootMainFiles`(공통 청크)와 라우트별 `page_client-reference-manifest.js`의 청크를 합쳐 size-limit entry를 동적으로 만든다. gzip 기준. `polyfillFiles`는 `<script nomodule>`로 실려 ES 모듈을 아는 브라우저가 받지 않으므로 뺐다. 서버를 띄워 `/`·`/products`·`/login`의 HTML script 태그와 대조했을 때 이 청크 하나만 차이 났다.
+**측정.** Next 16(Turbopack)은 build 출력에 First Load JS를 찍지 않는다. `.size-limit.mts`가 `build-manifest.json`의 `rootMainFiles`(공통 청크)와 라우트별 `page_client-reference-manifest.js`의 청크를 합쳐 size-limit entry를 동적으로 만든다. gzip 기준. `polyfillFiles`는 `<script nomodule>`로 실려 ES 모듈을 아는 브라우저가 받지 않으므로 뺐다. `pnpm start`로 서버를 띄워 `/`·`/products`·`/login`의 HTML에서 `/_next/static/chunks/*.js` script 태그를 뽑아 설정의 path 목록과 대조했다. 세 화면 모두 HTML 16개 vs 설정 15개이고, 차이는 `<script nomodule>`인 `0cz1d0mv5g_q7.js` 하나였다(`build-manifest.json`의 `polyfillFiles`와 일치).
 
 **근거값.** 7주차 RFC에는 이미지·document 바이트만 있고 JS 바이트가 없다. 7주차 After SHA `e7d0c2b`를 worktree로 빌드해 같은 방법으로 쟀다.
 
@@ -167,7 +167,7 @@ E2E job을 붙인 첫 run(34431518663)에서 29개 중 정적 화면 3개만 통
 | ④   | `VERCEL_ENV=production`이면 `AUTH_SESSION_SECRET` 32바이트 이상        | 기본 시크릿으로 세션 위조                       | 배포 빌드에서만. CI는 vitest로 로직 보증 |
 | ⑤   | `NEXT_PUBLIC_*` 이름에 SECRET·TOKEN·PASSWORD·PRIVATE·KEY               | 비밀이 브라우저 번들에 노출                     | 잡는다                                   |
 
-32바이트는 세션 서명이 HMAC-SHA256이고 RFC 2104가 HMAC 키를 해시 출력 길이 이상으로 권고해서다. `next build`는 항상 `NODE_ENV=production`이라 실배포 판별은 `VERCEL_ENV`로만 한다. 한계: ④는 Vercel 밖 배포에선 울리지 않고, ⑤는 이름 수준이라 순진한 이름의 비밀은 못 잡고 공개용 키(`NEXT_PUBLIC_MAPS_KEY` 같은)는 오탐이다. 조용히 새는 쪽보다 시끄럽게 막히는 쪽을 골랐다. preview는 ④를 요구하지 않는다. mock 백엔드라 preview 세션을 위조해도 얻는 게 없고, 실데이터가 붙으면 `isDeploy`로 넓혀야 한다. 단위 테스트 20개(`env-rules.test.mts`)가 규칙별 경계(빈 문자열·비-origin 6종·컨텍스트별 금지·바이트 길이·표 이스케이프)를 고정한다. 이 문서 시점엔 배포가 없어 ④는 설계와 테스트만 있고 배포 빌드에서 실제로 울린 기록은 없다.
+32바이트는 세션 서명이 HMAC-SHA256이고 RFC 2104가 HMAC 키를 해시 출력 길이 이상으로 권고해서다. `next build`는 항상 `NODE_ENV=production`이라 실배포 판별은 `VERCEL_ENV`로만 한다. 한계: ④는 Vercel 밖 배포에선 울리지 않고, ⑤는 이름 수준이라 순진한 이름의 비밀은 못 잡고 공개용 키(`NEXT_PUBLIC_MAPS_KEY` 같은)는 오탐이다. 조용히 새는 쪽보다 시끄럽게 막히는 쪽을 골랐다. preview는 ④를 요구하지 않는다. mock 백엔드라 preview 세션을 위조해도 얻는 게 없고, 실데이터가 붙으면 `isDeploy`로 넓혀야 한다. 단위 테스트 20개(`env-rules.test.mts`)가 규칙별 경계(빈 문자열·비-origin 7종·컨텍스트별 금지·바이트 길이·표 이스케이프)를 고정한다. 이 문서 시점엔 배포가 없어 ④는 설계와 테스트만 있고 배포 빌드에서 실제로 울린 기록은 없다.
 
 ### 3.3 결과 가시성
 
@@ -175,7 +175,7 @@ E2E job을 붙인 첫 run(34431518663)에서 29개 중 정적 화면 3개만 통
 
 ### 3.4 branch protection — 무엇을 required로 두나
 
-fork의 `kjeunn`에 ruleset `kjeunn-required-checks`를 걸었다. required는 `quality`와 `e2e`, bypass 없음. `e2e`는 조건부지만 job 레벨 `if`로 스킵되면 통과로 집계돼 충돌하지 않는다([2.1](#21-무엇을-어떻게)). required에서 뺀 것은 Lighthouse(변동성이 커서 required면 거짓 빨간불이 생기고, 7주차에서 headless가 회귀를 못 잡은 기록이 있다)와 AI 리뷰(비결정적, [4](#4-ai-코드리뷰))다. Lighthouse CI는 붙이지 않았다. upstream 제출 PR에는 required를 걸 수 없어 그 run은 근거 신호이고, 병합을 실제로 막는 것은 fork의 이 ruleset이다. 부작용이 하나 있다. required check는 PR 머지만이 아니라 그 브랜치로의 직접 push도 막으므로, 그동안 직접 push하던 upstream 동기화 머지 커밋도 이제 PR을 거쳐야 한다. 통합 브랜치엔 전부 PR로 들어간다는 뜻이라 규칙과 맞고, 작업 브랜치(`feat/*`)는 대상이 아니라 push가 자유롭다.
+fork의 `kjeunn`에 ruleset `kjeunn-required-checks`를 걸었다. required는 `quality`와 `e2e`, bypass 없음. `changes`는 required가 아니다. 그 job이 실패하면 `e2e`가 스킵이 아니라 실행되므로([2.1](#21-무엇을-어떻게)) 판정 job 자체를 required로 둘 이유가 없다. `e2e`는 조건부지만 job 레벨 `if`로 스킵되면 통과로 집계돼 충돌하지 않는다([2.1](#21-무엇을-어떻게)). required에서 뺀 것은 Lighthouse(변동성이 커서 required면 거짓 빨간불이 생기고, 7주차에서 headless가 회귀를 못 잡은 기록이 있다)와 AI 리뷰(비결정적, [4](#4-ai-코드리뷰))다. Lighthouse CI는 붙이지 않았다. upstream 제출 PR에는 required를 걸 수 없어 그 run은 근거 신호이고, 병합을 실제로 막는 것은 fork의 이 ruleset이다. 부작용이 하나 있다. required check는 PR 머지만이 아니라 그 브랜치로의 직접 push도 막으므로, 그동안 직접 push하던 upstream 동기화 머지 커밋도 이제 PR을 거쳐야 한다. 통합 브랜치엔 전부 PR로 들어간다는 뜻이라 규칙과 맞고, 작업 브랜치(`feat/*`)는 대상이 아니라 push가 자유롭다.
 
 ### 3.5 빨간불 자가검증
 
@@ -199,20 +199,20 @@ CI 밖에서 로컬 Claude Code로 PR 전에 diff를 리뷰한다. CI 안 무료
 
 ### 4.2 앵커 유무 대조 — 같은 diff에 두 번
 
-10주차 diff(`cbc1489e..HEAD`, 10파일)에 A(CLAUDE.md·CONVENTION.md만, 억제 규칙 없음)와 B(스킬)를 각각 돌렸다. 9주차 src diff(약 5,000줄)에도 B를 돌렸다.
+10주차 diff(`cbc1489e..9acb1e45`, lockfile 제외 10파일)에 A(CLAUDE.md·CONVENTION.md만, 억제 규칙 없음)와 B(스킬)를 각각 돌렸다. 9주차 src diff(약 5,000줄)에도 B를 돌렸고, 이것을 B'로 부른다.
 
-|                | A    | B    |
-| -------------- | ---- | ---- |
-| 지적 수        | 15   | 6    |
-| 규칙 ID·확신도 | 없음 | 전부 |
-| 실패 경로 결함 | 5건  | 0건  |
-| 취향·중복 지적 | 섞임 | 억제 |
+|                                    | A    | B    |
+| ---------------------------------- | ---- | ---- |
+| 지적 수                            | 15   | 6    |
+| 규칙 ID·확신도                     | 없음 | 전부 |
+| 실제 결함(실패 경로 3·낡은 주석 2) | 5건  | 0건  |
+| 취향·중복 지적                     | 섞임 | 억제 |
 
-예상과 반대였다. 앵커는 노이즈를 줄였지만 신호도 걸렀다. A가 찾은 "changes 실패 시 e2e 스킵", "매니페스트 정규식 0건이면 통과", "flaky 리포트 파싱 실패가 초록을 빨강으로", "낡은 주석 2곳"은 전부 진짜였는데, B는 "규칙에 없는 지적은 하지 마라" 때문에 내지 않았다. 1회 대조라 방향만 보이고, 수치 근거로 쓰지 않는다.
+예상과 반대였다. 앵커는 노이즈를 줄였지만 신호도 걸렀다. A가 찾은 실패 경로 결함 셋("changes 실패 시 e2e 스킵", "매니페스트 정규식 0건이면 통과", "flaky 리포트 파싱 실패가 초록을 빨강으로")과 낡은 주석 2곳은 전부 진짜였는데, B는 "규칙에 없는 지적은 하지 마라" 때문에 내지 않았다. 1회 대조라 방향만 보이고, 수치 근거로 쓰지 않는다.
 
 ### 4.3 잘 잡은 것 하나
 
-A의 1번. `e2e`의 `if`가 `needs.changes.outputs.runtime == 'true'`만 봐서, `changes` job이 실패하면 outputs가 빈 문자열이 되고 e2e가 스킵돼 required는 통과했다. 판정 불가를 "안 바뀜"으로 취급한 결함이다. `needs.changes.result != 'success'`면 실행하도록 고쳤다(`21c79aad`). 그 외 A가 찾은 결함 4건도 고쳤다(`c43498bf`·`3d74dacf`·`9b4207fc`·`57b075a6`).
+A의 1번. `e2e`의 `if`가 `needs.changes.outputs.runtime == 'true'`만 봐서, `changes` job이 실패하면 outputs가 빈 문자열이 되고 e2e가 스킵돼 required는 통과했다. 판정 불가를 "안 바뀜"으로 취급한 결함이다. `needs.changes.result != 'success'`면 실행하도록 고쳤다(`21c79aad`). 그 외 A가 찾은 것 중 넷을 더 고쳤다. flaky 리포트 파싱 가드(`c43498bf`), 낡은 주석 2곳(`3d74dacf`), 매니페스트 검증·정규식 0건 throw(`9b4207fc`), 리포트 표의 `|` 이스케이프(`57b075a6`).
 
 ### 4.4 헛소리 하나
 
@@ -235,8 +235,8 @@ CLAUDE.md 규칙 7 "import는 절대경로 `@/`". 1주차부터 사람이 지키
 
 ### 5.2 어떻게
 
-- 28건 중 18건(16파일)을 `@/`로 바꿨다(`6e7074b7`). 나머지 10건은 스타터 파일(`api/auth`·`api/orders`·`_data/auth*`·`analytics/logger·provider`)이라 이미 lint 대상 밖이고 그대로 뒀다.
-- `no-restricted-imports`(`src/**`)에 `patterns: ["./*", "../*", "!./*.css"]`(`9861ad3c`). 테스트가 자기 대상을 `./`로 부르는 것도 예외로 두지 않았다. 26건을 다시 보니 1:1 콜로케이트가 아닌 상대 import(`setup.ts → ./server`, `auth.test.ts → ./auth-cookies`)가 섞여 있어 원리가 아니라 회피였다. `src` 밖(루트 설정·`scripts/`)은 alias가 없어 대상이 아니다.
+- 28건 중 18건(16파일)을 `@/`로 바꿨다(`6e7074b7`). 나머지 10건은 스타터 파일(`api/auth`·`api/orders`·`_data/auth*`·`analytics/logger·consoleProvider`)이라 이미 lint 대상 밖이고 그대로 뒀다.
+- `no-restricted-imports`(`src/**`)에 `patterns`의 `group: ["./*", "../*", "!./*.css"]`(`9861ad3c`). 테스트가 자기 대상을 `./`로 부르는 것도 예외로 두지 않았다. 테스트·테스트 인프라의 22건을 다시 보니 1:1 콜로케이트가 아닌 상대 import(`setup.ts → ./server`, `auth.test.ts → ./auth-cookies`)가 섞여 있어 원리가 아니라 회피였다. `src` 밖(루트 설정·`scripts/`)은 alias가 없어 대상이 아니다.
 - **오탐 1건 → 룰 좁힘.** 처음엔 예외를 `!./*.module.css`로 뒀는데 전체 lint에서 `app/layout.tsx`의 `import "./globals.css"`가 걸렸다. 규칙 문면엔 없지만 같은 폴더의 CSS라는 취지는 같아서 `./*.css`로 넓혔고 CLAUDE.md·CONVENTION·스킬 Q7 문구를 같은 말로 맞췄다(`2c0d0ed2`).
 
 ### 5.3 자가검증
