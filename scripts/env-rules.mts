@@ -87,16 +87,19 @@ export function validateEnv(env: EnvLike): EnvProblem[] {
     }
   }
 
-  // Vercel은 production 빌드에 자기 도메인(VERCEL_PROJECT_PRODUCTION_URL)을 넣어준다.
+  // Vercel은 production 빌드에 자기 production 도메인(VERCEL_PROJECT_PRODUCTION_URL)을 넣어준다.
   // APP_ORIGIN이 그 도메인이 아니면 서버가 남의 origin으로 self-fetch하고 OG URL도 남의 사이트를 가리킨다 —
-  // 같은 이름의 vercel.app이 남의 것이었던 첫 배포에서 실제로 났던 사고다. 형태 검사(①·②)는 이걸 못 잡는다.
+  // 같은 이름의 vercel.app이 남의 것이었던 첫 배포에서 실제로 났던 사고다. APP_ORIGIN·NEXT_PUBLIC_BASE_URL의
+  // 형태·일치 검사는 "내 origin인가"를 보지 않아 이걸 통과시킨다.
+  // Vercel은 https만 서빙하므로 호스트가 아니라 origin 전체(https://도메인)를 비교한다 — 스킴·포트 오기도 잡힌다.
+  // 전제: 이 변수는 Vercel 프로젝트 설정 "Automatically expose System Environment Variables"(기본 켜짐)가
+  // 켜져 있을 때만 주입된다. 꺼져 있으면 VERCEL_ENV도 없어 이 규칙과 production 시크릿 규칙 모두 개입하지 않는다.
   if (isProduction && isSet(env.VERCEL_PROJECT_PRODUCTION_URL) && appOrigin.success) {
-    const expectedHost = env.VERCEL_PROJECT_PRODUCTION_URL;
-    const actualHost = new URL(appOrigin.data).host;
-    if (actualHost !== expectedHost) {
+    const expectedOrigin = `https://${env.VERCEL_PROJECT_PRODUCTION_URL.toLowerCase()}`;
+    if (appOrigin.data !== expectedOrigin) {
       problems.push({
         name: "APP_ORIGIN",
-        problem: `production 도메인(${expectedHost})과 다릅니다. 지금은 ${actualHost} — 남의 origin으로 self-fetch하게 됩니다`,
+        problem: `production origin(${expectedOrigin})과 다릅니다. 지금은 ${appOrigin.data} — 남의 origin으로 self-fetch하게 됩니다`,
       });
     }
   }

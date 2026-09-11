@@ -118,11 +118,11 @@ if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.re
 
 ### 2.3 실행되는 PR과 스킵되는 PR
 
-| 경우                                               | run                                 | `changes`     | `e2e`                                                           |
-| -------------------------------------------------- | ----------------------------------- | ------------- | --------------------------------------------------------------- |
-| 워크플로·설정 변경(PR #1, 커밋 `1a1a19f7`)         | 34435712817                         | runtime=true  | 실행, 29 passed(37.5s), 전체 92s                                |
-| 실험 PR의 revert 커밋(PR #2·#3·#4) — 변경 파일 0개 | 34466762242·34466762258·34466763510 | runtime=false | skipped. base `feat/week-10`엔 required가 없어 스킵 동작만 실증 |
-| 문서만 바꾼 PR(회고 문서, `kjeunn` 대상)           | 예정                                | runtime=false | skipped인 채 required 통과 확인 예정                            |
+| 경우                                                           | run                                                    | `changes`           | `e2e`                                                           |
+| -------------------------------------------------------------- | ------------------------------------------------------ | ------------------- | --------------------------------------------------------------- |
+| 워크플로·설정 변경(PR #1, 커밋 `1a1a19f7`)                     | 34435712817                                            | runtime=true        | 실행, 29 passed(37.5s), 전체 92s                                |
+| 실험 PR의 revert 커밋(PR #2·#3·#4) — 변경 파일 0개             | 34466762242·34466762258·34466763510                    | runtime=false       | skipped. base `feat/week-10`엔 required가 없어 스킵 동작만 실증 |
+| 문서만 바꾼 PR(이 문서·회고·이미지를 올리는 PR, `kjeunn` 대상) | 그 PR의 run — 번호·결과는 upstream 제출 PR 본문에 기록 | runtime=false(예상) | required가 걸린 `kjeunn`에서 skipped인 채 머지 가능한지 확인    |
 
 revert 케이스는 계획한 게 아니다. 실험 커밋을 되돌리자 PR의 변경 파일이 0개가 됐고, 그대로 스킵 경로의 실증이 됐다.
 
@@ -159,15 +159,16 @@ E2E job을 붙인 첫 run(34431518663)에서 29개 중 정적 화면 3개만 통
 
 `scripts/env-rules.mts`(규칙)와 `scripts/validate-env.mts`(CLI)로 나눴다. `next.config.ts`가 빌드 시작 시 규칙을 호출해 로컬·배포 빌드가 같은 검사를 받고, CI는 빌드 앞 `Validate env` step에서 CLI를 한 번 더 부른다. 실패 원인이 "Build"가 아니라 step 이름으로 보이고, summary에 표가 남는다. 규칙은 이 앱에서 날 수 있는 사고에서 역산했다.
 
-| #   | 규칙                                                                   | 막는 사고                                       | CI에서 잡나                              |
-| --- | ---------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
-| ①   | `APP_ORIGIN` 필수, http(s), origin 형태(경로·끝 슬래시·기본 포트 없음) | self-fetch·OG URL이 깨진다                      | 잡는다                                   |
-| ②   | `NEXT_PUBLIC_BASE_URL` 같은 조건 + `APP_ORIGIN`과 동일                 | [2.4](#24-첫-e2e-run이-전부-실패한-사건)의 사고 | 잡는다                                   |
-| ③   | `CI` 또는 `VERCEL_ENV`가 있으면 `NEXT_PUBLIC_MOCK_SCENARIO` 금지       | 측정용 slow·error mock이 실서비스에 실린다      | 잡는다                                   |
-| ④   | `VERCEL_ENV=production`이면 `AUTH_SESSION_SECRET` 32바이트 이상        | 기본 시크릿으로 세션 위조                       | 배포 빌드에서만. CI는 vitest로 로직 보증 |
-| ⑤   | `NEXT_PUBLIC_*` 이름에 SECRET·TOKEN·PASSWORD·PRIVATE·KEY               | 비밀이 브라우저 번들에 노출                     | 잡는다                                   |
+| #   | 규칙                                                                       | 막는 사고                                                                 | CI에서 잡나                              |
+| --- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
+| ①   | `APP_ORIGIN` 필수, http(s), origin 형태(경로·끝 슬래시·기본 포트 없음)     | self-fetch·OG URL이 깨진다                                                | 잡는다                                   |
+| ②   | `NEXT_PUBLIC_BASE_URL` 같은 조건 + `APP_ORIGIN`과 동일                     | [2.4](#24-첫-e2e-run이-전부-실패한-사건)의 사고                           | 잡는다                                   |
+| ③   | `CI` 또는 `VERCEL_ENV`가 있으면 `NEXT_PUBLIC_MOCK_SCENARIO` 금지           | 측정용 slow·error mock이 실서비스에 실린다                                | 잡는다                                   |
+| ④   | `VERCEL_ENV=production`이면 `AUTH_SESSION_SECRET` 32바이트 이상            | 기본 시크릿으로 세션 위조                                                 | 배포 빌드에서만. CI는 vitest로 로직 보증 |
+| ⑤   | `NEXT_PUBLIC_*` 이름에 SECRET·TOKEN·PASSWORD·PRIVATE·KEY                   | 비밀이 브라우저 번들에 노출                                               | 잡는다                                   |
+| ⑥   | production이면 `APP_ORIGIN` = `https://` + `VERCEL_PROJECT_PRODUCTION_URL` | 남의 origin으로 self-fetch([배포 사고](#36-배포-실증과-배포에서-난-사고)) | 배포 빌드에서만. CI는 vitest로 로직 보증 |
 
-32바이트는 세션 서명이 HMAC-SHA256이고 RFC 2104가 HMAC 키를 해시 출력 길이 이상으로 권고해서다. `next build`는 항상 `NODE_ENV=production`이라 실배포 판별은 `VERCEL_ENV`로만 한다. 한계: ④는 Vercel 밖 배포에선 울리지 않고, ⑤는 이름 수준이라 순진한 이름의 비밀은 못 잡고 공개용 키(`NEXT_PUBLIC_MAPS_KEY` 같은)는 오탐이다. 조용히 새는 쪽보다 시끄럽게 막히는 쪽을 골랐다. preview는 ④를 요구하지 않는다. mock 백엔드라 preview 세션을 위조해도 얻는 게 없고, 실데이터가 붙으면 `isDeploy`로 넓혀야 한다. 단위 테스트 20개(`env-rules.test.mts`)가 규칙별 경계(빈 문자열·비-origin 7종·컨텍스트별 금지·바이트 길이·표 이스케이프)를 고정한다. 이 문서 시점엔 배포가 없어 ④는 설계와 테스트만 있고 배포 빌드에서 실제로 울린 기록은 없다.
+32바이트는 세션 서명이 HMAC-SHA256이고 RFC 2104가 HMAC 키를 해시 출력 길이 이상으로 권고해서다. `next build`는 항상 `NODE_ENV=production`이라 실배포 판별은 `VERCEL_ENV`로만 한다. 한계: ④·⑥은 `VERCEL_ENV`·`VERCEL_PROJECT_PRODUCTION_URL`에 묶여 있어 Vercel 밖 배포에선 울리지 않고, Vercel 안에서도 프로젝트 설정 "Automatically expose System Environment Variables"(기본 켜짐)가 꺼져 있으면 두 변수가 주입되지 않아 조용히 개입하지 않는다. ⑥은 Vercel이 정한 production 도메인(커스텀 도메인이 있으면 가장 짧은 것) 하나만 인정하므로 `www.` 같은 별칭을 `APP_ORIGIN`에 쓰면 오탐이다. ⑤는 이름 수준이라 순진한 이름의 비밀은 못 잡고 공개용 키(`NEXT_PUBLIC_MAPS_KEY` 같은)는 오탐이다. 조용히 새는 쪽보다 시끄럽게 막히는 쪽을 골랐다. preview는 ④를 요구하지 않는다. mock 백엔드라 preview 세션을 위조해도 얻는 게 없고, 실데이터가 붙으면 `isDeploy`로 넓혀야 한다. 단위 테스트 26개(`env-rules.test.mts`)가 규칙별 경계(빈 문자열·비-origin 7종·컨텍스트별 금지·바이트 길이·도메인 일치와 그 스킴·포트·대소문자·미개입 경계·표 이스케이프)를 고정한다. ④·⑥이 배포 빌드에서 실제로 울린 기록은 [3.6](#36-배포-실증과-배포에서-난-사고)에 있다.
 
 ### 3.3 결과 가시성
 
@@ -190,6 +191,20 @@ fork의 `kjeunn`에 ruleset `kjeunn-required-checks`를 걸었다. required는 `
 한 PR에 셋을 쌓지 않은 이유는 가장 앞 step(Validate env)에서 멈춰 나머지 빨강이 보이지 않고, 순차 push는 concurrency가 앞 run을 취소해서다. #3의 위반 커밋은 husky가 막아서(정상 동작) 그 커밋만 훅을 우회해 만들었다. 머지하지 않는 실험이고 CI가 잡는지 보려면 위반 커밋이 있어야 했다. 세 브랜치에 revert를 push해 전부 초록으로 돌아왔다(quality 성공, e2e는 변경 파일 0개라 skipped).
 
 스크린샷: [번들 step 로그(원인 안 보임)](../images/week10-bundle-red-log-before.png) · [번들 summary 표](../images/week10-bundle-red-summary.png) · [lint](../images/week10-lint-red.png) · [env quality](../images/week10-env-red.png) · [env e2e](../images/week10-env-red-e2e.png) · [e2e summary flaky 0건](../images/week10-e2e-summary-flaky.png) · [ruleset](../images/week10-ruleset-required-checks.png).
+
+### 3.6 배포 실증과 배포에서 난 사고
+
+배포는 채점 대상이 아니지만 env 게이트의 배포 쪽 규칙(④)을 실측하려고 마지막 날 Vercel에 붙였다. Production Branch `kjeunn`, env는 Production에만 넣고 Preview는 비워뒀다. 시간순으로 적는다.
+
+**첫 production 배포에서 사고가 났다.** `<프로젝트명>.vercel.app`은 전역에서 유일한데, 같은 이름을 다른 수강생이 먼저 써서 이 프로젝트는 `-indol` 접미사가 붙은 도메인(`https://loop-pack-fe-l2-vol1-indol.vercel.app`)을 받았다. 그런데 `APP_ORIGIN`·`NEXT_PUBLIC_BASE_URL`에는 대시보드에서 실제 도메인을 확인하지 않고 접미사 없는 주소를 넣었다. 원인은 이름 충돌이 아니라 값을 확인 없이 넣은 것이다. 빌드는 통과했고 사이트도 떴다. 관측된 것은 서빙된 HTML의 `og:url`·`canonical`이 남의 주소였다는 것이고, `fetcher.ts`가 서버 self-fetch base로 `APP_ORIGIN`을 쓰므로 홈·목록 prefetch도 남의 `/api/home`·`/api/products`로 갔을 것이다(코드로 추론, 요청 로그로 관측하진 않았다). mock 백엔드라 화면은 같아 보였다. 실서비스였으면 남의 API에 요청을 보내는 사고다. `APP_ORIGIN`·`NEXT_PUBLIC_BASE_URL`의 형태·일치 검사(①·②)는 "내 origin인가"를 보지 않아 이걸 통과시킨다.
+
+**규칙 ⑥을 사고에서 역산했다.** Vercel은 production 빌드에 자기 production 도메인 `VERCEL_PROJECT_PRODUCTION_URL`을 넣어준다. production이면 `APP_ORIGIN`이 `https://` + 그 값과 같아야 한다(`c65f3315`, 이후 스킴·포트까지 비교하도록 좁힘). Vercel 밖과 preview에선 개입하지 않는다. 한계는 [3.2](#32-환경-변수)에 있다.
+
+**preview 빌드가 막혔다(①·②).** ⑥을 올린 PR #5의 preview 배포(커밋 `c65f3315`)는 env가 없어 `next.config.ts` 검증에서 11s 만에 멈췄다. 로그 원문: `Error: 환경 변수 검증 실패` / `- APP_ORIGIN: 설정되지 않았습니다` / `- NEXT_PUBLIC_BASE_URL: 설정되지 않았습니다`([스크린샷](../images/week10-vercel-preview-red.png)). GitHub PR 화면에서는 `Vercel` check가 FAILURE로 뜨지만 required가 아니라 머지를 막지 않는다.
+
+**④·⑥ 실측.** PR #5를 머지해 ⑥이 든 커밋(`1c0aad04`)을 production에 올린 뒤, env를 일부러 틀리게 바꿔(`AUTH_SESSION_SECRET=short`, `APP_ORIGIN`=접미사 없는 남의 주소) Redeploy했다. 빌드가 23s 만에 멈췄고, `NEXT_PUBLIC_BASE_URL`은 그대로 둔 탓에 ②까지 세 규칙이 함께 울렸다([스크린샷](../images/week10-vercel-env-red.png)). 로그의 세 줄은 `env-rules.mts`의 메시지 그대로이고(② `…과 같아야 합니다`, ④ `…32바이트 이상으로 설정해야 합니다(기본값 금지). 지금은 5바이트`, ⑥ `production 도메인(loop-pack-fe-l2-vol1-indol.vercel.app)과 다릅니다…`), 스크린샷에서 ⑥ 줄 끝은 화면 폭에 잘렸다. 값 일부는 `[REDACTED]`로 가려졌다. Vercel이 Secret 타입으로 저장된 변수의 값을 로그에서 가린 것으로(헤더 "Sensitive Environment Variable Redacted 1"), 우리 메시지가 값을 찍어도 플랫폼이 한 겹 더 막는다. 그 사이 production은 직전 Ready 배포가 그대로 서빙됐다. 원복 뒤 Redeploy로 Ready를 확인했고, `E2E_BASE_URL`을 production URL로 준 Playwright 29개가 로컬 실행에서 전부 통과했다(리포트 파일은 보존하지 않았다).
+
+**Vercel도 ⑤와 같은 검사를 한다.** `NEXT_PUBLIC_BASE_URL`을 Secret 타입으로 저장하려 하자 "Public prefixes expose values to the browser. If that's safe, change the variable to Config"라고 막았다. 공개값이라 Config로 다시 만들었다.
 
 ## 4. AI 코드리뷰
 
@@ -262,6 +277,6 @@ CLAUDE.md 규칙 7 "import는 절대경로 `@/`". 1주차부터 사람이 지키
 
 **2. Lighthouse 하락은 항상 blocker인가.** 아니다. 7주차에서 같은 코드가 headless와 실브라우저에서 다른 LCP를 냈고, headless는 회귀를 못 잡았다. 변동성이 큰 지표를 required로 두면 거짓 빨간불이 쌓여 사람이 무시하게 된다. 막을 것은 결정적으로 재현되는 것(번들 바이트, env 형태)이고, Lighthouse는 주요 화면 변경 때 참고로 본다.
 
-**3. Preview가 production API를 보면.** 이 앱은 자기 origin으로 self-fetch하므로, preview의 `APP_ORIGIN`이 production 도메인이면 preview가 production 데이터를 읽고 쓴다. 실주문·실결제가 붙은 서비스라면 테스트 주문이 실데이터에 쌓인다. env 게이트가 ①·②로 origin 형태와 일치를 강제하고, ③으로 mock 플래그를 배포에서 막지만, "preview의 origin이 production을 가리키는가"는 아직 규칙에 없다. Vercel에 붙이면 `VERCEL_ENV=preview`일 때 `APP_ORIGIN` 호스트가 production 도메인이면 실패하는 규칙을 더해야 한다.
+**3. Preview가 production API를 보면.** 이 앱은 자기 origin으로 self-fetch하므로, preview의 `APP_ORIGIN`이 production 도메인이면 preview가 production 데이터를 읽고 쓴다. 실주문·실결제가 붙은 서비스라면 테스트 주문이 실데이터에 쌓인다. 이번 주에 그 사고의 사촌을 실제로 겪었다([3.6](#36-배포-실증과-배포에서-난-사고)). production의 `APP_ORIGIN`이 남의 사이트를 가리켰고 형태 검사(①·②)는 통과시켰다. 그래서 "내 origin인가"를 보는 ⑥을 더했다. preview는 이번 주 env를 비워 빌드 자체가 막히므로 production API를 볼 수 없지만, preview에 env를 주기 시작하면 `VERCEL_ENV=preview`일 때 `APP_ORIGIN` 호스트가 production 도메인이면 실패하는 규칙이 ⑥의 짝으로 필요하다.
 
 **4. AI가 만든 workflow를 그대로 머지하면.** 이번 주에 실제로 겪은 것으로 답한다. AI가 짠 초안에 `changes` 실패 시 e2e가 조용히 스킵되는 조건이 있었고, 매니페스트 형식이 바뀌면 예산이 항상 통과하는 정규식이 있었으며, summary만 쓰고 로그에 원인을 남기지 않았다. 셋 다 초록으로 돌았다. 머지 전 검증은 세 가지다. 실패 경로를 일부러 만들어 빨강이 나는지(실험 PR), 조건식의 각 분기가 어떤 이벤트에서 무엇으로 평가되는지 표로 쓰기, `permissions`·SHA 핀·`pull_request_target` 부재를 눈으로 확인하기.

@@ -72,35 +72,53 @@ describe("validateEnv", () => {
     ).toEqual([]);
   });
 
-  it("production에서 APP_ORIGIN 호스트가 Vercel production 도메인과 다르면 실패한다", () => {
+  describe("production origin 일치(⑥)", () => {
     const mine = "https://my-app-indol.vercel.app";
     const production = {
       APP_ORIGIN: mine,
       NEXT_PUBLIC_BASE_URL: mine,
       VERCEL_ENV: "production",
       AUTH_SESSION_SECRET: "x".repeat(32),
-    };
-    expect(
-      names({ ...production, VERCEL_PROJECT_PRODUCTION_URL: "my-app-indol.vercel.app" }),
-    ).toEqual([]);
-    // 같은 이름의 vercel.app이 남의 것이었던 사고: 형태는 맞는데 도메인이 내 것이 아니다.
-    const problems = validateEnv({
-      ...production,
-      APP_ORIGIN: "https://my-app.vercel.app",
-      NEXT_PUBLIC_BASE_URL: "https://my-app.vercel.app",
       VERCEL_PROJECT_PRODUCTION_URL: "my-app-indol.vercel.app",
+    };
+    const other = "https://my-app.vercel.app";
+
+    it("APP_ORIGIN이 Vercel production 도메인과 같으면 통과한다(대소문자 무관)", () => {
+      expect(names(production)).toEqual([]);
+      expect(
+        names({ ...production, VERCEL_PROJECT_PRODUCTION_URL: "My-App-Indol.vercel.app" }),
+      ).toEqual([]);
     });
-    expect(problems.map((problem) => problem.name)).toEqual(["APP_ORIGIN"]);
-    expect(problems[0]?.problem).toContain("my-app-indol.vercel.app");
-    // Vercel 밖(도메인 변수 없음)이나 preview에서는 이 규칙이 개입하지 않는다.
-    expect(names(production)).toEqual([]);
-    expect(
-      names({
+
+    it("같은 이름의 vercel.app이 남의 것이었던 사고: 형태는 맞는데 도메인이 내 것이 아니면 실패한다", () => {
+      const problems = validateEnv({
         ...production,
-        VERCEL_ENV: "preview",
-        VERCEL_PROJECT_PRODUCTION_URL: "my-app-indol.vercel.app",
-      }),
-    ).toEqual([]);
+        APP_ORIGIN: other,
+        NEXT_PUBLIC_BASE_URL: other,
+      });
+      expect(problems.map((problem) => problem.name)).toEqual(["APP_ORIGIN"]);
+      expect(problems[0]?.problem).toContain("https://my-app-indol.vercel.app");
+    });
+
+    it.each([
+      ["http 스킴", "http://my-app-indol.vercel.app"],
+      ["포트 표기", "https://my-app-indol.vercel.app:8443"],
+    ])("도메인이 같아도 %s이면 실패한다 — Vercel은 https 기본 포트만 서빙한다", (_, origin) => {
+      expect(names({ ...production, APP_ORIGIN: origin, NEXT_PUBLIC_BASE_URL: origin })).toEqual([
+        "APP_ORIGIN",
+      ]);
+    });
+
+    it("APP_ORIGIN 자체가 URL이 아니면 형태 규칙만 보고하고 ⑥은 중복 보고하지 않는다", () => {
+      expect(names({ ...production, APP_ORIGIN: "bad" })).toEqual(["APP_ORIGIN"]);
+    });
+
+    it("Vercel 밖(도메인 변수 없음·빈 값)이나 preview에서는 도메인이 달라도 개입하지 않는다", () => {
+      const mismatch = { ...production, APP_ORIGIN: other, NEXT_PUBLIC_BASE_URL: other };
+      expect(names({ ...mismatch, VERCEL_PROJECT_PRODUCTION_URL: undefined })).toEqual([]);
+      expect(names({ ...mismatch, VERCEL_PROJECT_PRODUCTION_URL: "" })).toEqual([]);
+      expect(names({ ...mismatch, VERCEL_ENV: "preview" })).toEqual([]);
+    });
   });
 
   it.each([

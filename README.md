@@ -113,7 +113,7 @@ Next.js(App Router)로 커머스 베이스를 세우고, UI 라이브러리 없�
 
 - **측정과 병목** — 같은 커밋을 cold·warm 3회씩 재 Before를 고정하고(cold 104s·warm 93s median), E2E를 안 돌리는 job이 매번 깔던 Chromium 설치(23~55s)만 제거했습니다. After cold **70s**·warm 68s, 범위 전체가 Before 최솟값 아래. pnpm 캐시는 순이익이 0이라 손대지 않았고 hit/miss·lockfile 키 변경을 로그로 남겼습니다.
 - **조건부 E2E** — "관련 경로가 바뀌면 실행"이 아니라 "런타임에 안 실리는 경로(docs·md·.claude)만 바뀌면 스킵"으로 짜고, 워크플로 `on.paths` 대신 job 레벨 `if`로 두어 required check가 Expected로 걸리지 않게 했습니다. 선행 job이 실패하면 스킵이 아니라 실행합니다. flaky는 CI에서만 재시도 1회로 두고 재시도 통과 스펙을 summary에 드러냅니다.
-- **예산 게이트** — Next 16이 First Load JS를 안 찍어 매니페스트로 라우트별 청크를 조립해 size-limit에 넣었고, 한도는 현재 측정값 + 10 kB로 계산하고, 여유폭 10 kB의 근거는 7주차 SHA 재측정과의 차이(두 주치 성장의 두 배)와 라이브러리 하나의 실측 크기입니다. 환경 변수는 이 앱에서 날 수 있는 사고 다섯 개에서 규칙을 역산해 빌드 앞 step과 `next.config.ts` 양쪽에서 검증합니다. 실험 PR 세 개(번들 초과·잘못된 env·상대 import)로 빨간불과 PR 화면에서 보이는 원인(예산·env는 summary 표, lint는 annotation)을 확인했습니다.
+- **예산 게이트** — Next 16이 First Load JS를 안 찍어 매니페스트로 라우트별 청크를 조립해 size-limit에 넣었고, 한도는 현재 측정값 + 10 kB로 계산하고, 여유폭 10 kB의 근거는 7주차 SHA 재측정과의 차이(두 주치 성장의 두 배)와 라이브러리 하나의 실측 크기입니다. 환경 변수는 이 앱에서 날 수 있는 사고에서 규칙을 역산해 빌드 앞 step과 `next.config.ts` 양쪽에서 검증합니다. Vercel에 붙인 첫 배포에서 `APP_ORIGIN`이 남의 사이트를 가리키는 사고가 실제로 났고, 그 사고에서 여섯 번째 규칙(production 도메인 일치)이 나왔습니다([배포](https://loop-pack-fe-l2-vol1-indol.vercel.app)). 실험 PR 세 개(번들 초과·잘못된 env·상대 import)로 빨간불과 PR 화면에서 보이는 원인(예산·env는 summary 표, lint는 annotation)을 확인했습니다.
 - **AI 리뷰** — 팀 컨벤션을 규칙 ID로 옮긴 리뷰 스킬을 만들고 같은 diff에 앵커 유무로 두 번 돌렸습니다. 앵커가 노이즈(15 → 6건)와 함께 실제 결함 5건(실패 경로 3)도 걸러낸 걸 확인해, 프롬프트에 "결함 후보" 섹션과 "미사용 주장은 Grep 확인 뒤에만" 규칙을 더했습니다.
 - **룰 승격** — 1주차부터 사람이 지키던 절대경로 import 규칙을 `no-restricted-imports`로 내렸습니다. 위반 18건을 먼저 고치고, 첫 실행의 오탐(`globals.css`)으로 예외를 "같은 폴더 CSS"로 좁혀 CLAUDE.md·CONVENTION·스킬 문구를 맞췄습니다.
 
