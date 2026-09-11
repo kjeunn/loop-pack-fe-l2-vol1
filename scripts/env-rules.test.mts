@@ -72,6 +72,37 @@ describe("validateEnv", () => {
     ).toEqual([]);
   });
 
+  it("production에서 APP_ORIGIN 호스트가 Vercel production 도메인과 다르면 실패한다", () => {
+    const mine = "https://my-app-indol.vercel.app";
+    const production = {
+      APP_ORIGIN: mine,
+      NEXT_PUBLIC_BASE_URL: mine,
+      VERCEL_ENV: "production",
+      AUTH_SESSION_SECRET: "x".repeat(32),
+    };
+    expect(
+      names({ ...production, VERCEL_PROJECT_PRODUCTION_URL: "my-app-indol.vercel.app" }),
+    ).toEqual([]);
+    // 같은 이름의 vercel.app이 남의 것이었던 사고: 형태는 맞는데 도메인이 내 것이 아니다.
+    const problems = validateEnv({
+      ...production,
+      APP_ORIGIN: "https://my-app.vercel.app",
+      NEXT_PUBLIC_BASE_URL: "https://my-app.vercel.app",
+      VERCEL_PROJECT_PRODUCTION_URL: "my-app-indol.vercel.app",
+    });
+    expect(problems.map((problem) => problem.name)).toEqual(["APP_ORIGIN"]);
+    expect(problems[0]?.problem).toContain("my-app-indol.vercel.app");
+    // Vercel 밖(도메인 변수 없음)이나 preview에서는 이 규칙이 개입하지 않는다.
+    expect(names(production)).toEqual([]);
+    expect(
+      names({
+        ...production,
+        VERCEL_ENV: "preview",
+        VERCEL_PROJECT_PRODUCTION_URL: "my-app-indol.vercel.app",
+      }),
+    ).toEqual([]);
+  });
+
   it.each([
     "NEXT_PUBLIC_API_SECRET",
     "NEXT_PUBLIC_AUTH_TOKEN",
