@@ -1,6 +1,6 @@
 import { ApiError } from "@/shared/api/apiError";
 import type { ApiErrorResponse } from "@/shared/api/types";
-import { APP_ORIGIN } from "@/shared/config/appOrigin";
+import { APP_ORIGIN } from "@/shared/config/origin";
 
 // 브라우저는 상대경로로 fetch할 수 있지만, 서버 프리패치는 절대 URL이 필요하다.
 // 서버 self-fetch base는 metadataBase와 같은 APP_ORIGIN을 써서 origin을 하나로 맞춘다.

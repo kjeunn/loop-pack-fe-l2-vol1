@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { Providers } from "@/app/providers";
-import { APP_ORIGIN } from "@/shared/config/appOrigin";
+import { APP_ORIGIN } from "@/shared/config/origin";
 import { COMMON_OPEN_GRAPH } from "@/shared/config/siteMetadata";
 
 import "./globals.css";
