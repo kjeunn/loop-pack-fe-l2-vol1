@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // 배포 사고는 코드보다 설정에서 난다. 빌드가 그 값을 쓰기 전에 결정적으로 거른다.
-// 값의 형태(URL·길이)는 zod가, 값 사이의 관계(같은 origin·컨텍스트별 금지)는 아래 규칙이 본다.
+// 값의 형태(URL·길이)는 zod가, 값 사이의 관계(production 도메인 일치·컨텍스트별 금지)는 아래 규칙이 본다.
 //
 // 어디서 도나: next.config.ts가 빌드 시작 시 부르고(로컬·배포 빌드 공통), CI는 빌드 앞의 이름 붙은 step에서
 // validate-env.mts(CLI)로 한 번 더 부른다. 두 번 부르는 건 CI에서 "어느 게이트가 빨간지"가 step 이름으로
@@ -50,22 +50,6 @@ export function validateEnv(env: EnvLike): EnvProblem[] {
     });
   }
 
-  const baseUrl = originSchema.safeParse(env.NEXT_PUBLIC_BASE_URL);
-  if (!baseUrl.success) {
-    problems.push({
-      name: "NEXT_PUBLIC_BASE_URL",
-      problem: describeOriginFailure(env.NEXT_PUBLIC_BASE_URL, baseUrl.error),
-    });
-  }
-
-  // 서버(self-fetch·metadataBase)와 브라우저 번들이 같은 origin을 봐야 서버 prefetch와 클라 요청의 query key가 일치한다.
-  if (appOrigin.success && baseUrl.success && appOrigin.data !== baseUrl.data) {
-    problems.push({
-      name: "NEXT_PUBLIC_BASE_URL",
-      problem: `APP_ORIGIN(${appOrigin.data})과 같아야 합니다. 지금은 ${baseUrl.data}`,
-    });
-  }
-
   // 측정 전용 플래그(build:slow)다. CI·배포 빌드에 남아 있으면 느린·실패하는 mock이 실서비스에 실린다.
   if ((isCi || isDeploy) && isSet(env.NEXT_PUBLIC_MOCK_SCENARIO)) {
     problems.push({
@@ -89,8 +73,8 @@ export function validateEnv(env: EnvLike): EnvProblem[] {
 
   // Vercel은 production 빌드에 자기 production 도메인(VERCEL_PROJECT_PRODUCTION_URL)을 넣어준다.
   // APP_ORIGIN이 그 도메인이 아니면 서버가 남의 origin으로 self-fetch하고 OG URL도 남의 사이트를 가리킨다 —
-  // 같은 이름의 vercel.app이 남의 것이었던 첫 배포에서 실제로 났던 사고다. APP_ORIGIN·NEXT_PUBLIC_BASE_URL의
-  // 형태·일치 검사는 "내 origin인가"를 보지 않아 이걸 통과시킨다.
+  // 같은 이름의 vercel.app이 남의 것이었던 첫 배포에서 실제로 났던 사고다. 형태 검사(①)는 "내 origin인가"를 보지 않아 이걸 통과시킨다.
+  // preview에는 걸지 않는다. preview가 켜지면 APP_ORIGIN은 그 preview 자신의 주소여야 하므로 production 도메인과 다르다.
   // Vercel은 https만 서빙하므로 호스트가 아니라 origin 전체(https://도메인)를 비교한다 — 스킴·포트 오기도 잡힌다.
   // 전제: 이 변수는 Vercel 프로젝트 설정 "Automatically expose System Environment Variables"(기본 켜짐)가
   // 켜져 있을 때만 주입된다. 꺼져 있으면 VERCEL_ENV도 없어 이 규칙과 production 시크릿 규칙 모두 개입하지 않는다.
@@ -99,7 +83,7 @@ export function validateEnv(env: EnvLike): EnvProblem[] {
     if (appOrigin.data !== expectedOrigin) {
       problems.push({
         name: "APP_ORIGIN",
-        problem: `production origin(${expectedOrigin})과 다릅니다. 지금은 ${appOrigin.data} — 남의 origin으로 self-fetch하게 됩니다`,
+        problem: `production 도메인(${expectedOrigin})과 다릅니다. 지금은 ${appOrigin.data} — 남의 origin으로 self-fetch하고 og:url도 남의 주소가 됩니다`,
       });
     }
   }

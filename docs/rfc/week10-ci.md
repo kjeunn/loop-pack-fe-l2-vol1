@@ -35,9 +35,9 @@
 | cold | 104·130·87 | 104s   | 87–130 |
 | warm | 93·108·84  | 93s    | 84–108 |
 
-**병목 지목.** 검증 본체(`Run quality checks`) 33~48s가 1위이지만 검증 유지가 조건이라 손댈 대상이 아니다. 2위 `Install Playwright Chromium` 23~55s가 실제 병목이다. E2E를 돌리지 않는 job에서 매번 브라우저를 내려받았고, 전체의 25~42%를 차지했으며 흔들림(범위 32s)의 대부분이 이 step이었다. 3위 `Set up Node.js` 5~12s는 캐시 복원 비용이다.
+**병목 지목.** 검증 본체(`Run quality checks`) 33~48s가 1위이지만 검증 유지가 조건이라 손댈 대상이 아니다. 2위 `Install Playwright Chromium` 23~55s가 실제 병목이다. E2E를 돌리지 않는 job에서 매번 브라우저를 내려받았고, 전체의 25~42%를 차지했으며 흔들림(범위 32s)의 대부분이 이 step이었다. 3위 `Set up Node.js`는 cold 5s(Node 설치만), warm 9~12s다. 차이 4~7s가 캐시 복원 비용이다.
 
-**예상과 달랐던 것 둘.** cold와 warm의 median 차이(11s)가 각 범위 안에 묻힌다(cold 87s가 warm 108s보다 빨랐다). 이 레포에서 캐시 상태는 wall-clock을 가르는 변수가 아니다. 그리고 pnpm 캐시의 순이익이 0에 가깝다. install에서 3~4s를 아끼는데 206MB를 복원하는 데 4~7s를 쓴다. 의존성이 작아 cold install이 6s라서다.
+**예상과 달랐던 것 둘.** cold와 warm의 median 차이(11s)가 각 범위 안에 묻힌다(cold 87s가 warm 108s보다 빨랐다). 이 레포에서 캐시 상태는 wall-clock을 가르는 변수가 아니다. 그리고 pnpm 캐시의 순이익이 0에 가깝다. install에서 3~4s를 아끼는데, 206MB 복원으로 `Set up Node.js`가 5s에서 9~12s로 늘어 4~7s를 더 쓴다. 의존성이 작아 cold install이 6s라서다.
 
 ### 1.3 고른 전략과 고르지 않은 전략
 
@@ -77,10 +77,10 @@ run 34362069942(커밋 `18aacb88`), 같은 방식으로 attempt 6개.
 ### 1.5 캐시 hit/miss 증명
 
 - **miss(cold 1)**: `Set up Node.js` 로그 `pnpm cache is not found`, Post step `Cache saved with the key: node-cache-Linux-x64-pnpm-4b610a8e…`. install 6s.
-- **hit(warm 1)**: `Cache hit for: node-cache-Linux-x64-pnpm-4b610a8e…`, `Cache Size: ~206 MB`, `Cache restored from key: …`. install 2~3s, 복원 9~12s.
+- **hit(warm 1)**: `Cache hit for: node-cache-Linux-x64-pnpm-4b610a8e…`, `Cache Size: ~206 MB`, `Cache restored from key: …`. install 2~3s, `Set up Node.js` 9~12s(cold 5s 대비 복원 비용 4~7s).
 - **lockfile 변경으로 키가 바뀐 miss**: size-limit을 추가한 커밋 `1e895267`이 든 push(run 34456290949, head `9acb1e45`)에서 키가 `4b610a8e…` → `441ceda4…`로 바뀌며 pnpm 캐시와 Playwright 브라우저 캐시 둘 다 `cache not found`. install 6s로 cold와 같고, Post step에서 새 키로 저장됐다. 이후 run 34464568933에서 새 키로 hit.
 - hit과 miss의 install 차이는 3~4s이고, 복원 비용이 그보다 크다는 것이 [1.2](#12-before)의 결론이다.
-- **Playwright 브라우저 캐시**(E2E job, `~/.cache/ms-playwright`, lockfile 해시 키)는 반대로 이득이 분명하다. miss면 Chromium 설치 25~31s, hit이면 복원 3s + OS 의존성(apt) 12s. E2E job 전체는 miss 92~96s, hit 73s(run 34464568933).
+- **Playwright 브라우저 캐시**(E2E job, `~/.cache/ms-playwright`, lockfile 해시 키)는 반대로 이득이 분명하다. miss면 Chromium 설치 25~35s, hit이면 복원 3s + OS 의존성(apt) 12s. E2E job 전체는 miss 92~96s, hit 73s(run 34464568933).
 
 ## 2. 조건부 실행 — E2E
 
@@ -118,21 +118,26 @@ if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.re
 
 ### 2.3 실행되는 PR과 스킵되는 PR
 
-| 경우                                                           | run                                                    | `changes`           | `e2e`                                                           |
-| -------------------------------------------------------------- | ------------------------------------------------------ | ------------------- | --------------------------------------------------------------- |
-| 워크플로·설정 변경(PR #1, 커밋 `1a1a19f7`)                     | 34435712817                                            | runtime=true        | 실행, 29 passed(37.5s), 전체 92s                                |
-| 실험 PR의 revert 커밋(PR #2·#3·#4) — 변경 파일 0개             | 34466762242·34466762258·34466763510                    | runtime=false       | skipped. base `feat/week-10`엔 required가 없어 스킵 동작만 실증 |
-| 문서만 바꾼 PR(이 문서·회고·이미지를 올리는 PR, `kjeunn` 대상) | 그 PR의 run — 번호·결과는 upstream 제출 PR 본문에 기록 | runtime=false(예상) | required가 걸린 `kjeunn`에서 skipped인 채 머지 가능한지 확인    |
+| 경우                                                           | run                                                    | `changes`             | `e2e`                                                           |
+| -------------------------------------------------------------- | ------------------------------------------------------ | --------------------- | --------------------------------------------------------------- |
+| 워크플로·설정 변경(PR #1, 커밋 `1a1a19f7`)                     | 34435712817                                            | runtime=true          | 실행, 29 passed(37.5s), 전체 92s                                |
+| 실험 PR의 revert 커밋(PR #2·#3·#4) — 변경 파일 0개             | 34466762242·34466762258·34466763510                    | runtime=false         | skipped. base `feat/week-10`엔 required가 없어 스킵 동작만 실증 |
+| 문서만 바꾼 PR(이 문서·회고·이미지를 올리는 PR, `kjeunn` 대상) | 그 PR의 run — 번호·결과는 upstream 제출 PR 본문에 기록 | runtime=false(예상)   | required가 걸린 `kjeunn`에서 skipped인 채 머지 가능한지 확인    |
+| 판정 자체가 실패(실험 PR #9, `filters`를 깨진 YAML로)          | 35367472755                                            | failure(outputs 없음) | **실행**, 29 passed. 스킵이 아니다                              |
 
 revert 케이스는 계획한 게 아니다. 실험 커밋을 되돌리자 PR의 변경 파일이 0개가 됐고, 그대로 스킵 경로의 실증이 됐다.
 
+판정 실패 케이스는 리뷰 뒤에 따로 만들었다. `e2e`의 `if`에서 `needs.changes.result != 'success'` 절만 실행으로 확인된 적이 없었기 때문이다. 그 절이 없던 초기 버전이 실제로 결함이었다 — `changes`가 실패하면 outputs가 빈 문자열이 되고 e2e가 조용히 스킵돼 required는 통과했다. `filters`를 깨진 YAML로 두어 `changes`를 실패시키자 `e2e`가 실행돼 29개가 통과했다. 실험 PR은 병합하지 않고 근거로 남긴다.
+
 ### 2.4 첫 E2E run이 전부 실패한 사건
 
-E2E job을 붙인 첫 run(34431518663)에서 29개 중 정적 화면 3개만 통과했다. 원인은 CI 빌드에 `NEXT_PUBLIC_BASE_URL`이 없어서였다. `appOrigin.ts`는 `APP_ORIGIN ?? NEXT_PUBLIC_BASE_URL`이 없으면 throw하는데, 브라우저 번들엔 서버 전용 `APP_ORIGIN`이 실리지 않는다. 로컬은 `.env.local`이 빌드에 박혀 괜찮았고 CI만 비어 있었다. 브라우저에서 모듈 평가 시점에 throw → 클라이언트 트리가 에러 경계로 → 데이터가 필요한 화면의 heading이 사라져 30s 타임아웃. 로컬에서 `NEXT_PUBLIC_BASE_URL=`로 빌드해 같은 실패를 재현했다. 워크플로 최상위 `env`에 두 값을 같은 origin으로 두어 고쳤고, 이 사건이 3단계 env 게이트 규칙 ②의 근거다.
+E2E job을 붙인 첫 run(34431518663)에서 29개 중 정적 화면 3개만 통과했다. 원인은 CI 빌드에 `NEXT_PUBLIC_BASE_URL`이 없어서였다. `appOrigin.ts`는 `APP_ORIGIN ?? NEXT_PUBLIC_BASE_URL`이 없으면 throw하는데, 브라우저 번들엔 서버 전용 `APP_ORIGIN`이 실리지 않는다. 로컬은 `.env.local`이 빌드에 박혀 괜찮았고 CI만 비어 있었다. 브라우저에서 모듈 평가 시점에 throw → 클라이언트 트리가 에러 경계로 → 데이터가 필요한 화면의 heading이 사라져 30s 타임아웃. 로컬에서 `NEXT_PUBLIC_BASE_URL=`로 빌드해 같은 실패를 재현했다. 워크플로 최상위 `env`에 두 값을 같은 origin으로 두어 고쳤고, 이 사건이 3단계 env 게이트 규칙 ②의 근거였다. 리뷰 뒤 origin을 함수로 바꿔 서버 분기 안에서만 읽게 하자(`origin.ts`) 브라우저 번들이 이 값을 찾지 않게 됐고, `NEXT_PUBLIC_BASE_URL`과 ②를 뺐다([3.2](#32-환경-변수)). 게이트로 막던 사고를 구조로 없앤 것이다.
 
 ### 2.5 flaky 정책
 
 `retries: process.env.CI ? 1 : 0`. 로컬은 0이다. 재시도가 "실패 후 통과"를 가리면 결정성을 확인할 수 없어서다(9주차의 `--workers=4`·`1` 동일성 검증이 그 용도였다). CI는 1이다. 목적은 실패를 숨기는 게 아니라 흔들림과 진짜 실패를 가르는 것이다. 진짜 실패는 두 번 다 실패해 빨강이고, 재시도로 통과한 것은 Playwright가 flaky로 따로 표시한다. CI는 json 리포터를 함께 켜고 `Report flaky specs` step이 `stats.flaky`와 해당 스펙 목록을 job summary에 쓴다. 초록이어도 흔들린 건 보인다. trace는 `retain-on-failure`라 flaky의 첫 실패 시도도 남고, `Upload traces`가 `trace.zip`만 항상 올린다. 워커는 CI에서 4다(4 vCPU 러너, 9주차에서 4·1이 8과 같은 결과를 냄을 확인).
+
+flaky 건수를 required check의 실패 조건으로 연결하지는 않았다. 흔들림으로 빨간불을 만들면 [7-2](#7-생각해-볼-질문)에서 말한 "거짓 빨강이 쌓여 사람이 무시하는" 문제가 그대로 돌아온다. Playwright가 공식으로 주는 건 결과를 passed·flaky·failed로 가르는 것과 `testInfo.retry`까지다. 실행이 잦아지면 blob 리포트를 병합해 주간 추이를 보고 반복되는 스펙에 담당자를 붙이는 쪽이 맞는데, 혼자 도는 지금 규모에서는 summary 한 줄로 충분하다.
 
 ## 3. 예산 게이트
 
@@ -153,22 +158,28 @@ E2E job을 붙인 첫 run(34431518663)에서 29개 중 정적 화면 3개만 통
 
 단위 kB(gzip). 측정값은 `.size-limit.mts`의 `measuredKb`와 같고, CI run 34464568933(커밋 `2c0d0ed2`)의 표는 `/products`만 249.9로 0.1 다르다. 8~9주차 두 주 동안 라우트당 약 +5 kB 자랐다.
 
-**한도 = 측정값 + 10 kB.** 설정 파일에 측정값(`measuredKb`)을 두고 한도를 계산해 "지금 얼마인데 왜 이 숫자인가"가 코드에 남는다. 10 kB는 두 주치 정상 성장의 두 배이고, 무심코 들어오는 라이브러리 하나(실험에서 TanStack devtools 패널을 홈에 실었을 때 +15.6 kB)보다 작다. 정상 작업은 통과하고 사고는 걸린다. 같은 소스라도 빌드마다 ±0.5 kB 흔들리는데 여유폭이 흡수한다. 이 한도는 절대 목표가 아니라 회귀 게이트다. 7주차 측정에서 LCP를 지배한 건 이미지 전송이지 JS가 아니라, "이 바이트 밑이어야 UX가 지켜진다"는 절대선을 세울 근거가 측정에 없다. 한도를 올릴 땐 측정값만 갱신하고 커밋에 이유를 적는다. CI는 커밋된 숫자와 비교만 하므로 base 빌드가 필요 없고 fork PR에서도 같다.
+**한도 = 측정값 + 10 kB.** 설정 파일에 측정값(`measuredKb`)을 두고 한도를 계산해 "지금 얼마인데 왜 이 숫자인가"가 코드에 남는다. 10 kB는 두 주치 정상 성장의 두 배이고, 무심코 들어오는 라이브러리 하나(실험에서 TanStack devtools 패널을 홈에 실었을 때 +15.6 kB)보다 작다. 정상 작업은 통과하고 사고는 걸린다. 같은 소스라도 빌드마다 ±0.5 kB 흔들리는데 여유폭이 흡수한다. 이 한도는 절대 목표가 아니라 회귀 게이트다. 7주차 측정에서 LCP를 지배한 건 이미지 전송이지 JS가 아니라, "이 바이트 밑이어야 UX가 지켜진다"는 절대선을 세울 근거가 측정에 없다. 한도를 올릴 땐 측정값만 갱신하고 커밋에 이유를 적는다. CI는 커밋된 숫자와 비교만 하므로 base 빌드가 필요 없고 fork PR에서도 같다. 측정값은 size-limit의 gzip이고 실제 HTTP 전송량과 같지 않다. CDN 압축 방식·수준과 헤더가 다르고, 이 게이트는 절대 전송량이 아니라 같은 잣대로 잰 회귀를 본다. 그 대가로 "이 PR이 몇 kB 늘렸나"는 보지 않는다. 여유폭 안의 단발 증가는 누적돼 한도에 닿을 때 걸리고, 그때 재측정해 한도를 다시 잡는 것이 주기다. 초기 로드에 안 실리는 지연 청크는 이 게이트 밖이다.
 
 ### 3.2 환경 변수
 
 `scripts/env-rules.mts`(규칙)와 `scripts/validate-env.mts`(CLI)로 나눴다. `next.config.ts`가 빌드 시작 시 규칙을 호출해 로컬·배포 빌드가 같은 검사를 받고, CI는 빌드 앞 `Validate env` step에서 CLI를 한 번 더 부른다. 실패 원인이 "Build"가 아니라 step 이름으로 보이고, summary에 표가 남는다. 규칙은 이 앱에서 날 수 있는 사고에서 역산했다.
 
-| #   | 규칙                                                                       | 막는 사고                                                                 | CI에서 잡나                              |
-| --- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
-| ①   | `APP_ORIGIN` 필수, http(s), origin 형태(경로·끝 슬래시·기본 포트 없음)     | self-fetch·OG URL이 깨진다                                                | 잡는다                                   |
-| ②   | `NEXT_PUBLIC_BASE_URL` 같은 조건 + `APP_ORIGIN`과 동일                     | [2.4](#24-첫-e2e-run이-전부-실패한-사건)의 사고                           | 잡는다                                   |
-| ③   | `CI` 또는 `VERCEL_ENV`가 있으면 `NEXT_PUBLIC_MOCK_SCENARIO` 금지           | 측정용 slow·error mock이 실서비스에 실린다                                | 잡는다                                   |
-| ④   | `VERCEL_ENV=production`이면 `AUTH_SESSION_SECRET` 32바이트 이상            | 기본 시크릿으로 세션 위조                                                 | 배포 빌드에서만. CI는 vitest로 로직 보증 |
-| ⑤   | `NEXT_PUBLIC_*` 이름에 SECRET·TOKEN·PASSWORD·PRIVATE·KEY                   | 비밀이 브라우저 번들에 노출                                               | 잡는다                                   |
-| ⑥   | production이면 `APP_ORIGIN` = `https://` + `VERCEL_PROJECT_PRODUCTION_URL` | 남의 origin으로 self-fetch([배포 사고](#36-배포-실증과-배포에서-난-사고)) | 배포 빌드에서만. CI는 vitest로 로직 보증 |
+| #   | 규칙                                                                       | 막는 사고                                                                                              | CI에서 잡나                              |
+| --- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| ①   | `APP_ORIGIN` 필수, http(s), origin 형태(경로·끝 슬래시·기본 포트 없음)     | self-fetch·OG URL이 깨진다                                                                             | 잡는다                                   |
+| ②   | (폐지) `NEXT_PUBLIC_BASE_URL` 같은 조건 + `APP_ORIGIN`과 동일              | [2.4](#24-첫-e2e-run이-전부-실패한-사건)의 사고. 브라우저가 origin을 읽지 않게 바꿔 사고 자체를 없앴다 | —                                        |
+| ③   | `CI` 또는 `VERCEL_ENV`가 있으면 `NEXT_PUBLIC_MOCK_SCENARIO` 금지           | 측정용 slow·error mock이 실서비스에 실린다                                                             | 잡는다                                   |
+| ④   | `VERCEL_ENV=production`이면 `AUTH_SESSION_SECRET` 32바이트 이상            | 기본 시크릿으로 세션 위조                                                                              | 배포 빌드에서만. CI는 vitest로 로직 보증 |
+| ⑤   | `NEXT_PUBLIC_*` 이름에 SECRET·TOKEN·PASSWORD·PRIVATE·KEY                   | 비밀이 브라우저 번들에 노출                                                                            | 잡는다                                   |
+| ⑥   | production이면 `APP_ORIGIN` = `https://` + `VERCEL_PROJECT_PRODUCTION_URL` | 남의 origin으로 self-fetch·og:url([배포 사고](#36-배포-실증과-배포에서-난-사고))                       | 배포 빌드에서만. CI는 vitest로 로직 보증 |
 
-32바이트는 세션 서명이 HMAC-SHA256이고 RFC 2104가 HMAC 키를 해시 출력 길이 이상으로 권고해서다. `next build`는 항상 `NODE_ENV=production`이라 실배포 판별은 `VERCEL_ENV`로만 한다. 한계: ④·⑥은 `VERCEL_ENV`·`VERCEL_PROJECT_PRODUCTION_URL`에 묶여 있어 Vercel 밖 배포에선 울리지 않고, Vercel 안에서도 프로젝트 설정 "Automatically expose System Environment Variables"(기본 켜짐)가 꺼져 있으면 두 변수가 주입되지 않아 조용히 개입하지 않는다. ⑥은 Vercel이 정한 production 도메인(커스텀 도메인이 있으면 가장 짧은 것) 하나만 인정하므로 `www.` 같은 별칭을 `APP_ORIGIN`에 쓰면 오탐이다. ⑤는 이름 수준이라 순진한 이름의 비밀은 못 잡고 공개용 키(`NEXT_PUBLIC_MAPS_KEY` 같은)는 오탐이다. 조용히 새는 쪽보다 시끄럽게 막히는 쪽을 골랐다. preview는 ④를 요구하지 않는다. mock 백엔드라 preview 세션을 위조해도 얻는 게 없고, 실데이터가 붙으면 `isDeploy`로 넓혀야 한다. 단위 테스트 26개(`env-rules.test.mts`)가 규칙별 경계(빈 문자열·비-origin 7종·컨텍스트별 금지·바이트 길이·도메인 일치와 그 스킴·포트·대소문자·미개입 경계·표 이스케이프)를 고정한다. ④·⑥이 배포 빌드에서 실제로 울린 기록은 [3.6](#36-배포-실증과-배포에서-난-사고)에 있다.
+검사 시점은 빌드 하나가 아니다. `next start`도 `next.config.ts`를 다시 평가하므로 서버 시작에서 같은 검사가 돈다. 정상 빌드를 `APP_ORIGIN`을 비운 채 `next start`하면 `Ready` 로그 뒤에 `Failed to load next.config.ts` / `환경 변수 검증 실패`가 찍히고 exit 1로 끝난다(로컬 실험, Next 16.2.10). 그래서 서버 시작 시점의 별도 검사(`instrumentation`)는 두지 않았다. Vercel은 env를 바꾸면 재배포가 필요해 빌드 env가 곧 런타임 env다. 한계: `Ready`가 먼저 찍히므로 로그의 첫 줄만 보고 정상이라 판단하면 안 되고, 이 동작은 한 버전에서 관찰한 것이라 Next 업그레이드 때 다시 확인한다.
+
+origin은 `getAppOrigin()` 하나다(`src/shared/config/origin.ts`). self-fetch와 metadataBase(og:url·canonical)는 역할이 다르지만 이 배포에서는 값이 같다. 둘 다 공개 주소인 production 도메인이어야 하기 때문이다. 상수가 아니라 함수인 것이 ②를 뺄 수 있었던 이유다. 모듈 최상위에서 읽으면 이 모듈을 import한 브라우저 번들에서도 평가돼 서버 전용 env를 찾다 throw하는데, 함수면 서버 분기 안에서만 평가된다. 브라우저는 상대경로로 fetch하므로 origin을 볼 일이 없다.
+
+리뷰 뒤 self-fetch를 배포별 생성 URL(`VERCEL_URL`)로 바꿨다가 되돌렸다. 이 프로젝트의 Deployment Protection이 Standard Protection이라 공개인 건 production 도메인뿐이고 생성 URL과 모든 preview는 인증 벽 뒤다. Vercel 문서도 Standard Protection으로 옮길 때 "`VERCEL_URL`을 쓰는 fetch를 사용자가 요청한 도메인으로 바꾸라"고 안내한다. 생성 URL로 self-fetch하면 로그인 페이지를 받는다. preview에 env를 주기 시작하면 self-fetch는 들어온 요청의 origin과 쿠키를 넘기는 방식이어야 하고, 그건 요청 컨텍스트를 아는 곳의 일이다. 지금은 preview 빌드가 env 없이 막혀 그 경로가 존재하지 않는다([3.6](#36-배포-실증과-배포에서-난-사고)).
+
+32바이트는 세션 서명이 HMAC-SHA256이고 RFC 2104가 HMAC 키를 해시 출력 길이 이상으로 권고해서다. `next build`는 항상 `NODE_ENV=production`이라 실배포 판별은 `VERCEL_ENV`로만 한다. 한계: ④·⑥은 `VERCEL_ENV`·`VERCEL_PROJECT_PRODUCTION_URL`에 묶여 있어 Vercel 밖 배포에선 울리지 않고, Vercel 안에서도 프로젝트 설정 "Automatically expose System Environment Variables"(기본 켜짐)가 꺼져 있으면 두 변수가 주입되지 않아 조용히 개입하지 않는다. 플랫폼을 옮기면 `getDeployContext()` 같은 얇은 어댑터에서 각 플랫폼의 변수를 같은 모양으로 바꿔 넣는 자리가 필요하다. 단일 플랫폼인 지금 그걸 미리 만들지는 않았다. `DEPLOY_ENV` 같은 자체 변수로 대신하지 않은 이유는 그것도 사람이 넣는 값이라, 사람이 넣은 값을 사람이 넣은 값으로 검증하게 되어 이번 사고를 못 잡기 때문이다. ⑥은 Vercel이 정한 production 도메인(커스텀 도메인이 있으면 가장 짧은 것) 하나만 인정하므로 `www.` 같은 별칭을 `APP_ORIGIN`에 쓰면 오탐이다. ⑤는 이름 수준이라 순진한 이름의 비밀은 못 잡고 공개용 키(`NEXT_PUBLIC_MAPS_KEY` 같은)는 오탐이다. 조용히 새는 쪽보다 시끄럽게 막히는 쪽을 골랐다. preview는 ④를 요구하지 않는다. mock 백엔드라 preview 세션을 위조해도 얻는 게 없고, 실데이터가 붙으면 `isDeploy`로 넓혀야 한다. ⑥도 preview에는 걸지 않는다. preview가 켜지면 `APP_ORIGIN`은 그 preview 자신의 주소여야 해서 production 도메인과 다르다. 단위 테스트 25개(`env-rules.test.mts`)가 규칙별 경계(빈 문자열·비-origin 7종·컨텍스트별 금지·바이트 길이·도메인 일치와 그 스킴·포트·대소문자·미개입 경계·비밀 이름 4종·표 이스케이프)를 고정한다. ④·⑥이 배포 빌드에서 실제로 울린 기록은 [3.6](#36-배포-실증과-배포에서-난-사고)에 있다.
 
 ### 3.3 결과 가시성
 
@@ -203,6 +214,8 @@ fork의 `kjeunn`에 ruleset `kjeunn-required-checks`를 걸었다. required는 `
 **preview 빌드가 막혔다(①·②).** ⑥을 올린 PR #5의 preview 배포(커밋 `c65f3315`)는 env가 없어 `next.config.ts` 검증에서 11s 만에 멈췄다. 로그 원문: `Error: 환경 변수 검증 실패` / `- APP_ORIGIN: 설정되지 않았습니다` / `- NEXT_PUBLIC_BASE_URL: 설정되지 않았습니다`([스크린샷](../images/week10-vercel-preview-red.png)). GitHub PR 화면에서는 `Vercel` check가 FAILURE로 뜨지만 required가 아니라 머지를 막지 않는다.
 
 **④·⑥ 실측.** PR #5를 머지해 ⑥이 든 커밋(`1c0aad04`)을 production에 올린 뒤, env를 일부러 틀리게 바꿔(`AUTH_SESSION_SECRET=short`, `APP_ORIGIN`=접미사 없는 남의 주소) Redeploy했다. 빌드가 23s 만에 멈췄고, `NEXT_PUBLIC_BASE_URL`은 그대로 둔 탓에 ②까지 세 규칙이 함께 울렸다([스크린샷](../images/week10-vercel-env-red.png)). 로그의 세 줄은 `env-rules.mts`의 메시지 그대로이고(② `…과 같아야 합니다`, ④ `…32바이트 이상으로 설정해야 합니다(기본값 금지). 지금은 5바이트`, ⑥ `production 도메인(loop-pack-fe-l2-vol1-indol.vercel.app)과 다릅니다…`), 스크린샷에서 ⑥ 줄 끝은 화면 폭에 잘렸다. 값 일부는 `[REDACTED]`로 가려졌다. Vercel이 Secret 타입으로 저장된 변수의 값을 로그에서 가린 것으로(헤더 "Sensitive Environment Variable Redacted 1"), 우리 메시지가 값을 찍어도 플랫폼이 한 겹 더 막는다. 그 사이 production은 직전 Ready 배포가 그대로 서빙됐다. 원복 뒤 Redeploy로 Ready를 확인했고, `E2E_BASE_URL`을 production URL로 준 Playwright 29개가 로컬 실행에서 전부 통과했다(리포트 파일은 보존하지 않았다).
+
+**배포 뒤 확인을 자동화했다.** 위 스모크는 손으로 돌린 것이라 다음 배포에서 빠질 수 있다. `deploy-smoke.yml`이 `deployment_status`(state success, environment Production)를 받아 배포본에 E2E를 돌린다. 설계에서 실측으로 고친 게 둘이다. 첫째, `environment_url`을 쓰지 않는다. deployments API로 실제 값을 보니 배포별 생성 URL이었고(`loop-pack-fe-l2-vol1-lslf1jyvt-kjeunn.vercel.app`), 이 프로젝트는 Standard Protection이라 그 주소는 `vercel.com/sso-api`로 302된다. 공개인 건 production 도메인뿐이라 그 값을 워크플로 `env`에 박았다. 보호 범위나 도메인이 바뀌면 29개가 타임아웃으로 죽어 원인이 안 보이므로, E2E 앞에 한 번 때려 보고 200이 아니면 문장으로 끊는 step을 뒀다. 둘째, `@writes` 태그가 붙은 주문 스펙 2개를 뺀다. 그 스펙은 서버의 `ordersByUser`에 실제로 주문을 넣어, 배포마다 돌리면 production에 테스트 주문이 쌓인다([7-3](#7-생각해-볼-질문)에서 경계한 그 일이다). 돌릴 스펙을 나열하는 대신 뺄 것에 태그를 붙인 건 2단계의 deny-list와 같은 이유다 — 새로 만든 스펙이 목록에 없어 조용히 빠지면 안 된다. 로그인·세션 만료는 서명 토큰이라 서버 상태를 안 만들어 그대로 돈다. 워크플로 전체를 로컬에서 그대로 재현해 확인했다: production 도메인 200, `--grep-invert "@writes"`로 27개 통과(30.5s). 이벤트 배선은 PR #8을 올리며 확인됐다. Vercel의 preview 배포가 `deployment_status`를 보내 워크플로가 트리거됐고, `if`가 environment로 걸러 job이 skipped로 끝났다(run 35366979676). 그래서 이 워크플로는 PR 화면에 `smoke` 체크로 뜨는데, required가 아니고 job 레벨 `if`라 스킵이 통과로 집계된다 — 나중에 required로 올려도 `e2e`와 같은 이유로 안전하다. 아직 확인 못 한 건 production + success 갈래다. 첫 production 배포가 그 검증이다. 워크플로 파일 자체는 `quality-workflow.test.mts`가 불변 조건(SHA 핀·읽기 권한·`pull_request_target` 부재·checkout 자격 증명 미보존·timeout·artifact 범위·동시성 그룹·e2e 실행 조건·deny-list 필터 내용·`@writes` 태그)을 고정한다. PR #8을 올린 뒤 이 테스트들에 손으로 고른 뮤테이션을 넣어 빨간불이 나는지 확인했다. 다섯 중 넷은 잡혔고 하나는 안 잡혔다 — 태그 검사가 파일 어디서든 `@writes` 문자열을 찾고 있어서, 이유를 적은 주석이 제목을 대신 덮고 있었다. `--grep`은 제목만 보므로 제목에서 찾도록 고쳤다. 9주차에 배운 대로, 손으로 고른 뮤테이션은 통과가 기본값이라 여기서 잡힌 하나가 이 점검이 준 정보의 전부다. 실행돼야 드러나는 동작은 실험 PR로, 빠지면 조용히 약해지는 조건은 테스트로 본다.
 
 **Vercel도 ⑤와 같은 검사를 한다.** `NEXT_PUBLIC_BASE_URL`을 Secret 타입으로 저장하려 하자 "Public prefixes expose values to the browser. If that's safe, change the variable to Config"라고 막았다. 공개값이라 Config로 다시 만들었다.
 
@@ -277,6 +290,6 @@ CLAUDE.md 규칙 7 "import는 절대경로 `@/`". 1주차부터 사람이 지키
 
 **2. Lighthouse 하락은 항상 blocker인가.** 아니다. 7주차에서 같은 코드가 headless와 실브라우저에서 다른 LCP를 냈고, headless는 회귀를 못 잡았다. 변동성이 큰 지표를 required로 두면 거짓 빨간불이 쌓여 사람이 무시하게 된다. 막을 것은 결정적으로 재현되는 것(번들 바이트, env 형태)이고, Lighthouse는 주요 화면 변경 때 참고로 본다.
 
-**3. Preview가 production API를 보면.** 이 앱은 자기 origin으로 self-fetch하므로, preview의 `APP_ORIGIN`이 production 도메인이면 preview가 production 데이터를 읽고 쓴다. 실주문·실결제가 붙은 서비스라면 테스트 주문이 실데이터에 쌓인다. 이번 주에 그 사고의 사촌을 실제로 겪었다([3.6](#36-배포-실증과-배포에서-난-사고)). production의 `APP_ORIGIN`이 남의 사이트를 가리켰고 형태 검사(①·②)는 통과시켰다. 그래서 "내 origin인가"를 보는 ⑥을 더했다. preview는 이번 주 env를 비워 빌드 자체가 막히므로 production API를 볼 수 없지만, preview에 env를 주기 시작하면 `VERCEL_ENV=preview`일 때 `APP_ORIGIN` 호스트가 production 도메인이면 실패하는 규칙이 ⑥의 짝으로 필요하다.
+**3. Preview가 production API를 보면.** 이 앱은 자기 origin으로 self-fetch하고 그 origin은 사람이 넣는 값 하나이므로, preview의 `APP_ORIGIN`이 production 도메인이면 preview가 production 데이터를 읽고 쓴다. 실주문·실결제가 붙은 서비스라면 테스트 주문이 실데이터에 쌓인다. 이번 주에 그 사고의 사촌을 실제로 겪었다([3.6](#36-배포-실증과-배포에서-난-사고)). production의 `APP_ORIGIN`이 남의 사이트를 가리켰고 형태 검사(①)는 통과시켰다. 그래서 "내 origin인가"를 보는 ⑥을 더했다. 리뷰 뒤 self-fetch를 배포 자신(`VERCEL_URL`)으로 돌려 이 문제를 구조로 없애려 했으나 되돌렸다. 이 프로젝트는 Deployment Protection이 Standard Protection이라 생성 URL과 모든 preview가 인증 벽 뒤이고, Vercel 문서는 그 설정에서 `VERCEL_URL` fetch를 쓰지 말라고 안내한다([3.2](#32-환경-변수)). 그래서 preview에 env를 주기 시작할 때의 대응은 둘 중 하나다. 들어온 요청의 origin과 쿠키를 self-fetch에 넘기거나, 자동화 bypass 시크릿(`x-vercel-protection-bypass`)을 쓰는 것. 그때 `VERCEL_ENV=preview`인데 `APP_ORIGIN`이 production 도메인이면 실패하는 규칙이 ⑥의 짝으로 필요하다.
 
 **4. AI가 만든 workflow를 그대로 머지하면.** 이번 주에 실제로 겪은 것으로 답한다. AI가 짠 초안에 `changes` 실패 시 e2e가 조용히 스킵되는 조건이 있었고, 매니페스트 형식이 바뀌면 예산이 항상 통과하는 정규식이 있었으며, summary만 쓰고 로그에 원인을 남기지 않았다. 셋 다 초록으로 돌았다. 머지 전 검증은 세 가지다. 실패 경로를 일부러 만들어 빨강이 나는지(실험 PR), 조건식의 각 분기가 어떤 이벤트에서 무엇으로 평가되는지 표로 쓰기, `permissions`·SHA 핀·`pull_request_target` 부재를 눈으로 확인하기.
