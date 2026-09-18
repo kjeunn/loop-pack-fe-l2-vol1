@@ -71,13 +71,15 @@ export function validateEnv(env: EnvLike): EnvProblem[] {
     }
   }
 
-  // Vercel은 production 빌드에 자기 production 도메인(VERCEL_PROJECT_PRODUCTION_URL)을 넣어준다.
+  // Vercel은 배포 빌드마다 자기 production 도메인(VERCEL_PROJECT_PRODUCTION_URL)을 넣어준다(preview에도 production 도메인).
   // APP_ORIGIN은 metadataBase(og:url·canonical)의 origin이라, 그 도메인이 아니면 크롤러에 남의 주소를 준다 —
   // 같은 이름의 vercel.app이 남의 것이었던 첫 배포에서 실제로 났던 사고다. 형태 검사(①)는 "내 origin인가"를 보지 않아 이걸 통과시킨다.
+  // preview에도 건다. preview의 self-fetch는 배포 자신(VERCEL_URL)을 쓰므로 APP_ORIGIN이 production 도메인이어도
+  // production API를 부르지 않고, OG는 preview에서도 production 도메인이어야 한다.
   // Vercel은 https만 서빙하므로 호스트가 아니라 origin 전체(https://도메인)를 비교한다 — 스킴·포트 오기도 잡힌다.
   // 전제: 이 변수는 Vercel 프로젝트 설정 "Automatically expose System Environment Variables"(기본 켜짐)가
   // 켜져 있을 때만 주입된다. 꺼져 있으면 VERCEL_ENV도 없어 이 규칙과 production 시크릿 규칙 모두 개입하지 않는다.
-  if (isProduction && isSet(env.VERCEL_PROJECT_PRODUCTION_URL) && appOrigin.success) {
+  if (isDeploy && isSet(env.VERCEL_PROJECT_PRODUCTION_URL) && appOrigin.success) {
     const expectedOrigin = `https://${env.VERCEL_PROJECT_PRODUCTION_URL.toLowerCase()}`;
     if (appOrigin.data !== expectedOrigin) {
       problems.push({

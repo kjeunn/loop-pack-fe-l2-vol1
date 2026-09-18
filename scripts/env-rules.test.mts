@@ -59,7 +59,7 @@ describe("validateEnv", () => {
     ).toEqual([]);
   });
 
-  describe("production origin 일치(⑥)", () => {
+  describe("배포 빌드의 production 도메인 일치(⑥)", () => {
     const mine = "https://my-app-indol.vercel.app";
     const production = {
       APP_ORIGIN: mine,
@@ -93,11 +93,17 @@ describe("validateEnv", () => {
       expect(names({ ...production, APP_ORIGIN: "bad" })).toEqual(["APP_ORIGIN"]);
     });
 
-    it("Vercel 밖(도메인 변수 없음·빈 값)이나 preview에서는 도메인이 달라도 개입하지 않는다", () => {
+    it("preview에서도 건다 — og:url은 preview에서도 production 도메인이어야 한다", () => {
+      expect(names({ ...production, VERCEL_ENV: "preview" })).toEqual([]);
+      expect(names({ ...production, VERCEL_ENV: "preview", APP_ORIGIN: other })).toEqual([
+        "APP_ORIGIN",
+      ]);
+    });
+
+    it("Vercel 밖(도메인 변수 없음·빈 값)에서는 도메인이 달라도 개입하지 않는다", () => {
       const mismatch = { ...production, APP_ORIGIN: other };
       expect(names({ ...mismatch, VERCEL_PROJECT_PRODUCTION_URL: undefined })).toEqual([]);
       expect(names({ ...mismatch, VERCEL_PROJECT_PRODUCTION_URL: "" })).toEqual([]);
-      expect(names({ ...mismatch, VERCEL_ENV: "preview" })).toEqual([]);
     });
   });
 
