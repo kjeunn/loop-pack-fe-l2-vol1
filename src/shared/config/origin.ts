@@ -1,12 +1,9 @@
-// 서버가 쓰는 origin은 역할이 둘인데(self-fetch, metadataBase→og:url·canonical) 이 배포에서는 값이 같다.
-// 둘 다 공개 주소인 production 도메인이어야 하기 때문이다.
+// 사이트의 정식 origin. metadataBase가 여기서 og:url·canonical을 만든다.
+// 크롤러에 주는 주소라 배포 환경과 무관하게 production 도메인이어야 하고, env 규칙 ⑥이 배포 빌드에서 그걸 대조한다.
 //
-// self-fetch에 배포별 생성 URL(VERCEL_URL)을 쓰지 않는 이유: 이 프로젝트의 Deployment Protection이
-// Standard Protection이라 production 도메인만 공개고 생성 URL과 모든 preview는 인증 벽 뒤에 있다.
-// Vercel 문서도 Standard Protection으로 옮길 때 "VERCEL_URL을 쓰는 fetch를 사용자가 요청한 도메인으로 바꾸라"고
-// 안내한다(deployment-protection#how-to-migrate-to-standard-protection). 생성 URL로 self-fetch하면 로그인 페이지를 받는다.
-// preview에 env를 주기 시작하면 self-fetch는 들어온 요청의 origin과 쿠키를 넘기는 방식이어야 하고, 그건 이 함수가 아니라
-// 요청 컨텍스트를 아는 곳의 일이다. 지금은 preview 빌드가 env 없이 막히므로 그 경로가 존재하지 않는다(RFC 3.6).
+// 서버 self-fetch는 이 값을 쓰지 않는다. 배포는 production 도메인과 preview 주소로 동시에 서빙되므로
+// 값 하나로 고정하면 한쪽이 틀린다. self-fetch는 들어온 요청의 origin을 쓴다(serverRequest.ts).
+// 요청 스코프가 없는 자리(스크립트 등)에서만 이 값이 fetch의 fallback으로 쓰인다.
 //
 // 함수인 이유: 모듈 최상위에서 읽으면 이 모듈을 import한 브라우저 번들에서도 평가되는데,
 // 서버 전용 env는 브라우저에 없어 throw하고 클라이언트 트리가 통째로 에러 경계로 간다.
