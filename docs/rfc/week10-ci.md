@@ -35,9 +35,9 @@
 | cold | 104·130·87 | 104s   | 87–130 |
 | warm | 93·108·84  | 93s    | 84–108 |
 
-**병목 지목.** 검증 본체(`Run quality checks`) 33~48s가 1위이지만 검증 유지가 조건이라 손댈 대상이 아니다. 2위 `Install Playwright Chromium` 23~55s가 실제 병목이다. E2E를 돌리지 않는 job에서 매번 브라우저를 내려받았고, 전체의 25~42%를 차지했으며 흔들림(범위 32s)의 대부분이 이 step이었다. 3위 `Set up Node.js` 5~12s는 캐시 복원 비용이다.
+**병목 지목.** 검증 본체(`Run quality checks`) 33~48s가 1위이지만 검증 유지가 조건이라 손댈 대상이 아니다. 2위 `Install Playwright Chromium` 23~55s가 실제 병목이다. E2E를 돌리지 않는 job에서 매번 브라우저를 내려받았고, 전체의 25~42%를 차지했으며 흔들림(범위 32s)의 대부분이 이 step이었다. 3위 `Set up Node.js`는 cold 5s(Node 설치만), warm 9~12s다. 차이 4~7s가 캐시 복원 비용이다.
 
-**예상과 달랐던 것 둘.** cold와 warm의 median 차이(11s)가 각 범위 안에 묻힌다(cold 87s가 warm 108s보다 빨랐다). 이 레포에서 캐시 상태는 wall-clock을 가르는 변수가 아니다. 그리고 pnpm 캐시의 순이익이 0에 가깝다. install에서 3~4s를 아끼는데 206MB를 복원하는 데 4~7s를 쓴다. 의존성이 작아 cold install이 6s라서다.
+**예상과 달랐던 것 둘.** cold와 warm의 median 차이(11s)가 각 범위 안에 묻힌다(cold 87s가 warm 108s보다 빨랐다). 이 레포에서 캐시 상태는 wall-clock을 가르는 변수가 아니다. 그리고 pnpm 캐시의 순이익이 0에 가깝다. install에서 3~4s를 아끼는데, 206MB 복원으로 `Set up Node.js`가 5s에서 9~12s로 늘어 4~7s를 더 쓴다. 의존성이 작아 cold install이 6s라서다.
 
 ### 1.3 고른 전략과 고르지 않은 전략
 
@@ -77,10 +77,10 @@ run 34362069942(커밋 `18aacb88`), 같은 방식으로 attempt 6개.
 ### 1.5 캐시 hit/miss 증명
 
 - **miss(cold 1)**: `Set up Node.js` 로그 `pnpm cache is not found`, Post step `Cache saved with the key: node-cache-Linux-x64-pnpm-4b610a8e…`. install 6s.
-- **hit(warm 1)**: `Cache hit for: node-cache-Linux-x64-pnpm-4b610a8e…`, `Cache Size: ~206 MB`, `Cache restored from key: …`. install 2~3s, 복원 9~12s.
+- **hit(warm 1)**: `Cache hit for: node-cache-Linux-x64-pnpm-4b610a8e…`, `Cache Size: ~206 MB`, `Cache restored from key: …`. install 2~3s, `Set up Node.js` 9~12s(cold 5s 대비 복원 비용 4~7s).
 - **lockfile 변경으로 키가 바뀐 miss**: size-limit을 추가한 커밋 `1e895267`이 든 push(run 34456290949, head `9acb1e45`)에서 키가 `4b610a8e…` → `441ceda4…`로 바뀌며 pnpm 캐시와 Playwright 브라우저 캐시 둘 다 `cache not found`. install 6s로 cold와 같고, Post step에서 새 키로 저장됐다. 이후 run 34464568933에서 새 키로 hit.
 - hit과 miss의 install 차이는 3~4s이고, 복원 비용이 그보다 크다는 것이 [1.2](#12-before)의 결론이다.
-- **Playwright 브라우저 캐시**(E2E job, `~/.cache/ms-playwright`, lockfile 해시 키)는 반대로 이득이 분명하다. miss면 Chromium 설치 25~31s, hit이면 복원 3s + OS 의존성(apt) 12s. E2E job 전체는 miss 92~96s, hit 73s(run 34464568933).
+- **Playwright 브라우저 캐시**(E2E job, `~/.cache/ms-playwright`, lockfile 해시 키)는 반대로 이득이 분명하다. miss면 Chromium 설치 25~35s, hit이면 복원 3s + OS 의존성(apt) 12s. E2E job 전체는 miss 92~96s, hit 73s(run 34464568933).
 
 ## 2. 조건부 실행 — E2E
 
