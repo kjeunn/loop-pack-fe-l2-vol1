@@ -18,13 +18,10 @@ concurrency:
 permissions:
   contents: read
 
-# CI 빌드는 배포가 아니므로 로컬 origin을 준다. 둘 다 같은 값이어야 한다 —
-# APP_ORIGIN은 서버(self-fetch·metadataBase), NEXT_PUBLIC_BASE_URL은 브라우저 번들에 박히는 같은 origin이다.
-# 둘 중 하나라도 빠지면 Validate env가 막는다. 막지 않으면 빌드는 통과하고 브라우저에서 appOrigin이 throw해
-# 클라이언트 트리가 통째로 죽는다.
+# CI 빌드는 배포가 아니므로 로컬 origin을 준다. 서버(self-fetch·metadataBase)만 읽고 브라우저 번들엔 실리지 않는다.
+# 빠지면 Validate env가 막는다.
 env:
   APP_ORIGIN: http://localhost:3000
-  NEXT_PUBLIC_BASE_URL: http://localhost:3000
 
 jobs:
   quality:
@@ -107,11 +104,7 @@ jobs:
           # 기본값(some)은 부정 패턴을 무시해 md 변경도 true가 된다.
           predicate-quantifier: some-with-excludes
           filters: |
-            runtime:
-              - "**"
-              - "!docs/**"
-              - "!**/*.md"
-              - "!.claude/**"
+            runtime: [
 
   e2e:
     needs: changes
