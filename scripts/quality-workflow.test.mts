@@ -75,6 +75,17 @@ describe.each(workflows)("$file 불변 조건", ({ workflow }) => {
     }
   });
 
+  // deploy-smoke가 이걸로 깨졌었다 — 그룹이 워크플로 이름뿐이면 preview 배포의 deployment_status가
+  // (job은 스킵되지만 run은 시작돼) 돌고 있던 production 스모크를 취소한다.
+  it("동시성 그룹은 워크플로 이름만으로 나누지 않는다", () => {
+    const concurrency = (workflow as unknown as { concurrency?: { group?: string } }).concurrency;
+    if (!concurrency) {
+      return;
+    }
+    expect(concurrency.group).toBeDefined();
+    expect(concurrency.group).not.toBe("${{ github.workflow }}");
+  });
+
   it("env에 비밀로 보이는 이름이 없다 — YAML은 공개 파일이다", () => {
     const names = [
       ...Object.keys(workflow.env ?? {}),
@@ -102,11 +113,60 @@ describe("quality.yml 실행 조건", () => {
     expect(condition).toContain("needs.changes.outputs.runtime == 'true'");
   });
 
+  // 스킵 판정의 핵심은 필터 내용이다. 여기가 조용히 바뀌면(예: "!**") 모든 PR에서 E2E가 빠진다.
+  // PR #9은 필터를 깨뜨려 job이 실패하는 쪽을 봤고, 이 테스트는 의미가 바뀌는 쪽을 본다.
+  it("E2E 스킵 필터는 deny-list이고 부정 패턴을 실제로 적용한다", () => {
+    const step = quality.jobs.changes?.steps.find((candidate) =>
+      candidate.uses?.startsWith("dorny/paths-filter@"),
+    );
+    expect(step, "paths-filter step을 찾지 못했다").toBeDefined();
+    // 기본값(some)은 부정 패턴을 무시해 문서 변경도 runtime=true가 된다.
+    expect(step?.with?.["predicate-quantifier"]).toBe("some-with-excludes");
+
+    const filters = parse(String(step?.with?.filters)) as { runtime?: string[] };
+    expect(filters.runtime?.[0], "첫 패턴이 전체(**)여야 deny-list다").toBe("**");
+    expect(filters.runtime?.slice(1)).toEqual(["!docs/**", "!**/*.md", "!.claude/**"]);
+  });
+
   it("quality는 Validate env → Build → Bundle budget 순서다", () => {
     const names = quality.jobs.quality?.steps.map((step) => step.name) ?? [];
     const at = (name: string) => names.indexOf(name);
     expect(at("Validate env")).toBeGreaterThanOrEqual(0);
     expect(at("Validate env")).toBeLessThan(at("Build"));
     expect(at("Build")).toBeLessThan(at("Bundle budget"));
+  });
+});
+
+// 배포본 스모크는 @writes 태그가 붙은 스펙을 뺀다. 태그가 지워지거나, 서버 상태를 바꾸는 스펙이
+// 태그 없이 새로 생기면 production에 테스트 데이터가 쌓인다.
+// 휴리스틱의 전제는 "서버 상태를 바꾸는 라우트가 /api/orders 하나"라는 것이고, 그 전제도 아래에서 고정한다.
+describe("배포본 스모크 범위", () => {
+  const E2E_DIR = "e2e";
+  const specs = readdirSync(E2E_DIR)
+    .filter((file) => file.endsWith(".spec.ts"))
+    .map((file) => ({ file, source: readFileSync(join(E2E_DIR, file), "utf8") }));
+
+  it("서버 상태를 바꾸는 라우트는 /api/orders 하나다 — 아래 태그 검사의 전제", () => {
+    const callers = ["src/app/api/orders/route.ts"];
+    for (const path of callers) {
+      expect(readFileSync(path, "utf8")).toContain("addOrder");
+    }
+    const apiDir = "src/app/api";
+    const mutating = readdirSync(apiDir, { recursive: true, encoding: "utf8" })
+      .filter((entry) => entry.endsWith("route.ts"))
+      .filter((entry) => readFileSync(join(apiDir, entry), "utf8").includes("addOrder"));
+    expect(mutating).toEqual(["orders/route.ts"]);
+  });
+
+  it("주문 API를 부르는 스펙에는 @writes가 붙어 있다", () => {
+    expect(specs.length).toBeGreaterThan(0);
+    const writers = specs.filter(({ source }) => source.includes("/api/orders"));
+    expect(writers.map(({ file }) => file)).toEqual(["order.spec.ts"]);
+    // 파일 어디든 "@writes"가 있으면 통과하게 두면, 이유를 적은 주석이 제목을 대신해 테스트가 헛돈다
+    // (실제로 그렇게 짰다가 태그를 지우는 뮤테이션에 안 걸렸다). --grep은 제목만 보므로 제목에서 찾는다.
+    const taggedTitle = /\btest(\.describe)?\(\s*"[^"]*@writes[^"]*"/;
+    for (const { file, source } of writers) {
+      expect(taggedTitle.test(source), `${file}의 test·describe 제목에 @writes가 없다`).toBe(true);
+    }
   });
 });
