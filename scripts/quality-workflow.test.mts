@@ -147,14 +147,18 @@ describe("배포본 스모크 범위", () => {
     .map((file) => ({ file, source: readFileSync(join(E2E_DIR, file), "utf8") }));
 
   it("서버 상태를 바꾸는 라우트는 /api/orders 하나다 — 아래 태그 검사의 전제", () => {
-    const callers = ["src/app/api/orders/route.ts"];
-    for (const path of callers) {
-      expect(readFileSync(path, "utf8")).toContain("addOrder");
-    }
+    // 변이 함수 목록이 이 둘뿐이라는 것부터 고정한다. 셋째가 생기면 여기서 걸려 태그 기준을 다시 보게 된다.
+    const store = readFileSync("src/app/api/_data/auth.ts", "utf8");
+    expect(store.match(/ordersByUser\.(set|clear|delete)\(/g)).toHaveLength(2);
+    const MUTATORS = ["addOrder", "resetOrders"];
+
     const apiDir = "src/app/api";
     const mutating = readdirSync(apiDir, { recursive: true, encoding: "utf8" })
       .filter((entry) => entry.endsWith("route.ts"))
-      .filter((entry) => readFileSync(join(apiDir, entry), "utf8").includes("addOrder"));
+      .filter((entry) => {
+        const source = readFileSync(join(apiDir, entry), "utf8");
+        return MUTATORS.some((name) => source.includes(name));
+      });
     expect(mutating).toEqual(["orders/route.ts"]);
   });
 
