@@ -104,11 +104,7 @@ jobs:
           # 기본값(some)은 부정 패턴을 무시해 md 변경도 true가 된다.
           predicate-quantifier: some-with-excludes
           filters: |
-            runtime:
-              - "**"
-              - "!docs/**"
-              - "!**/*.md"
-              - "!.claude/**"
+            runtime: [
 
   e2e:
     needs: changes
