@@ -59,7 +59,7 @@ describe("validateEnv", () => {
     ).toEqual([]);
   });
 
-  describe("production 도메인 일치(⑥)", () => {
+  describe("배포 빌드의 production 도메인 일치(⑥)", () => {
     const mine = "https://my-app-indol.vercel.app";
     const production = {
       APP_ORIGIN: mine,
@@ -93,11 +93,18 @@ describe("validateEnv", () => {
       expect(names({ ...production, APP_ORIGIN: "bad" })).toEqual(["APP_ORIGIN"]);
     });
 
-    it("Vercel 밖(도메인 변수 없음·빈 값)이나 preview에서는 도메인이 달라도 개입하지 않는다", () => {
+    // preview의 og:url도 정식 주소여야 한다. self-fetch가 요청 origin을 쓰게 된 뒤에야 이 범위가 맞다.
+    it("preview 배포에도 건다", () => {
+      expect(names({ ...production, VERCEL_ENV: "preview" })).toEqual([]);
+      expect(names({ ...production, VERCEL_ENV: "preview", APP_ORIGIN: other })).toEqual([
+        "APP_ORIGIN",
+      ]);
+    });
+
+    it("Vercel 밖(도메인 변수 없음·빈 값)에서는 도메인이 달라도 개입하지 않는다", () => {
       const mismatch = { ...production, APP_ORIGIN: other };
       expect(names({ ...mismatch, VERCEL_PROJECT_PRODUCTION_URL: undefined })).toEqual([]);
       expect(names({ ...mismatch, VERCEL_PROJECT_PRODUCTION_URL: "" })).toEqual([]);
-      expect(names({ ...mismatch, VERCEL_ENV: "preview" })).toEqual([]);
     });
   });
 

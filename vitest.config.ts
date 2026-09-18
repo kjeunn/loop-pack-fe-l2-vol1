@@ -6,7 +6,13 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // server-only는 react-server 조건에서만 빈 모듈로 풀리고, 그 밖에서는 import 즉시 throw한다.
+      // vitest는 node로 도니 빈 모듈(패키지가 서버용으로 제공하는 파일)을 직접 가리킨다.
+      // 클라이언트에서 실수로 import하는 것을 잡는 진짜 관문은 next build다.
+      "server-only": fileURLToPath(new URL("./node_modules/server-only/empty.js", import.meta.url)),
+    },
   },
   // 테스트는 클래스명을 검증하지 않으므로 프로젝트 PostCSS(Tailwind)를 태우지 않는다.
   // 이걸 비우지 않으면 CSS 모듈을 렌더하는 컴포넌트 테스트가 PostCSS 로드에서 실패한다.
