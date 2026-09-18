@@ -1,6 +1,6 @@
 import { ApiError } from "@/shared/api/apiError";
 import type { ApiErrorResponse } from "@/shared/api/types";
-import { getServerFetchOrigin } from "@/shared/config/origin";
+import { getAppOrigin } from "@/shared/config/origin";
 
 // 브라우저는 상대경로로 fetch할 수 있지만, 서버 프리패치는 절대 URL이 필요하다.
 // origin은 서버 분기 안에서만 읽는다. 모듈 최상위에서 읽으면 브라우저 번들이 서버 전용 env를 찾다 throw한다.
@@ -8,7 +8,7 @@ function resolveUrl(path: string): string {
   if (typeof window !== "undefined") {
     return path;
   }
-  return `${getServerFetchOrigin()}${path}`;
+  return `${getAppOrigin()}${path}`;
 }
 
 // 클라이언트 조회 계층. 실패를 ApiError(kind·status)로 바꿔 TanStack Query로 흘려보낸다.
