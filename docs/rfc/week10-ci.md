@@ -275,7 +275,7 @@ CLAUDE.md 규칙 7 "import는 절대경로 `@/`". 1주차부터 사람이 지키
 
 - 프로브: `../safeRedirect`·`./parent`·테스트 파일의 `./sibling` → 빨강 3건. `./globals.css`·`./p.module.css` → 초록.
 - CI: 실험 PR #3에서 `./HomeSkeleton`이 Lint step에서 빨강, revert 뒤 초록.
-- 전체 lint 초록, 테스트 283개 통과.
+- 전체 lint 초록, 테스트 283개 통과(승격 시점 기준. 이후 리뷰 반영으로 늘었다).
 
 ### 5.4 무엇을 기계에, 무엇을 AI·사람에
 
