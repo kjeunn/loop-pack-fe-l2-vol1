@@ -118,7 +118,7 @@ Next.js(App Router)로 커머스 베이스를 세우고, UI 라이브러리 없�
 - **룰 승격** — 1주차부터 사람이 지키던 절대경로 import 규칙을 `no-restricted-imports`로 내렸습니다. 위반 28건 중 lint 대상 18건을 먼저 고치고, 첫 실행의 오탐(`globals.css`)으로 예외를 "같은 폴더 CSS"로 좁혀 CLAUDE.md·CONVENTION·스킬 문구를 맞췄습니다.
 - **리뷰 반영 — 겸직하던 값 분리** — `APP_ORIGIN` 하나가 서버 self-fetch와 `metadataBase`를 겸하고 있었습니다. 배포는 production 도메인과 preview 주소로 동시에 서빙되는데 self-fetch는 "이 배포 자신"을, og:url은 "정식 주소"를 가리켜야 해 어느 쪽을 맞춰도 반대쪽이 틀렸습니다. self-fetch를 요청 origin·쿠키로 옮기자 게이트 둘이 필요 없어졌습니다 — `NEXT_PUBLIC_BASE_URL`과 env 규칙 ②가 사라졌고, preview가 production API를 부르는 경로도 없어졌습니다. 문서와 어긋난 숫자 다섯도 함께 맞췄습니다.
 - **게이트 자가검증** — 승격한 룰과 워크플로는 지워도 아무것도 울리지 않아, 룰이 `src`에 실제 적용되는지와 워크플로 불변 조건(SHA 핀·읽기 권한·timeout·동시성 그룹·deny-list 필터 내용 등)을 테스트로 고정했습니다. 그 테스트에 손으로 뮤테이션을 넣어보니 셋이 안 잡혔습니다 — 태그 검사가 제목 대신 파일 전체를 보고 있었고, 쿠키 전달은 테스트가 없었고, 브라우저 상대경로는 테스트 origin이 우연히 같아 절대 URL로 바꿔도 통과했습니다. 셋 다 고쳤습니다.
-- **배포 뒤 스모크** — `deployment_status`로 production 배포를 받아 배포본에 E2E를 돌립니다. `environment_url`은 배포별 생성 URL이라 Deployment Protection에 막혀(SSO 302 확인) production 도메인을 쓰고, E2E 앞에서 200과 `og:url` 일치를 먼저 끊습니다. 서버 상태를 바꾸는 주문 스펙은 `@writes` 태그로 빼 production에 테스트 주문이 쌓이지 않게 했습니다. 서로 다른 세 배포에서 27개 통과를 확인했습니다.
+- **배포 뒤 스모크** — `deployment_status`로 production 배포를 받아 배포본에 E2E를 돌립니다. `environment_url`은 배포별 생성 URL이라 Deployment Protection에 막혀(SSO 302 확인) production 도메인을 쓰고, E2E 앞에서 200과 `og:url` 일치를 먼저 끊습니다. 서버 상태를 바꾸는 주문 스펙은 `@writes` 태그로 빼 production에 테스트 주문이 쌓이지 않게 했습니다. 서로 다른 다섯 배포에서 27개 통과를 확인했습니다.
 
 ## AI 협업 방식
 
