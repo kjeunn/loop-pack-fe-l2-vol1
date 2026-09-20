@@ -1,20 +1,16 @@
 import { ApiError } from "@/shared/api/apiError";
-import type { ServerRequestContext } from "@/shared/api/serverRequest";
+import { readServerRequestContext } from "@/shared/api/serverRequest";
 import type { ApiErrorResponse } from "@/shared/api/types";
 import { getAppOrigin } from "@/shared/config/origin";
 
 // 브라우저는 상대경로로 fetch할 수 있지만, 서버 프리패치는 절대 URL이 필요하다.
 // 서버에서는 들어온 요청의 origin을 쓴다 — 배포는 production 도메인과 preview 주소로 동시에 서빙되므로
 // 값 하나로 고정하면 한쪽이 틀린다(serverRequest.ts에 근거).
-// 요청 스코프 밖(vitest·스크립트)이면 APP_ORIGIN으로 돌아간다.
-// serverRequest는 server-only라 동적 import로만 들어간다. 최상위에서 import하면 브라우저 번들이 깨진다.
-async function readServerContext(): Promise<ServerRequestContext | null> {
-  if (typeof window !== "undefined") {
-    return null;
-  }
-  const { readServerRequestContext } = await import("@/shared/api/serverRequest");
-  return readServerRequestContext();
-}
+//
+// 브라우저에서 부르지 않는 건 이 가드가 맡는다. serverRequest가 브라우저 번들에 실리지 않는 것은
+// 빌드 산출물로 확인했다(.next/static에 next/headers·x-forwarded-proto 0건, 같은 방식의 대조 문자열은 2건).
+// 클라이언트 컴포넌트의 SSR에서도 window는 없어 여기로 들어오는데, 그 자리에서는 next/headers가 던지고
+// serverRequest가 null을 돌려줘 APP_ORIGIN으로 떨어진다. 요청 스코프 밖(vitest·스크립트)도 같다.
 
 // 클라이언트 조회 계층. 실패를 ApiError(kind·status)로 바꿔 TanStack Query로 흘려보낸다.
 // 전역 throwOnError 정책이 kind·status를 보고 5xx는 경계로, 4xx·네트워크는 인라인으로 가른다.
@@ -30,7 +26,7 @@ type FetchOptions = {
 export async function fetchJson<T>(path: string, options?: FetchOptions): Promise<T> {
   const hasBody = options?.body !== undefined;
   const isBrowser = typeof window !== "undefined";
-  const server = await readServerContext();
+  const server = isBrowser ? null : await readServerRequestContext();
   // 브라우저는 상대경로로 현재 origin을 그대로 쓴다.
   const url = isBrowser ? path : `${server?.origin ?? getAppOrigin()}${path}`;
   const headers: Record<string, string> = {};

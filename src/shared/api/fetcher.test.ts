@@ -54,3 +54,17 @@ describe("fetchJson (서버 분기)", () => {
     expect(url).toBe("http://localhost:3000/api/home");
   });
 });
+
+describe("fetchJson (브라우저 분기)", () => {
+  // 브라우저는 상대경로로 현재 origin을 그대로 쓴다. 절대 URL을 쓰면 배포 주소마다 origin이 틀어지고,
+  // 테스트에서는 APP_ORIGIN이 마침 jsdom origin과 같아 절대 URL로 바꿔도 초록이 유지된다(실제로 그랬다).
+  it("상대경로를 그대로 쓰고 서버 맥락을 읽지 않는다", async () => {
+    vi.stubGlobal("window", {});
+    const readSpy = vi.fn();
+    vi.doMock("@/shared/api/serverRequest", () => ({ readServerRequestContext: readSpy }));
+    const [url, init] = await callFetchJson("/api/home");
+    expect(url).toBe("/api/home");
+    expect(readSpy).not.toHaveBeenCalled();
+    expect(init.headers).toBeUndefined();
+  });
+});
