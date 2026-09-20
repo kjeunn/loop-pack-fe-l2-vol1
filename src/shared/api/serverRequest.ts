@@ -9,7 +9,7 @@
 // 들어온 요청은 이미 그 벽을 통과한 쿠키를 갖고 있으므로 그대로 넘겨야 self-fetch도 통과한다.
 // same-origin 요청이라 브라우저가 보냈을 것과 같은 범위이고, 지금 self-fetch가 타는 /api/home·/api/products는
 // 쿠키를 읽지 않으므로 이 전달이 현재 동작을 바꾸지는 않는다.
-// `server-only`를 붙이지 않는다. 이 모듈은 fetcher가 동적으로 부르는데, fetcher는 클라이언트 컴포넌트도 쓰므로
+// `server-only`를 붙이지 않는다. 이 모듈은 fetcher가 부르는데 fetcher는 클라이언트 컴포넌트도 쓰므로
 // 클라이언트 SSR 그래프에 들어가 빌드가 막힌다(실제로 막혔다). 대신 호출자가 `typeof window`로 막고,
 // 브라우저에 실리지 않는 것은 빌드 산출물로 확인한다(.next/static에 next/headers·x-forwarded-proto 0건).
 export type ServerRequestContext = { origin: string; cookie: string | null };
