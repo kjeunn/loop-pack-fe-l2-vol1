@@ -191,7 +191,7 @@ Before 값은 CLI observed다(실브라우저 Before-①은 ①a 적용 전 상�
 - 루트 `layout.tsx`: `title` template `%s | Loopers`·공통 `openGraph`(siteName·locale·type·fallback image)·`metadataBase`.
 - 홈·목록 `generateMetadata`: 본문 prefetch와 같은 query factory로 조회한 응답으로 동적 title·description·image.
 - `buildPageMetadata`(shared/config): title·description을 top-level과 openGraph에 함께 넣고 공통 OG를 spread해 조립. og:url·canonical(정규화 URL)도 여기서 붙인다. 조회·문구 구성은 각 페이지가, 공통 조립은 이 헬퍼가 맡는다.
-- origin 통일: 서버 self-fetch base와 metadataBase가 같은 `APP_ORIGIN`(`appOrigin.ts`, 미설정 시 throw — 아래 "멘토 피드백 반영")을 쓰게 fetcher를 정렬한다. 이래야 미도달 origin으로 query failure를 재현할 수 있다(throw는 미설정만 잡는다. 미도달 origin은 값이 설정돼 있어 throw를 통과하고, fetch가 그 origin에 못 닿아 실패한다 — 층이 다르다).
+- origin 통일: 서버 self-fetch base와 metadataBase가 같은 `APP_ORIGIN`(`origin.ts`, 당시 이름은 `appOrigin.ts`. 미설정 시 throw — 아래 "멘토 피드백 반영")을 쓰게 fetcher를 정렬한다. 이래야 미도달 origin으로 query failure를 재현할 수 있다(throw는 미설정만 잡는다. 미도달 origin은 값이 설정돼 있어 throw를 통과하고, fetch가 그 origin에 못 닿아 실패한다 — 층이 다르다).
 
 ### 합성·shallow merge `[실측]`
 

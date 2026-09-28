@@ -1,15 +1,16 @@
 import { ApiError } from "@/shared/api/apiError";
+import { readServerRequestContext } from "@/shared/api/serverRequest";
 import type { ApiErrorResponse } from "@/shared/api/types";
-import { APP_ORIGIN } from "@/shared/config/appOrigin";
+import { getAppOrigin } from "@/shared/config/origin";
 
 // 브라우저는 상대경로로 fetch할 수 있지만, 서버 프리패치는 절대 URL이 필요하다.
-// 서버 self-fetch base는 metadataBase와 같은 APP_ORIGIN을 써서 origin을 하나로 맞춘다.
-function resolveUrl(path: string): string {
-  if (typeof window !== "undefined") {
-    return path;
-  }
-  return `${APP_ORIGIN}${path}`;
-}
+// 서버에서는 들어온 요청의 origin을 쓴다 — 배포는 production 도메인과 preview 주소로 동시에 서빙되므로
+// 값 하나로 고정하면 한쪽이 틀린다(serverRequest.ts에 근거).
+//
+// 브라우저에서 부르지 않는 건 이 가드가 맡는다. serverRequest가 브라우저 번들에 실리지 않는 것은
+// 빌드 산출물로 확인했다(.next/static에 next/headers·x-forwarded-proto 0건, 같은 방식의 대조 문자열은 2건).
+// 클라이언트 컴포넌트의 SSR에서도 window는 없어 여기로 들어오는데, 그 자리에서는 next/headers가 던지고
+// serverRequest가 null을 돌려줘 APP_ORIGIN으로 떨어진다. 요청 스코프 밖(vitest·스크립트)도 같다.
 
 // 클라이언트 조회 계층. 실패를 ApiError(kind·status)로 바꿔 TanStack Query로 흘려보낸다.
 // 전역 throwOnError 정책이 kind·status를 보고 5xx는 경계로, 4xx·네트워크는 인라인으로 가른다.
@@ -24,13 +25,26 @@ type FetchOptions = {
 
 export async function fetchJson<T>(path: string, options?: FetchOptions): Promise<T> {
   const hasBody = options?.body !== undefined;
+  const isBrowser = typeof window !== "undefined";
+  const server = isBrowser ? null : await readServerRequestContext();
+  // 브라우저는 상대경로로 현재 origin을 그대로 쓴다.
+  const url = isBrowser ? path : `${server?.origin ?? getAppOrigin()}${path}`;
+  const headers: Record<string, string> = {};
+  if (hasBody) {
+    headers["Content-Type"] = "application/json";
+  }
+  // 인증 벽(Deployment Protection)이 걸린 배포에서는 이 쿠키가 있어야 self-fetch가 통과한다.
+  if (server?.cookie) {
+    headers.cookie = server.cookie;
+  }
+
   let response: Response;
   try {
-    response = await fetch(resolveUrl(path), {
+    response = await fetch(url, {
       method: options?.method ?? "GET",
       cache: "no-store",
       signal: options?.signal,
-      headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+      headers: Object.keys(headers).length > 0 ? headers : undefined,
       body: hasBody ? JSON.stringify(options.body) : undefined,
     });
   } catch (error) {

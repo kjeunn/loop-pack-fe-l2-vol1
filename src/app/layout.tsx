@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { Providers } from "@/app/providers";
-import { APP_ORIGIN } from "@/shared/config/appOrigin";
+import { getAppOrigin } from "@/shared/config/origin";
 import { COMMON_OPEN_GRAPH } from "@/shared/config/siteMetadata";
 
 import "./globals.css";
@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(APP_ORIGIN),
+  metadataBase: new URL(getAppOrigin()),
   // 페이지가 title만 주면 template이 "제목 | Loopers"로 합성한다. 페이지가 없으면 default를 쓴다.
   title: {
     template: "%s | Loopers",

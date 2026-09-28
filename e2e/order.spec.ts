@@ -23,7 +23,11 @@ async function addFirstProductAndOpenCart(page: Page): Promise<string> {
   return firstCartItemId(page);
 }
 
-test.describe("주문", () => {
+// @writes: 서버 상태(ordersByUser)를 바꾸는 스펙이라는 표시.
+// 배포본 스모크는 이 태그를 --grep-invert로 빼 production에 테스트 주문이 쌓이지 않게 한다.
+// 태그를 붙이는 쪽(deny-list)으로 둔 이유는, 돌릴 스펙을 나열하면(allow-list) 새로 만든 스펙이
+// 목록에 없어 조용히 스모크에서 빠지기 때문이다. 기본은 "돈다"여야 한다.
+test.describe("주문 @writes", () => {
   test("담은 상품이 주문서를 거쳐 주문내역에 그대로 반영된다", async ({ page }) => {
     const productId = await addFirstProductAndOpenCart(page);
 
